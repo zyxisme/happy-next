@@ -4,8 +4,8 @@ import { processImage } from "@/storage/processImage";
 import { s3bucket, s3client, s3public } from "@/storage/files";
 import { db } from "@/storage/db";
 
-const MAX_DIMENSION = 1024;
-const MAX_SIZE_BYTES = 128 * 1024; // 128KB
+const MAX_DIMENSION = 1568;
+const MAX_SIZE_BYTES = 1.5 * 1024 * 1024; // 1.5MB
 const JPEG_QUALITY = 80;
 
 interface UploadChatImageResult {
@@ -55,7 +55,7 @@ async function compressForUpload(imageBuffer: Buffer, mimeType: string): Promise
  * Uploads a chat image to S3 and returns the public URL and metadata.
  *
  * Images are stored in public/users/{userId}/chat/{sessionId}/ directory.
- * The function compresses the image (resize to 1024px max + JPEG quality),
+ * The function compresses the image (resize to 1568px max + JPEG quality),
  * generates a thumbhash for preview rendering, then uploads to S3 and
  * records in the database.
  *

@@ -5,10 +5,18 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Modal } from '@/modal';
 import { LocalImage } from '@/components/ImagePreview';
 
-const MAX_DIMENSION = 1024;
+const MAX_DIMENSION = 1568;
+const MAX_SIZE_BYTES = 1.5 * 1024 * 1024;
 const JPEG_QUALITY = 0.8;
 const DEFAULT_MAX_IMAGES = 4;
 const DEFAULT_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+function shouldPassthrough(mimeType: string, width: number, height: number, fileSize?: number): boolean {
+    if (mimeType !== 'image/jpeg' && mimeType !== 'image/png') return false;
+    if (width > MAX_DIMENSION || height > MAX_DIMENSION) return false;
+    if (fileSize != null && fileSize > MAX_SIZE_BYTES) return false;
+    return true;
+}
 
 interface UseImagePickerOptions {
     maxImages?: number;
@@ -103,8 +111,17 @@ export function useImagePicker(options: UseImagePickerOptions = {}): UseImagePic
                 continue;
             }
 
+            if (shouldPassthrough(mimeType, img.width, img.height, img.fileSize)) {
+                processed.push({
+                    uri: img.uri,
+                    width: img.width,
+                    height: img.height,
+                    mimeType,
+                });
+                continue;
+            }
+
             try {
-                // Always compress (resize if needed + quality compression)
                 const compressed = await compressImage(img.uri, img.width, img.height);
                 processed.push({
                     uri: compressed.uri,
@@ -114,7 +131,6 @@ export function useImagePicker(options: UseImagePickerOptions = {}): UseImagePic
                 });
             } catch (error) {
                 console.warn('[ImagePicker] Failed to compress image, using original:', error);
-                // Fallback: use original image without compression
                 processed.push({
                     uri: img.uri,
                     width: img.width,
@@ -211,14 +227,22 @@ export function useImagePicker(options: UseImagePickerOptions = {}): UseImagePic
             const width = img.naturalWidth;
             const height = img.naturalHeight;
 
-            // Always compress (resize if needed + quality compression)
-            const compressed = await compressImage(uri, width, height);
-            setImages(prev => [...prev, {
-                uri: compressed.uri,
-                width: compressed.width,
-                height: compressed.height,
-                mimeType: 'image/jpeg',
-            }]);
+            if (shouldPassthrough(mimeType, width, height)) {
+                setImages(prev => [...prev, {
+                    uri,
+                    width,
+                    height,
+                    mimeType,
+                }]);
+            } else {
+                const compressed = await compressImage(uri, width, height);
+                setImages(prev => [...prev, {
+                    uri: compressed.uri,
+                    width: compressed.width,
+                    height: compressed.height,
+                    mimeType: 'image/jpeg',
+                }]);
+            }
         } else {
             // For native, use a default size (will be properly sized during upload)
             setImages(prev => [...prev, {

@@ -6,6 +6,7 @@ OpenClaw chat now renders rich AI content blocks, plus Claude Opus 4.7 model sup
 
 - OpenClaw: full rendering of thinking, tool use, and image content blocks from external AI machines
 - Models: add Claude Opus 4.7 to available model list
+- Image uploads: raise max dimension to 1568px and skip redundant compression when originals are already within limits, preserving text sharpness in code and UI screenshots
 
 ## Version 7 - 2026-03-18
 
