@@ -190,6 +190,13 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
     // Handle messages
     let planModeToolCalls = new Set<string>();
     let ongoingToolCalls = new Map<string, { parentToolCallId: string | null }>();
+    // Tracks whether the current turn produced any assistant message. Reset when a
+    // new user prompt (not a tool_result) arrives — NOT on result, because the SDK
+    // can keep emitting late-arriving assistant messages after `result` which would
+    // otherwise poison the next turn's detection.
+    // Used to surface result.result text when Claude Code emits only a result
+    // (e.g. unknown slash command like `/foo` → result.result = "Unknown command: /foo").
+    let hadAssistantMessage = false;
 
     function onMessage(message: SDKMessage) {
 
@@ -221,6 +228,11 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
                 } else {
                     session.client.sendSessionEvent({ type: 'message', message: 'An error occurred during execution' });
                 }
+            } else if (!hadAssistantMessage && typeof resultMsg.result === 'string' && resultMsg.result.length > 0) {
+                // Unknown slash command path: Claude Code returns only a result with text
+                // and no assistant stream, leaving the chat blank. Surface the text.
+                session.client.sendSessionEvent({ type: 'message', message: resultMsg.result });
+                logger.debug('[remote]: forwarded result text as session event (no assistant output this turn)');
             }
             // Result messages don't need further processing (not part of conversation log)
             return;
@@ -228,6 +240,10 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
 
         // Write to permission handler for tool id resolving
         permissionHandler.onMessage(message);
+
+        if (message.type === 'assistant') {
+            hadAssistantMessage = true;
+        }
 
         // Detect plan mode tool call
         if (message.type === 'assistant') {
@@ -256,14 +272,28 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
         }
         if (message.type === 'user') {
             let umessage = message as SDKUserMessage;
-            if (umessage.message.content && Array.isArray(umessage.message.content)) {
-                for (let c of umessage.message.content) {
+            const content = umessage.message.content;
+            if (typeof content === 'string') {
+                // Fresh user prompt (string form) — starts a new turn.
+                hadAssistantMessage = false;
+            } else if (Array.isArray(content)) {
+                let hasToolResult = false;
+                let hasNonToolResult = false;
+                for (let c of content) {
                     if (c.type === 'tool_result' && c.tool_use_id) {
+                        hasToolResult = true;
                         ongoingToolCalls.delete(c.tool_use_id);
 
                         // When tool result received, release any delayed messages for this tool call
                         messageQueue.releaseToolCall(c.tool_use_id);
+                    } else {
+                        hasNonToolResult = true;
                     }
+                }
+                // If this user message has any non-tool-result content (text/image/etc.)
+                // and no tool_result, it's a fresh user prompt — reset per-turn tracking.
+                if (hasNonToolResult && !hasToolResult) {
+                    hadAssistantMessage = false;
                 }
             }
         }
