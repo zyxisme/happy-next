@@ -137,25 +137,88 @@ export interface OpenClawSession {
     contextTokens?: number;
 }
 
+// === Content Block Types ===
+
+export interface TextContentBlock {
+    type: 'text';
+    text: string;
+    textSignature?: string;
+}
+
+export interface ThinkingContentBlock {
+    type: 'thinking';
+    thinking: string;
+}
+
+export interface ToolCallContentBlock {
+    type: 'toolcall';
+    id?: string;
+    name?: string;
+    arguments?: unknown;
+    locations?: Array<{ path: string; line?: number }>;
+}
+
+export interface ToolResultContentBlock {
+    type: 'tool_result';
+    id?: string;
+    name?: string;
+    content?: string | Array<{ type: string; text?: string }>;
+    is_error?: boolean;
+}
+
+export interface ImageContentBlock {
+    type: 'image';
+    data?: string;
+    mimeType?: string;
+}
+
+export type OpenClawContentBlock =
+    | TextContentBlock
+    | ThinkingContentBlock
+    | ToolCallContentBlock
+    | ToolResultContentBlock
+    | ImageContentBlock;
+
+// === Message Types ===
+
 /**
- * OpenClaw chat message
+ * OpenClaw chat message — matches gateway transcript format
  */
 export interface OpenClawChatMessage {
     role: 'user' | 'assistant';
-    content: Array<{ type: string; text?: string }> | string;
+    content: OpenClawContentBlock[] | string;
     timestamp?: number;
     stopReason?: string;
+    errorMessage?: string;
+    phase?: 'commentary' | 'final_answer';
+    usage?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number };
+    model?: string;
 }
 
 /**
- * OpenClaw chat event (streamed from gateway)
+ * OpenClaw chat event — matches gateway ChatEventSchema
  */
 export interface OpenClawChatEvent {
     runId: string;
     sessionKey: string;
     seq: number;
-    state: 'started' | 'thinking' | 'delta' | 'tool' | 'final' | 'error';
+    state: 'delta' | 'final' | 'aborted' | 'error';
     message?: OpenClawChatMessage;
-    delta?: string;
     errorMessage?: string;
+    errorKind?: 'refusal' | 'timeout' | 'rate_limit' | 'context_length' | 'unknown';
+    usage?: unknown;
+    stopReason?: string;
+}
+
+/**
+ * OpenClaw tool stream event — from agent stream: "tool"
+ */
+export interface OpenClawToolStreamEvent {
+    sessionKey: string;
+    runId?: string;
+    toolCallId: string;
+    phase: 'start' | 'update' | 'result';
+    name?: string;
+    args?: Record<string, unknown>;
+    isError?: boolean;
 }
