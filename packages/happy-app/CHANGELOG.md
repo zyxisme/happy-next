@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 8 - 2026-04-17
+
+OpenClaw chat now renders rich AI content blocks, plus Claude Opus 4.7 model support.
+
+- OpenClaw: full rendering of thinking, tool use, and image content blocks from external AI machines
+- Models: add Claude Opus 4.7 to available model list
+
 ## Version 7 - 2026-03-18
 
 Orchestrator arrives — define multi-agent task DAGs and let Happy schedule, execute, and monitor them automatically, plus offline message queuing, session management upgrades, and dozens of reliability fixes.

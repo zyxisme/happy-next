@@ -135,6 +135,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Connect to external AI machines via relay tunnel or direct WebSocket
 - Machine pairing with Ed25519 key exchange
 - Chat interface with real-time streaming and session management
+- Rich content block rendering: thinking, tool use, and image blocks from external AI
 
 ### DooTask Integration
 - Task list with filters, search, pagination, and status workflows

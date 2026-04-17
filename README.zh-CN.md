@@ -135,6 +135,7 @@ Happy Next 是原版 Happy 的重大演进，以下是亮点：
 - 通过中继隧道或直连 WebSocket 连接外部 AI 机器
 - Ed25519 密钥交换进行机器配对
 - 聊天界面，支持实时流式传输和会话管理
+- 丰富内容块渲染：支持外部 AI 的 thinking、tool use 和 image 内容块
 
 ### DooTask 集成
 - 任务列表，支持过滤、搜索、分页和状态工作流
