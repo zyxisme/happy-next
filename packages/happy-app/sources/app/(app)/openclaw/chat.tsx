@@ -662,7 +662,7 @@ export default function OpenClawChatPage() {
                     handleChatEventRef.current({
                         state: 'error',
                         sessionKey: p.sessionKey as string,
-                        runId: p.runId as string ?? '',
+                        runId: (p.runId as string | undefined) ?? '',
                         errorMessage: data.error,
                         seq: 0,
                     });
@@ -670,7 +670,7 @@ export default function OpenClawChatPage() {
                     handleChatEventRef.current({
                         state: 'aborted',
                         sessionKey: p.sessionKey as string,
-                        runId: p.runId as string ?? '',
+                        runId: (p.runId as string | undefined) ?? '',
                         seq: 0,
                     });
                 }
@@ -762,10 +762,10 @@ export default function OpenClawChatPage() {
                 setMessages((prev) => {
                     const lastMsg = prev[prev.length - 1];
                     if (lastMsg?.isStreaming) {
-                        // Cumulative guard: only update if new content is at least as large
-                        const prevLen = typeof lastMsg.content === 'string' ? lastMsg.content.length : lastMsg.content.length;
-                        const nextLen = typeof msg.content === 'string' ? msg.content.length : msg.content.length;
-                        if (nextLen < prevLen) return prev;
+                        // Cumulative guard for string content (gateway sends cumulative text)
+                        if (typeof msg.content === 'string' && typeof lastMsg.content === 'string') {
+                            if (msg.content.length < lastMsg.content.length) return prev;
+                        }
                         return [
                             ...prev.slice(0, -1),
                             { ...lastMsg, content: msg.content },
@@ -805,6 +805,8 @@ export default function OpenClawChatPage() {
 
     const handleToolStream = React.useCallback((event: OpenClawToolStreamEvent) => {
         if (event.sessionKey !== sessionKey) return;
+        // Only handle start and result — update phase has no visual effect in simplified rendering
+        if (event.phase === 'update') return;
 
         setMessages((prev) => {
             const lastMsg = prev[prev.length - 1];
