@@ -125,6 +125,8 @@ export class ApiSessionClient extends EventEmitter {
     private pendingOutbox: Array<{ content: string; localId: string }> = [];
     /** Coalescing sync that flushes the HTTP outbox */
     private sendSync: InvalidateSync;
+    /** Whether the "first user message → title" seeding has already fired (idempotent guard). */
+    private initialTitleSet = false;
 
     constructor(token: string, session: Session) {
         super()
@@ -250,6 +252,8 @@ export class ApiSessionClient extends EventEmitter {
                         if (userResult.data.meta?.sentFrom === 'cli') {
                             logger.debug('[SOCKET] [UPDATE] Ignoring echo of CLI-originated user message');
                         } else if (this.pendingMessageCallback) {
+                            // Title seed for Codex/Gemini remote mode — their user messages don't re-echo through buildMessageContent
+                            this.maybeSetInitialTitleFromUserText(userResult.data.content.text);
                             this.pendingMessageCallback(userResult.data);
                             emitMessageReceipt({
                                 sid: data.body.sid,
@@ -258,6 +262,7 @@ export class ApiSessionClient extends EventEmitter {
                                 ok: true,
                             });
                         } else {
+                            this.maybeSetInitialTitleFromUserText(userResult.data.content.text);
                             this.pendingMessages.push(userResult.data);
                             emitMessageReceipt({
                                 sid: data.body.sid,
@@ -468,6 +473,7 @@ export class ApiSessionClient extends EventEmitter {
                         }
                     };
                 }
+                this.maybeSetInitialTitleFromUserText(body.message.content);
                 return {
                     role: 'user',
                     content: {
@@ -489,11 +495,13 @@ export class ApiSessionClient extends EventEmitter {
                 }
                 // Only treat as user message if we extracted some text (not just tool_results)
                 if (textParts.length > 0) {
+                    const joined = textParts.join('\n');
+                    this.maybeSetInitialTitleFromUserText(joined);
                     return {
                         role: 'user',
                         content: {
                             type: 'text',
-                            text: textParts.join('\n')
+                            text: joined
                         },
                         meta: {
                             sentFrom: 'cli'
@@ -957,6 +965,39 @@ export class ApiSessionClient extends EventEmitter {
                 ...currentMetadata,
                 model: normalized,
             };
+        });
+    }
+
+    /**
+     * Seed the session title from the first user message when no custom title exists.
+     * Runs at most once per session; skipped when HAPPY_SESSION_TITLE was set at spawn
+     * (copy/resume/DooTask), when a summary is already present, or when the user has
+     * pinned the title. Subsequent AI-generated summaries still replace this seed.
+     */
+    private maybeSetInitialTitleFromUserText(text: string): void {
+        if (this.initialTitleSet) return;
+
+        const hasCustomTitle = !!this.metadata?.summary
+            || !!this.metadata?.summaryPinned
+            || !!process.env.HAPPY_SESSION_TITLE?.trim();
+        if (hasCustomTitle) {
+            this.initialTitleSet = true;
+            return;
+        }
+
+        const normalized = text.trim().replace(/\s+/g, ' ');
+        if (!normalized) return;
+
+        const chars = [...normalized];
+        const MAX_CODEPOINTS = 50;
+        const title = chars.length <= MAX_CODEPOINTS
+            ? normalized
+            : chars.slice(0, MAX_CODEPOINTS).join('') + '…';
+
+        this.initialTitleSet = true;
+        this.updateMetadata((metadata) => {
+            if (metadata.summary || metadata.summaryPinned) return metadata;
+            return { ...metadata, summary: { text: title, updatedAt: Date.now() } };
         });
     }
 
