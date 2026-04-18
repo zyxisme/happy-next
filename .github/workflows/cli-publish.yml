@@ -1,4 +1,5 @@
 name: Publish CLI
+run-name: "[Manual] Publish CLI ${{ inputs.version }}${{ inputs.dry-run && ' (dry-run)' || '' }}"
 
 on:
   workflow_dispatch:
