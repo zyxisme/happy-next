@@ -99,7 +99,7 @@ Happy Next 是原版 Happy 的重大演进，以下是亮点：
 - 三个 Agent 均为一等公民，支持会话恢复、复制/分叉和历史记录
 - 多 Agent 历史页面，按供应商分标签页，支持设备和 Agent 类型筛选
 - 按 Agent 选择模型、费用追踪和上下文窗口显示
-- Codex 支持 ACP 和 App-Server（JSON-RPC）两种后端，Codex v0.116.0 支持 fast mode
+- Codex 支持 ACP 和 App-Server（JSON-RPC）两种后端，Codex v0.121.0 支持 fast mode
 - AI 后端配置文件，内置 DeepSeek、Z.AI、OpenAI、Azure 和 Google AI 预设
 - 新增 Claude Opus 4.7 支持，过滤 4.x 模型的空 thinking 块以保证渲染干净
 

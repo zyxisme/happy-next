@@ -99,7 +99,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - All three agents are first-class citizens with session resume, duplicate/fork, and history
 - Multi-agent history page with per-provider tabs, device and agent filter dropdowns
 - Per-agent model selection, cost tracking, and context window display
-- ACP and App-Server (JSON-RPC) backends for Codex, Codex v0.116.0 with fast mode
+- ACP and App-Server (JSON-RPC) backends for Codex, Codex v0.121.0 with fast mode
 - AI backend profiles with presets for DeepSeek, Z.AI, OpenAI, Azure, and Google AI
 - Claude Opus 4.7 support with empty thinking block filtering for clean 4.x rendering
 
