@@ -172,6 +172,9 @@ class Sync {
      *  Ensures input is cleared before message appears, regardless of whether
      *  the HTTP response or WebSocket echo arrives first. */
     private pendingSendCallbacks = new Map<string, () => void>();
+    /** Defer showing no_cli_connection so CLI cold-start has a chance to attach
+     *  and clear via message-delivery-cleared before the user sees the badge. */
+    private deliveryErrorTimers = new Map<string, ReturnType<typeof setTimeout>>();
     /** Per-session lock to serialize fetchMessagesV3 and websocket message application */
     private sessionMessageLocks = new Map<string, AsyncLock>();
     private machineDataKeys = new Map<string, Uint8Array>(); // Store machine data encryption keys internally
@@ -3600,15 +3603,40 @@ class Sync {
         }
 
         if (updateData.type === 'message-delivery-error') {
-            storage.getState().setMessageDeliveryError(
-                updateData.sid,
-                updateData.messageId,
-                updateData.localId ?? null,
-                updateData.error
-            );
+            const key = `${updateData.sid}:${updateData.messageId}`;
+            const existing = this.deliveryErrorTimers.get(key);
+            if (existing) {
+                clearTimeout(existing);
+                this.deliveryErrorTimers.delete(key);
+            }
+            if (updateData.error === 'no_cli_connection') {
+                const timer = setTimeout(() => {
+                    this.deliveryErrorTimers.delete(key);
+                    storage.getState().setMessageDeliveryError(
+                        updateData.sid,
+                        updateData.messageId,
+                        updateData.localId ?? null,
+                        updateData.error
+                    );
+                }, 10_000);
+                this.deliveryErrorTimers.set(key, timer);
+            } else {
+                storage.getState().setMessageDeliveryError(
+                    updateData.sid,
+                    updateData.messageId,
+                    updateData.localId ?? null,
+                    updateData.error
+                );
+            }
         }
 
         if (updateData.type === 'message-delivery-cleared') {
+            const key = `${updateData.sid}:${updateData.messageId}`;
+            const pending = this.deliveryErrorTimers.get(key);
+            if (pending) {
+                clearTimeout(pending);
+                this.deliveryErrorTimers.delete(key);
+            }
             storage.getState().setMessageDeliveryError(
                 updateData.sid,
                 updateData.messageId,
