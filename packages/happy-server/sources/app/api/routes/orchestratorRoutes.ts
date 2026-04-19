@@ -43,7 +43,8 @@ const IDEMPOTENCY_RETRY_TIMES = 2;
 const CLI_DETECTION_COMMAND =
     '(command -v claude >/dev/null 2>&1 && echo "claude:true" || echo "claude:false") && ' +
     '(command -v codex >/dev/null 2>&1 && echo "codex:true" || echo "codex:false") && ' +
-    '(command -v gemini >/dev/null 2>&1 && echo "gemini:true" || echo "gemini:false")';
+    '(command -v gemini >/dev/null 2>&1 && echo "gemini:true" || echo "gemini:false") && ' +
+    'echo "hostname:$(hostname 2>/dev/null || echo \'\')"';
 const CLI_DETECTION_TIMEOUT_MS = 20_000;
 const MODEL_MODES_BY_PROVIDER: Record<string, readonly string[]> = {
     claude: CLAUDE_MODEL_MODES,
@@ -67,24 +68,66 @@ type BashRpcResponse = {
     exitCode?: number;
 };
 
-/**
- * Detect which CLI providers are installed on the given machines via bash RPC.
- * Runs detection commands in parallel with a timeout.
- * Returns a Map of machineId -> detected provider names.
- * On failure/timeout, returns empty array for that machine.
- */
-async function detectMachineProviders(
+const MACHINE_IDENTITY_TIMEOUT_MS = 5_000;
+
+async function fetchMachineNames(
     userId: string,
     machineIds: string[],
-): Promise<Map<string, ProviderName[]>> {
-    const result = new Map<string, ProviderName[]>();
+): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
     if (machineIds.length === 0) {
         return result;
     }
 
-    const detectionPromises = machineIds.map(async (machineId): Promise<[string, ProviderName[]]> => {
+    const promises = machineIds.map(async (machineId): Promise<[string, string | null]> => {
+        if (!hasUserRpcMethod(userId, `${machineId}:machine-identity`)) {
+            return [machineId, null];
+        }
+        try {
+            const response = await invokeUserRpc(
+                userId,
+                `${machineId}:machine-identity`,
+                {},
+                MACHINE_IDENTITY_TIMEOUT_MS,
+            ) as { name?: unknown } | null;
+            const name = typeof response?.name === 'string' ? response.name : null;
+            return [machineId, name];
+        } catch {
+            return [machineId, null];
+        }
+    });
+
+    const settled = await Promise.allSettled(promises);
+    for (const entry of settled) {
+        if (entry.status === 'fulfilled' && entry.value[1]) {
+            result.set(entry.value[0], entry.value[1]);
+        }
+    }
+    return result;
+}
+
+type DetectionResult = {
+    providers: ProviderName[];
+    hostname?: string;
+};
+
+/**
+ * Detect which CLI providers are installed on the given machines via bash RPC,
+ * plus the machine's OS hostname. Runs detection commands in parallel with a timeout.
+ * On failure/timeout, returns empty providers for that machine.
+ */
+async function detectMachineProviders(
+    userId: string,
+    machineIds: string[],
+): Promise<Map<string, DetectionResult>> {
+    const result = new Map<string, DetectionResult>();
+    if (machineIds.length === 0) {
+        return result;
+    }
+
+    const detectionPromises = machineIds.map(async (machineId): Promise<[string, DetectionResult]> => {
         if (!hasUserRpcMethod(userId, `${machineId}:bash`)) {
-            return [machineId, []];
+            return [machineId, { providers: [] }];
         }
 
         try {
@@ -96,28 +139,31 @@ async function detectMachineProviders(
             ) as BashRpcResponse;
 
             if (!response || !response.success) {
-                return [machineId, []];
+                return [machineId, { providers: [] }];
             }
 
             const statusByProvider = new Map<ProviderName, boolean>();
+            let hostname: string | undefined;
             const lines = (response.stdout || '').trim().split('\n');
             for (const line of lines) {
-                const [cliRaw, statusRaw] = line.split(':');
-                const cli = cliRaw?.trim();
-                const status = statusRaw?.trim();
-                if (!cli || !status) {
+                const sepIdx = line.indexOf(':');
+                if (sepIdx < 0) continue;
+                const keyRaw = line.slice(0, sepIdx).trim();
+                const valueRaw = line.slice(sepIdx + 1).trim();
+                if (!keyRaw) continue;
+                if (keyRaw === 'hostname') {
+                    if (valueRaw) hostname = valueRaw;
                     continue;
                 }
-                if (!PROVIDERS.includes(cli as ProviderName)) {
-                    continue;
-                }
-                statusByProvider.set(cli as ProviderName, status === 'true');
+                if (!PROVIDERS.includes(keyRaw as ProviderName)) continue;
+                if (!valueRaw) continue;
+                statusByProvider.set(keyRaw as ProviderName, valueRaw === 'true');
             }
 
             const providers = PROVIDERS.filter((provider) => statusByProvider.get(provider) === true);
-            return [machineId, providers];
+            return [machineId, { providers, hostname }];
         } catch {
-            return [machineId, []];
+            return [machineId, { providers: [] }];
         }
     });
 
@@ -804,18 +850,25 @@ export function orchestratorRoutes(app: Fastify) {
             },
         });
         const dispatchReadyIds = [...dispatchReadyMachineIds];
-        const detectedProviders = await detectMachineProviders(userId, dispatchReadyIds);
+        const onlineIds = [...onlineMachineIds];
+        const [detectedProviders, identityNames] = await Promise.all([
+            detectMachineProviders(userId, dispatchReadyIds),
+            fetchMachineNames(userId, onlineIds),
+        ]);
 
         const machineList = machines.map((machine) => {
             const online = onlineMachineIds.has(machine.id);
             const dispatchReady = dispatchReadyMachineIds.has(machine.id);
-            const providers = detectedProviders.get(machine.id) ?? [];
+            const detection = detectedProviders.get(machine.id);
+            const providers = detection?.providers ?? [];
             const modelModes: Record<string, readonly string[]> = {};
             for (const provider of providers) {
                 modelModes[provider] = MODEL_MODES_BY_PROVIDER[provider];
             }
+            const name = identityNames.get(machine.id) ?? detection?.hostname;
             return {
                 machineId: machine.id,
+                ...(name ? { name } : {}),
                 active: machine.active,
                 online,
                 dispatchReady,

@@ -199,6 +199,15 @@ export class ApiMachineClient {
             key: this.machine.encryptionKey
         });
 
+        // WHY: metadata is E2E-encrypted, so the orchestrator server cannot
+        // read displayName itself; the daemon exposes it here to let other
+        // clients resolve this machine by a user-readable name.
+        this.rpcHandlerManager.registerHandler('machine-identity', async () => {
+            const { displayName, host } = this.machine.metadata;
+            const trimmed = displayName?.trim();
+            return { name: trimmed || host || undefined };
+        });
+
         // Set up OpenClaw event forwarding
         openClawTunnelManager.setEventCallback((tunnelId, event, payload) => {
             this.broadcastOpenClawEvent(tunnelId, event, payload);

@@ -215,6 +215,7 @@ type ParsedOrchestratorContext = {
     modelModes: Record<string, string[]>;
     machines: Array<{
         machineId?: string;
+        name?: string;
         providers?: string[];
         active?: boolean;
         online?: boolean;
@@ -477,7 +478,7 @@ function OrchestratorContextCard({ context }: { context: ParsedOrchestratorConte
                     <Text style={styles.orchestratorRunMetaLabel}>machines</Text>
                     {context.machines.map((machine, index) => (
                         <Text key={machine.machineId ?? `machine-${index}`} style={styles.orchestratorTaskMeta}>
-                            {machine.machineId ?? '-'} · providers:{machine.providers?.join(',') || '-'} · active:{formatBoolean(machine.active)} · online:{formatBoolean(machine.online)} · ready:{formatBoolean(machine.dispatchReady)}
+                            {machine.name ? `${machine.name} (${machine.machineId ?? '-'})` : (machine.machineId ?? '-')} · providers:{machine.providers?.join(',') || '-'} · active:{formatBoolean(machine.active)} · online:{formatBoolean(machine.online)} · ready:{formatBoolean(machine.dispatchReady)}
                             {machine.lastActiveAt ? ` · lastActiveAt:${machine.lastActiveAt}` : ''}
                         </Text>
                     ))}
@@ -611,6 +612,7 @@ function parseOrchestratorContextCandidate(value: unknown): ParsedOrchestratorCo
             }
             return [{
                 machineId: asString(item.machineId),
+                name: asString(item.name),
                 providers: Array.isArray(item.providers) ? item.providers.filter((provider): provider is string => typeof provider === 'string') : [],
                 active: asBoolean(item.active),
                 online: asBoolean(item.online),
