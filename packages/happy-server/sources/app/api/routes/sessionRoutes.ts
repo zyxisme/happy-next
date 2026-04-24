@@ -14,13 +14,25 @@ export function sessionRoutes(app: Fastify) {
     // Sessions API
     app.get('/v1/sessions', {
         preHandler: app.authenticate,
+        schema: {
+            querystring: z.object({
+                since: z.coerce.number().int().nonnegative().optional()
+            }).optional()
+        }
     }, async (request, reply) => {
         const userId = request.userId;
+        const since = request.query?.since;
+        const incremental = typeof since === 'number';
 
+        // When incremental, order by updatedAt asc so the max(updatedAt) of
+        // the response is the new cursor. Otherwise preserve legacy
+        // "createdAt desc" ordering for backward compatibility.
         const sessions = await db.session.findMany({
-            where: { accountId: userId },
-            orderBy: { createdAt: 'desc' },
-            take: 150,
+            where: incremental
+                ? { accountId: userId, updatedAt: { gt: new Date(since!) } }
+                : { accountId: userId },
+            orderBy: incremental ? { updatedAt: 'asc' } : { createdAt: 'desc' },
+            take: incremental ? 500 : 150,
             select: {
                 id: true,
                 seq: true,
@@ -35,42 +47,25 @@ export function sessionRoutes(app: Fastify) {
                 lastActiveAt: true,
                 _count: { select: { shares: true } },
                 publicShare: { select: { id: true } },
-                // messages: {
-                //     orderBy: { seq: 'desc' },
-                //     take: 1,
-                //     select: {
-                //         id: true,
-                //         seq: true,
-                //         content: true,
-                //         localId: true,
-                //         createdAt: true
-                //     }
-                // }
             }
         });
 
         return reply.send({
-            sessions: sessions.map((v) => {
-                // const lastMessage = v.messages[0];
-                const sessionUpdatedAt = v.updatedAt.getTime();
-                // const lastMessageCreatedAt = lastMessage ? lastMessage.createdAt.getTime() : 0;
-
-                return {
-                    id: v.id,
-                    seq: v.seq,
-                    createdAt: v.createdAt.getTime(),
-                    updatedAt: sessionUpdatedAt,
-                    active: v.active,
-                    activeAt: v.lastActiveAt.getTime(),
-                    metadata: v.metadata,
-                    metadataVersion: v.metadataVersion,
-                    agentState: v.agentState,
-                    agentStateVersion: v.agentStateVersion,
-                    dataEncryptionKey: v.dataEncryptionKey ? Buffer.from(v.dataEncryptionKey).toString('base64') : null,
-                    lastMessage: null,
-                    isShared: (v._count.shares > 0) || (v.publicShare !== null)
-                };
-            })
+            sessions: sessions.map((v) => ({
+                id: v.id,
+                seq: v.seq,
+                createdAt: v.createdAt.getTime(),
+                updatedAt: v.updatedAt.getTime(),
+                active: v.active,
+                activeAt: v.lastActiveAt.getTime(),
+                metadata: v.metadata,
+                metadataVersion: v.metadataVersion,
+                agentState: v.agentState,
+                agentStateVersion: v.agentStateVersion,
+                dataEncryptionKey: v.dataEncryptionKey ? Buffer.from(v.dataEncryptionKey).toString('base64') : null,
+                lastMessage: null,
+                isShared: (v._count.shares > 0) || (v.publicShare !== null)
+            }))
         });
     });
 

@@ -9,6 +9,7 @@ import { eventRouter, buildPublicShareCreatedUpdate, buildPublicShareUpdatedUpda
 import { allocateUserSeq } from "@/storage/seq";
 import { createHash } from "crypto";
 import { decodeBase64 } from "privacy-kit";
+import { touchSession } from "@/app/session/sessionTouch";
 
 /**
  * Public session sharing API routes
@@ -55,28 +56,15 @@ export function publicShareRoutes(app: Fastify) {
             where: { sessionId }
         });
 
-        let publicShare;
         const isUpdate = !!existing;
 
+        // Validate inputs before opening the transaction (early returns are not
+        // possible from inside db.$transaction callback).
         if (existing) {
             const shouldRotateToken = typeof token === 'string' && token.length > 0;
             if (shouldRotateToken && !encryptedDataKey) {
                 return reply.code(400).send({ error: 'encryptedDataKey required when rotating token' });
             }
-            const nextTokenHash = shouldRotateToken ? createHash('sha256').update(token!, 'utf8').digest() : null;
-
-            // Update existing share (token is stored as a hash only; token itself is not persisted)
-            publicShare = await db.publicSessionShare.update({
-                where: { sessionId },
-                data: {
-                    ...(nextTokenHash ? { tokenHash: nextTokenHash } : {}),
-                    ...(encryptedDataKey ? { encryptedDataKey: decodeBase64(encryptedDataKey, 'base64') } : {}),
-                    expiresAt: expiresAt ? new Date(expiresAt) : null,
-                    maxUses: maxUses ?? null,
-                    isConsentRequired: isConsentRequired ?? false,
-                    ...(nextTokenHash ? { useCount: 0 } : {}),
-                }
-            });
         } else {
             if (!token) {
                 return reply.code(400).send({ error: 'token required' });
@@ -84,21 +72,45 @@ export function publicShareRoutes(app: Fastify) {
             if (!encryptedDataKey) {
                 return reply.code(400).send({ error: 'encryptedDataKey required' });
             }
-            const tokenHash = createHash('sha256').update(token, 'utf8').digest();
-
-            // Create new share with client-provided token
-            publicShare = await db.publicSessionShare.create({
-                data: {
-                    sessionId,
-                    createdByUserId: userId,
-                    tokenHash,
-                    encryptedDataKey: decodeBase64(encryptedDataKey, 'base64'),
-                    expiresAt: expiresAt ? new Date(expiresAt) : null,
-                    maxUses: maxUses ?? null,
-                    isConsentRequired: isConsentRequired ?? false
-                }
-            });
         }
+
+        const publicShare = await db.$transaction(async (tx) => {
+            let result;
+            if (existing) {
+                const shouldRotateToken = typeof token === 'string' && token.length > 0;
+                const nextTokenHash = shouldRotateToken ? createHash('sha256').update(token!, 'utf8').digest() : null;
+
+                // Update existing share (token is stored as a hash only; token itself is not persisted)
+                result = await tx.publicSessionShare.update({
+                    where: { sessionId },
+                    data: {
+                        ...(nextTokenHash ? { tokenHash: nextTokenHash } : {}),
+                        ...(encryptedDataKey ? { encryptedDataKey: decodeBase64(encryptedDataKey, 'base64') } : {}),
+                        expiresAt: expiresAt ? new Date(expiresAt) : null,
+                        maxUses: maxUses ?? null,
+                        isConsentRequired: isConsentRequired ?? false,
+                        ...(nextTokenHash ? { useCount: 0 } : {}),
+                    }
+                });
+            } else {
+                const tokenHash = createHash('sha256').update(token!, 'utf8').digest();
+
+                // Create new share with client-provided token
+                result = await tx.publicSessionShare.create({
+                    data: {
+                        sessionId,
+                        createdByUserId: userId,
+                        tokenHash,
+                        encryptedDataKey: decodeBase64(encryptedDataKey!, 'base64'),
+                        expiresAt: expiresAt ? new Date(expiresAt) : null,
+                        maxUses: maxUses ?? null,
+                        isConsentRequired: isConsentRequired ?? false
+                    }
+                });
+            }
+            await touchSession(tx, sessionId);
+            return result;
+        });
 
         // Emit real-time update to session owner only (no session-scoped broadcast
         // since public-share-created includes the raw token which must not leak)
@@ -201,6 +213,8 @@ export function publicShareRoutes(app: Fastify) {
             await tx.publicSessionShare.delete({
                 where: { sessionId }
             });
+
+            await touchSession(tx, sessionId);
 
             return true;
         });

@@ -7,6 +7,7 @@ import { eventRouter, buildSessionSharedUpdate, buildSessionShareUpdatedUpdate, 
 import { allocateUserSeq } from "@/storage/seq";
 import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { decodeBase64 } from "privacy-kit";
+import { touchSession } from "@/app/session/sessionTouch";
 
 function parseEncryptedDataKeyV0(encryptedDataKeyB64: string): Uint8Array<ArrayBuffer> {
     let bytes: Uint8Array<ArrayBuffer>;
@@ -136,25 +137,27 @@ export function shareRoutes(app: Fastify) {
             return reply.code(400).send({ error: 'Invalid encryptedDataKey' });
         }
 
-        // Create or update share
-        await db.sessionShare.upsert({
-            where: {
-                sessionId_sharedWithUserId: {
+        await db.$transaction(async (tx) => {
+            await tx.sessionShare.upsert({
+                where: {
+                    sessionId_sharedWithUserId: {
+                        sessionId,
+                        sharedWithUserId: userId
+                    }
+                },
+                create: {
                     sessionId,
-                    sharedWithUserId: userId
+                    sharedByUserId: ownerId,
+                    sharedWithUserId: userId,
+                    accessLevel,
+                    encryptedDataKey: encryptedDataKeyBytes
+                },
+                update: {
+                    accessLevel,
+                    encryptedDataKey: encryptedDataKeyBytes
                 }
-            },
-            create: {
-                sessionId,
-                sharedByUserId: ownerId,
-                sharedWithUserId: userId,
-                accessLevel,
-                encryptedDataKey: encryptedDataKeyBytes
-            },
-            update: {
-                accessLevel,
-                encryptedDataKey: encryptedDataKeyBytes
-            }
+            });
+            await touchSession(tx, sessionId);
         });
 
         // Re-fetch with includes for response and event payload
@@ -225,14 +228,18 @@ export function shareRoutes(app: Fastify) {
             return reply.code(403).send({ error: 'Forbidden' });
         }
 
-        const share = await db.sessionShare.update({
-            where: { id: shareId, sessionId },
-            data: { accessLevel },
-            include: {
-                sharedWithUser: {
-                    select: PROFILE_SELECT
+        const share = await db.$transaction(async (tx) => {
+            const updated = await tx.sessionShare.update({
+                where: { id: shareId, sessionId },
+                data: { accessLevel },
+                include: {
+                    sharedWithUser: {
+                        select: PROFILE_SELECT
+                    }
                 }
-            }
+            });
+            await touchSession(tx, sessionId);
+            return updated;
         });
 
         // Emit real-time update to shared user
@@ -294,6 +301,8 @@ export function shareRoutes(app: Fastify) {
             await tx.sessionShare.delete({
                 where: { id: shareId, sessionId }
             });
+
+            await touchSession(tx, sessionId);
 
             return { share };
         });

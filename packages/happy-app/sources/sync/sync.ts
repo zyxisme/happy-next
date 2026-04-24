@@ -203,6 +203,7 @@ class Sync {
     // Generic locking mechanism
     private recalculationLockCount = 0;
     private lastRecalculationTime = 0;
+    private lastSessionsCursorMs = 0;
 
     constructor() {
         this.sessionsSync = new InvalidateSync(this.fetchSessions);
@@ -364,6 +365,7 @@ class Sync {
 
         // Invalidate sync
         log.log('🔄 #init: Invalidating all syncs');
+        this.lastSessionsCursorMs = 0;
         this.sessionsSync.invalidate();
         this.settingsSync.invalidate();
         this.sessionModeConfigSync.invalidate();
@@ -1049,7 +1051,11 @@ class Sync {
         if (!this.credentials) return;
 
         const API_ENDPOINT = getServerUrl();
-        const response = await fetch(`${API_ENDPOINT}/v1/sessions`, {
+        const cursor = this.lastSessionsCursorMs;
+        const url = cursor > 0
+            ? `${API_ENDPOINT}/v1/sessions?since=${cursor}`
+            : `${API_ENDPOINT}/v1/sessions`;
+        const response = await fetch(url, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
                 'Content-Type': 'application/json'
@@ -1063,7 +1069,6 @@ class Sync {
         const data = await response.json();
         const sessions = data.sessions as Array<{
             id: string;
-            tag: string;
             seq: number;
             metadata: string;
             metadataVersion: number;
@@ -1077,6 +1082,14 @@ class Sync {
             lastMessage: ApiMessage | null;
             isShared?: boolean;
         }>;
+
+        if (sessions.length === 0) {
+            // Keep orchestrator activity fresh even when no session rows changed —
+            // this batch is not keyed to the session list.
+            this.fetchOrchestratorActivityBatch();
+            log.log(`📥 fetchSessions: no changes since cursor=${cursor}`);
+            return;
+        }
 
         // Initialize all session encryptions first
         const sessionKeys = new Map<string, Uint8Array | null>();
@@ -1097,23 +1110,19 @@ class Sync {
 
         // Decrypt sessions
         let decryptedSessions: (Omit<Session, 'presence'> & { presence?: "online" | number })[] = [];
+        let maxUpdatedAt = cursor;
         for (const session of sessions) {
-            // Get session encryption (should always exist after initialization)
             const sessionEncryption = this.encryption.getSessionEncryption(session.id);
             if (!sessionEncryption) {
                 console.error(`Session encryption not found for ${session.id} - this should never happen`);
                 continue;
             }
 
-            // Decrypt metadata using session-specific encryption
             let metadata = await sessionEncryption.decryptMetadata(session.metadataVersion, session.metadata);
-
-            // Decrypt agent state using session-specific encryption
             let agentState = await sessionEncryption.decryptAgentState(session.agentStateVersion, session.agentState);
 
             const existingSession = storage.getState().sessions[session.id];
 
-            // Put it all together.
             // Keep local thinking state during refresh to avoid online<->thinking flicker.
             const processedSession = {
                 ...session,
@@ -1123,13 +1132,19 @@ class Sync {
                 agentState
             };
             decryptedSessions.push(processedSession);
+
+            if (session.updatedAt > maxUpdatedAt) {
+                maxUpdatedAt = session.updatedAt;
+            }
         }
 
-        // Apply to storage
+        // Advance cursor to max updatedAt observed. Note: applySessions merges,
+        // so sessions not in this response are preserved in local storage.
+        this.lastSessionsCursorMs = maxUpdatedAt;
+
         this.applySessions(decryptedSessions);
         this.fetchOrchestratorActivityBatch();
-        log.log(`📥 fetchSessions completed - processed ${decryptedSessions.length} sessions`);
-
+        log.log(`📥 fetchSessions completed - processed ${decryptedSessions.length} sessions, cursor=${maxUpdatedAt}`);
     }
 
     private fetchSharedSessions = async () => {
@@ -2561,6 +2576,7 @@ class Sync {
         // Subscribe to connection state changes
         apiSocket.onReconnected(() => {
             log.log('🔌 Socket reconnected');
+            this.lastSessionsCursorMs = 0; // force full resync after reconnect to catch any missed events
             this.sessionsSync.invalidate();
             this.machinesSync.invalidate();
             log.log('🔌 Socket reconnected: Invalidating artifacts sync');
