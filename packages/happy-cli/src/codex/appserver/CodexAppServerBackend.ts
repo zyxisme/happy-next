@@ -388,12 +388,13 @@ export class CodexAppServerBackend implements AgentBackend {
     // Build config overrides (MCP servers + reasoning effort)
     const config: Record<string, unknown> = {};
     if (this.options.mcpServers && Object.keys(this.options.mcpServers).length > 0) {
-      // `default_tools_approval_mode: "Approve"` lets Codex's guardian skip MCP
+      // `default_tools_approval_mode: "approve"` lets Codex's guardian skip MCP
       // approval for trusted servers; handleMcpElicitation stays as fallback.
+      // Codex 0.125 renamed the variant from PascalCase `Approve` to lowercase `approve`.
       const mcpServers: Record<string, unknown> = {};
       for (const [name, cfg] of Object.entries(this.options.mcpServers)) {
         mcpServers[name] = TRUSTED_MCP_SERVER_NAMES.has(name)
-          ? { ...cfg, default_tools_approval_mode: 'Approve' }
+          ? { ...cfg, default_tools_approval_mode: 'approve' }
           : cfg;
       }
       config.mcp_servers = mcpServers;
