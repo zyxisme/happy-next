@@ -42,6 +42,8 @@ export class CodexJsonRpcPeer {
   private closed = false;
   private exited = false;
   private exitPromise: Promise<number | null> | null = null;
+  private stderrBuffer: string[] = [];
+  private readonly MAX_STDERR_LINES = 100;
 
   /**
    * Spawn the codex app-server child process.
@@ -89,6 +91,10 @@ export class CodexJsonRpcPeer {
         const text = chunk.toString().trim();
         if (text) {
           logger.debug(`[CodexRPC] stderr: ${text}`);
+          this.stderrBuffer.push(text);
+          if (this.stderrBuffer.length > this.MAX_STDERR_LINES) {
+            this.stderrBuffer.shift();
+          }
         }
       });
     }
@@ -109,7 +115,10 @@ export class CodexJsonRpcPeer {
 
     this.readline.on('close', () => {
       logger.debug('[CodexRPC] stdout closed');
-      this.rejectAllPending(new Error('Codex process stdout closed'));
+      const stderrSuffix = this.stderrBuffer.length > 0
+        ? '. stderr:\n' + this.stderrBuffer.join('\n')
+        : '';
+      this.rejectAllPending(new Error(`Codex process stdout closed${stderrSuffix}`));
       this.closeHandler?.();
     });
   }

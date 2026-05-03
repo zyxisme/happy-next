@@ -1141,8 +1141,8 @@ export async function runCodex(opts: {
                         id: randomUUID(),
                     });
                 } else if (!isUserAbort) {
-                    messageBuffer.addMessage('Process exited unexpectedly', 'status');
-                    session.sendSessionEvent({ type: 'message', message: 'Process exited unexpectedly' });
+                    messageBuffer.addMessage(`Process exited unexpectedly: ${errMsg}`, 'status');
+                    session.sendSessionEvent({ type: 'message', message: `Process exited unexpectedly: ${errMsg}` });
                     // Store session for potential recovery
                     if (backend && backend.isAlive) {
                         storedSessionIdForResume = backend.getSessionId();
