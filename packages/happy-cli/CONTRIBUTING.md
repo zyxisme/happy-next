@@ -11,7 +11,7 @@
 
 ```bash
 git clone https://github.com/hitosea/happy-next.git
-cd happy/packages/happy-cli
+cd happy-next/packages/happy-cli
 yarn install
 yarn build
 ```
