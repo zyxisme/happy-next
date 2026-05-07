@@ -208,10 +208,12 @@ export default function TextSelectionScreen() {
                 domStorageEnabled
                 setSupportMultipleWindows={false}
                 mixedContentMode="always"
-                contentInsetAdjustmentBehavior="never"
-                automaticallyAdjustContentInsets={false}
-                decelerationRate="normal"
-                directionalLockEnabled
+                {...(Platform.OS === 'ios' ? {
+                    contentInsetAdjustmentBehavior: 'never' as const,
+                    automaticallyAdjustContentInsets: false,
+                    decelerationRate: 'normal' as const,
+                    directionalLockEnabled: true,
+                } : {})}
                 style={{ flex: 1, backgroundColor: 'transparent' }}
             />
         </View>
