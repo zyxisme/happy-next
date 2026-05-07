@@ -53,6 +53,8 @@ export function buildEditorHtml(args: {
         height: 100%;
         overflow: hidden;
         background: transparent;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
       }
       #root {
         position: relative;
@@ -80,6 +82,12 @@ export function buildEditorHtml(args: {
         font-family: ${monoFont};
         font-size: 14px;
         line-height: 20px;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      .cm-gutters {
+        user-select: none;
+        -webkit-user-select: none;
       }
       .happy-target-line-dark {
         background: #ff8a0038;
@@ -111,6 +119,7 @@ export function buildEditorHtml(args: {
         var languageCompartment = null;
         var themeCompartment = null;
         var readOnlyCompartment = null;
+        var editableCompartment = null;
         var bottomPaddingCompartment = null;
 
         var targetLineEffect = null;
@@ -254,6 +263,7 @@ export function buildEditorHtml(args: {
             languageCompartment = new CM.state.Compartment();
             themeCompartment = new CM.state.Compartment();
             readOnlyCompartment = new CM.state.Compartment();
+            editableCompartment = new CM.state.Compartment();
             bottomPaddingCompartment = new CM.state.Compartment();
 
             targetLineEffect = CM.state.StateEffect.define();
@@ -298,6 +308,8 @@ export function buildEditorHtml(args: {
                 languageCompartment.of(getLanguageExtension(initialLanguage)),
                 themeCompartment.of(buildThemeExtension(initialTheme)),
                 readOnlyCompartment.of(CM.state.EditorState.readOnly.of(!!initialReadOnly)),
+                editableCompartment.of(CM.view.EditorView.editable.of(!initialReadOnly)),
+                CM.view.EditorView.contentAttributes.of({tabindex: "0"}),
                 bottomPaddingCompartment.of(buildBottomPaddingExtension(initialBottomPadding)),
                 targetLineField,
                 CM.search.highlightSelectionMatches(),
@@ -394,9 +406,14 @@ export function buildEditorHtml(args: {
             initialReadOnly = !!command.readOnly;
             if (view && window.CM) {
               view.dispatch({
-                effects: readOnlyCompartment.reconfigure(
-                  window.CM.state.EditorState.readOnly.of(initialReadOnly)
-                ),
+                effects: [
+                  readOnlyCompartment.reconfigure(
+                    window.CM.state.EditorState.readOnly.of(initialReadOnly)
+                  ),
+                  editableCompartment.reconfigure(
+                    window.CM.view.EditorView.editable.of(!initialReadOnly)
+                  )
+                ],
               });
             } else {
               fallback.readOnly = initialReadOnly;
