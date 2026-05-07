@@ -21,6 +21,8 @@ export function encodeBase64Utf8(value: string): string {
     return encodeBase64(encodeUTF8(value));
 }
 
+export const MONO_FONT_STACK = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+
 export function buildEditorHtml(args: {
     initialValueBase64: string;
     initialLanguage: string;
@@ -40,7 +42,7 @@ export function buildEditorHtml(args: {
     const safeLanguage = JSON.stringify(initialLanguage);
     const safeTheme = JSON.stringify(initialTheme);
     const safeBottomPadding = Number.isFinite(initialBottomPadding) ? initialBottomPadding : 16;
-    const monoFont = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+    const monoFont = MONO_FONT_STACK;
 
     return `<!DOCTYPE html>
 <html>
