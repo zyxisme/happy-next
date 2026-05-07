@@ -259,6 +259,7 @@ const OptionItem = React.memo((props: {
     isDisabled: boolean,
     onPress: () => void,
     onLongPress: () => void,
+    onContextMenu?: () => void,
 }) => {
     // Use GestureDetector to handle long press, which takes priority over parent GestureDetector
     const longPressGesture = Gesture.LongPress()
@@ -281,6 +282,18 @@ const OptionItem = React.memo((props: {
     // Race between tap and long press - first one to complete wins
     const composedGesture = Gesture.Race(tapGesture, longPressGesture);
 
+    // Web: right-click mirrors mobile long-press (fill input)
+    const webHandlers = Platform.OS === 'web'
+        ? {
+            onContextMenu: (e: { preventDefault: () => void }) => {
+                e.preventDefault();
+                if (!props.isDisabled) {
+                    props.onContextMenu?.();
+                }
+            },
+        }
+        : {};
+
     return (
         <GestureDetector gesture={composedGesture}>
             <View
@@ -288,6 +301,7 @@ const OptionItem = React.memo((props: {
                     style.optionItem,
                     props.isDisabled && style.optionItemDisabled,
                 ]}
+                {...webHandlers}
             >
                 <Text
                     selectable={false}
@@ -329,6 +343,10 @@ function RenderOptionsBlock(props: {
         }
     }, [props.onOptionLongPress, props.items]);
 
+    const handleContextMenu = React.useCallback((item: OptionItemData) => {
+        props.onOptionLongPress?.(item, props.items);
+    }, [props.onOptionLongPress, props.items]);
+
     return (
         <View style={[style.optionsContainer, props.first && style.first, props.last && style.last]}>
             <View style={style.optionsInner}>
@@ -346,6 +364,7 @@ function RenderOptionsBlock(props: {
                                 isDisabled={isDisabled}
                                 onPress={() => props.onOptionPress?.(item, props.items)}
                                 onLongPress={() => handleLongPress(item)}
+                                onContextMenu={() => handleContextMenu(item)}
                             />
                         );
                     } else {
