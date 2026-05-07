@@ -11,7 +11,6 @@ export default function FeaturesSettingsScreen() {
     const [experiments, setExperiments] = useSettingMutable('experiments');
     const [agentInputEnterToSend, setAgentInputEnterToSend] = useSettingMutable('agentInputEnterToSend');
     const [commandPaletteEnabled, setCommandPaletteEnabled] = useLocalSettingMutable('commandPaletteEnabled');
-    const [markdownCopyV2, setMarkdownCopyV2] = useLocalSettingMutable('markdownCopyV2');
     const [useEnhancedSessionWizard, setUseEnhancedSessionWizard] = useSettingMutable('useEnhancedSessionWizard');
 
     return (
@@ -29,18 +28,6 @@ export default function FeaturesSettingsScreen() {
                         <Switch
                             value={experiments}
                             onValueChange={setExperiments}
-                        />
-                    }
-                    showChevron={false}
-                />
-                <Item
-                    title={t('settingsFeatures.markdownCopyV2')}
-                    subtitle={t('settingsFeatures.markdownCopyV2Subtitle')}
-                    icon={<Ionicons name="text-outline" size={29} color="#34C759" />}
-                    rightElement={
-                        <Switch
-                            value={markdownCopyV2}
-                            onValueChange={setMarkdownCopyV2}
                         />
                     }
                     showChevron={false}

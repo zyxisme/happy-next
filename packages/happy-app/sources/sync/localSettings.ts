@@ -10,7 +10,6 @@ export const LocalSettingsSchema = z.object({
     devModeEnabled: z.boolean().describe('Enable developer menu in settings'),
     commandPaletteEnabled: z.boolean().describe('Enable CMD+K command palette (web only)'),
     themePreference: z.enum(['light', 'dark', 'adaptive']).describe('Theme preference: light, dark, or adaptive (follows system)'),
-    markdownCopyV2: z.boolean().describe('Replace native paragraph selection with long-press modal for full markdown copy'),
     hideNotificationsWhenActive: z.boolean().describe('Hide all notifications while the app is active'),
     hideSessionNotificationsWhenActive: z.boolean().describe('Hide notifications for the currently open session while the app is active'),
     // CLI version acknowledgments - keyed by machineId
@@ -35,7 +34,6 @@ export const localSettingsDefaults: LocalSettings = {
     devModeEnabled: false,
     commandPaletteEnabled: false,
     themePreference: 'adaptive',
-    markdownCopyV2: false,
     hideNotificationsWhenActive: false,
     hideSessionNotificationsWhenActive: false,
     acknowledgedCliVersions: {},

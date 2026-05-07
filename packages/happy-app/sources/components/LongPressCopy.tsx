@@ -2,23 +2,19 @@ import * as React from 'react';
 import { Platform, Text, TextProps, View, ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
-import { useLocalSetting } from '@/sync/storage';
 import { storeTempText } from '@/sync/persistence';
 
 /**
  * Returns whether Text elements should use native `selectable` prop.
- * When markdownCopyV2 is enabled on mobile, selectable is disabled
- * in favor of the long-press → text-selection page flow.
+ * On mobile, selectable is disabled in favor of the long-press → text-selection page flow.
  */
 export function useCopySelectable(): boolean {
-    const markdownCopyV2 = useLocalSetting('markdownCopyV2');
-    return Platform.OS === 'web' || !markdownCopyV2;
+    return Platform.OS === 'web';
 }
 
 /**
- * Wrapper that adds long-press → text-selection page navigation
- * when markdownCopyV2 is enabled. When disabled (or on web),
- * renders children as-is (relying on native selectable text).
+ * Wrapper that adds long-press → text-selection page navigation on mobile.
+ * On web, renders children as-is (relying on native selectable text).
  */
 export function LongPressCopy({ text, children, style }: { text: string; children: React.ReactNode; style?: ViewStyle }) {
     const selectable = useCopySelectable();

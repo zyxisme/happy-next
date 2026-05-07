@@ -10,7 +10,6 @@ import { Text } from '../StyledText';
 import { Typography } from '@/constants/Typography';
 import { SimpleSyntaxHighlighter } from '../SimpleSyntaxHighlighter';
 import { Modal } from '@/modal';
-import { useLocalSetting } from '@/sync/storage';
 import { storeTempText } from '@/sync/persistence';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -43,13 +42,10 @@ export const MarkdownView = React.memo((props: {
 }) => {
     const blocks = React.useMemo(() => parseMarkdown(props.markdown), [props.markdown]);
 
-    // Backwards compatibility: The original version just returned the view, wrapping the list of blocks.
-    // It made each of the individual text elements selectable. When we enable the markdownCopyV2 feature,
-    // we disable the selectable property on individual text segments on mobile only. Instead, the long press
-    // will be handled by a wrapper Pressable. If we don't disable the selectable property, then you will see
-    // the native copy modal come up at the same time as the long press handler is fired.
-    const markdownCopyV2 = useLocalSetting('markdownCopyV2');
-    const selectable = Platform.OS === 'web' || !markdownCopyV2;
+    // On mobile, individual text elements are not selectable. Instead, the long press
+    // will be handled by a wrapper GestureDetector that opens the text-selection page.
+    // On web, native text selection is used.
+    const selectable = Platform.OS === 'web';
     const router = useRouter();
     const linkContext = React.useMemo(() => ({
         sessionId: props.sessionId,
@@ -68,7 +64,7 @@ export const MarkdownView = React.memo((props: {
     }, [props.markdown, router]);
 
     // Separate blocks into groups: options blocks need to be outside the parent GestureDetector
-    // to prevent long press conflicts with the markdownCopyV2 feature
+    // to prevent long press conflicts
     const renderBlockContent = (block: typeof blocks[number], index: number) => {
         if (block.type === 'text') {
             return <RenderTextBlock spans={block.content} key={index} first={index === 0} last={index === blocks.length - 1} selectable={selectable} />;
@@ -104,8 +100,8 @@ export const MarkdownView = React.memo((props: {
         );
     };
 
-    // For web or when markdownCopyV2 is disabled, render everything normally
-    if (!markdownCopyV2 || Platform.OS === 'web') {
+    // For web, render everything normally with native text selection
+    if (Platform.OS === 'web') {
         return (
             <MarkdownLinkContext.Provider value={linkContext}>
                 {renderContent()}
@@ -113,7 +109,7 @@ export const MarkdownView = React.memo((props: {
         );
     }
 
-    // For mobile with markdownCopyV2 enabled, we need to render options blocks OUTSIDE
+    // For mobile, we need to render options blocks OUTSIDE
     // the parent GestureDetector to prevent long press conflicts
     const longPressGesture = Gesture.LongPress()
         .minDuration(500)
