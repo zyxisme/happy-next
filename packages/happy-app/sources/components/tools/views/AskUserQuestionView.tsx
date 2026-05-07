@@ -267,7 +267,8 @@ export const AskUserQuestionView = React.memo<ToolViewProps>(({ tool, sessionId 
         // captured the values above. TODO: Revisit this logic.
         setIsSubmitted(true);
 
-        // Build answers as Record<string, string> keyed by question header
+        // Build answers as Record<string, string> keyed by full question text —
+        // Claude Code's AskUserQuestion implementation looks up answers by `question`, not `header`.
         const answers: Record<string, string> = {};
         questions.forEach((q, qIndex) => {
             const selected = selections.get(qIndex);
@@ -283,12 +284,12 @@ export const AskUserQuestionView = React.memo<ToolViewProps>(({ tool, sessionId 
                     const customText = otherTexts.get(qIndex)?.trim() || '';
                     if (predefinedLabels.length > 0) {
                         // Multi-select: combine predefined labels with custom text
-                        answers[q.header] = [...predefinedLabels, customText].join(', ');
+                        answers[q.question] = [...predefinedLabels, customText].join(', ');
                     } else {
-                        answers[q.header] = customText;
+                        answers[q.question] = customText;
                     }
                 } else {
-                    answers[q.header] = predefinedLabels.join(', ');
+                    answers[q.question] = predefinedLabels.join(', ');
                 }
             }
         });
@@ -333,7 +334,7 @@ export const AskUserQuestionView = React.memo<ToolViewProps>(({ tool, sessionId 
                                 displayLabel = predefinedLabels.join(', ');
                             }
                         } else {
-                            displayLabel = persistedAnswers?.[q.header] || '-';
+                            displayLabel = persistedAnswers?.[q.question] || '-';
                         }
                         return (
                             <View key={qIndex} style={styles.submittedItem}>
