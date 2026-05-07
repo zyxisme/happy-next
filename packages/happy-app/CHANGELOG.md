@@ -1,8 +1,8 @@
 # Changelog
 
-## Version 8 - 2026-04-24
+## Version 8 - 2026-05-07
 
-OpenClaw renders rich AI content blocks, Claude Opus 4.7 and GPT-5.5 support, image upload quality, session title polish, and Claude 4.x compatibility fixes.
+OpenClaw renders rich AI content blocks, Claude Opus 4.7 and GPT-5.5 support, image upload quality, session title polish, Claude 4.x compatibility fixes, web desktop polish, and mobile text-selection rebuild.
 
 - OpenClaw: full rendering of thinking, tool use, and image content blocks from external AI machines
 - Models: add Claude Opus 4.7 to available model list
@@ -12,6 +12,10 @@ OpenClaw renders rich AI content blocks, Claude Opus 4.7 and GPT-5.5 support, im
 - Web: return to home screen after archiving a session instead of staying on the archived page
 - Claude Opus 4.7: drop empty thinking blocks emitted by 4.x models that previously caused rendering glitches
 - Slash commands: surface Claude Code's result text when a turn (e.g. unknown slash command) produces no assistant message, preventing blank mobile replies
+- Web desktop: hover-to-show copy button on chat messages (≥850 width); right-click on options reuses the mobile long-press behavior (fills input instead of sending)
+- Mobile text selection: in-app selection page rebuilt to use browser-native long-press with static syntax highlighting (Lezer), fixing first-tap selection on Android and removing the markdownCopyV2 toggle so all mobile users get the improved experience
+- Mobile reliability: fix Android text-selection page crash caused by iOS-only WebView props under the new Fabric architecture
+- AskUserQuestion: fix empty/missing answers — frontend now keys answers by the full question text to match Claude Code CLI's internal lookup
 
 ## Version 7 - 2026-03-18
 

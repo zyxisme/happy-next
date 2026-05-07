@@ -168,6 +168,8 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Active/Inactive tab filter, session preview expand/collapse, metadata caching
 - Session rename with lock (prevent AI auto-update), search in history
 - Options click-to-send / long-press-to-fill, scroll-to-bottom button
+- Web desktop: hover-to-show copy button on chat messages and right-click on options reusing the mobile long-press behavior
+- Mobile text selection: in-app selection page uses browser-native long-press with static syntax highlighting (Lezer) for reliable first-tap selection on Android
 - Pull-to-refresh, inset dividers, Agent tool display with robot icon
 - Tool input/output formatted as key-value pairs instead of raw JSON
 - `preview_html` tool for full-page HTML preview, colon-separated MCP tool naming

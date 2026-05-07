@@ -2,8 +2,8 @@
   "entries": [
     {
       "version": 8,
-      "date": "2026-04-24",
-      "summary": "OpenClaw renders rich AI content blocks, Claude Opus 4.7 and GPT-5.5 support, image upload quality, session title polish, and Claude 4.x compatibility fixes.",
+      "date": "2026-05-07",
+      "summary": "OpenClaw renders rich AI content blocks, Claude Opus 4.7 and GPT-5.5 support, image upload quality, session title polish, Claude 4.x compatibility fixes, web desktop polish, and mobile text-selection rebuild.",
       "changes": [
         "OpenClaw: full rendering of thinking, tool use, and image content blocks from external AI machines",
         "Models: add Claude Opus 4.7 to available model list",
@@ -12,9 +12,13 @@
         "Session title: seed new sessions with the first user message instead of the project directory name, until an AI summary takes over",
         "Web: return to home screen after archiving a session instead of staying on the archived page",
         "Claude Opus 4.7: drop empty thinking blocks emitted by 4.x models that previously caused rendering glitches",
-        "Slash commands: surface Claude Code's result text when a turn (e.g. unknown slash command) produces no assistant message, preventing blank mobile replies"
+        "Slash commands: surface Claude Code's result text when a turn (e.g. unknown slash command) produces no assistant message, preventing blank mobile replies",
+        "Web desktop: hover-to-show copy button on chat messages (≥850 width); right-click on options reuses the mobile long-press behavior (fills input instead of sending)",
+        "Mobile text selection: in-app selection page rebuilt to use browser-native long-press with static syntax highlighting (Lezer), fixing first-tap selection on Android and removing the markdownCopyV2 toggle so all mobile users get the improved experience",
+        "Mobile reliability: fix Android text-selection page crash caused by iOS-only WebView props under the new Fabric architecture",
+        "AskUserQuestion: fix empty/missing answers — frontend now keys answers by the full question text to match Claude Code CLI's internal lookup"
       ],
-      "rawMarkdown": "## Version 8 - 2026-04-24\n\n\nOpenClaw renders rich AI content blocks, Claude Opus 4.7 and GPT-5.5 support, image upload quality, session title polish, and Claude 4.x compatibility fixes.\n\n- OpenClaw: full rendering of thinking, tool use, and image content blocks from external AI machines\n- Models: add Claude Opus 4.7 to available model list\n- Models: add GPT-5.5 to available Codex model list with low/medium/high/xhigh reasoning levels\n- Image uploads: raise max dimension to 1568px and skip redundant compression when originals are already within limits, preserving text sharpness in code and UI screenshots\n- Session title: seed new sessions with the first user message instead of the project directory name, until an AI summary takes over\n- Web: return to home screen after archiving a session instead of staying on the archived page\n- Claude Opus 4.7: drop empty thinking blocks emitted by 4.x models that previously caused rendering glitches\n- Slash commands: surface Claude Code's result text when a turn (e.g. unknown slash command) produces no assistant message, preventing blank mobile replies"
+      "rawMarkdown": "## Version 8 - 2026-05-07\n\n\nOpenClaw renders rich AI content blocks, Claude Opus 4.7 and GPT-5.5 support, image upload quality, session title polish, Claude 4.x compatibility fixes, web desktop polish, and mobile text-selection rebuild.\n\n- OpenClaw: full rendering of thinking, tool use, and image content blocks from external AI machines\n- Models: add Claude Opus 4.7 to available model list\n- Models: add GPT-5.5 to available Codex model list with low/medium/high/xhigh reasoning levels\n- Image uploads: raise max dimension to 1568px and skip redundant compression when originals are already within limits, preserving text sharpness in code and UI screenshots\n- Session title: seed new sessions with the first user message instead of the project directory name, until an AI summary takes over\n- Web: return to home screen after archiving a session instead of staying on the archived page\n- Claude Opus 4.7: drop empty thinking blocks emitted by 4.x models that previously caused rendering glitches\n- Slash commands: surface Claude Code's result text when a turn (e.g. unknown slash command) produces no assistant message, preventing blank mobile replies\n- Web desktop: hover-to-show copy button on chat messages (≥850 width); right-click on options reuses the mobile long-press behavior (fills input instead of sending)\n- Mobile text selection: in-app selection page rebuilt to use browser-native long-press with static syntax highlighting (Lezer), fixing first-tap selection on Android and removing the markdownCopyV2 toggle so all mobile users get the improved experience\n- Mobile reliability: fix Android text-selection page crash caused by iOS-only WebView props under the new Fabric architecture\n- AskUserQuestion: fix empty/missing answers — frontend now keys answers by the full question text to match Claude Code CLI's internal lookup"
     },
     {
       "version": 7,
