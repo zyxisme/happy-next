@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { Modal } from '@/modal';
 import { hapticsLight } from '@/components/haptics';
 import { showCopiedToast } from '@/components/Toast';
 import { Ionicons } from '@expo/vector-icons';
+import { CodeEditor } from '@/components/CodeEditor';
 
 // Header button width constants
 const HEADER_BUTTON_WIDTH = 40; // 24px icon + 16px padding
@@ -105,26 +106,16 @@ export default function TextSelectionScreen() {
                     ),
                 }}
             />
-            <ScrollView
-                style={styles.textContainer}
-                showsVerticalScrollIndicator={true}
-                contentContainerStyle={[
-                    styles.scrollContent,
-                    { paddingBottom: insets.bottom + 16 }
-                ]}
-            >
-                <TextInput
-                    style={[styles.textInput, {
-                        color: theme.colors.text,
-                        backgroundColor: 'transparent'
-                    }]}
+            <View style={styles.editorContainer}>
+                <CodeEditor
                     value={fullText}
-                    multiline={true}
-                    editable={false}
-                    selectTextOnFocus={false}
-                    scrollEnabled={false}
+                    language="markdown"
+                    readOnly={true}
+                    lineWrapping={true}
+                    bottomPadding={insets.bottom + 16}
+                    onChangeText={() => {}}
                 />
-            </ScrollView>
+            </View>
         </View>
     );
 }
@@ -140,23 +131,7 @@ const styles = StyleSheet.create((theme) => ({
         textAlign: 'center',
         marginTop: 50,
     },
-    textContainer: {
+    editorContainer: {
         flex: 1,
-        padding: 16,
     },
-    scrollContent: {
-        flexGrow: 1,
-    },
-    textInput: {
-        ...Typography.mono(),
-        fontSize: 14,
-        lineHeight: 20,
-        color: theme.colors.text,
-        minHeight: 200,
-        textAlignVertical: 'top',
-        backgroundColor: 'transparent',
-        borderWidth: 0,
-        paddingHorizontal: 0,
-        paddingVertical: 0,
-    }
 }));

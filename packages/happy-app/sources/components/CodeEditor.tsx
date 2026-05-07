@@ -17,6 +17,7 @@ interface CodeEditorProps {
     readOnly?: boolean;
     revealLine?: number;
     revealColumn?: number;
+    lineWrapping?: boolean;
 }
 
 export interface CodeEditorHandle {
@@ -32,6 +33,7 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, CodeEditorProps>(({
     readOnly = false,
     revealLine,
     revealColumn,
+    lineWrapping = false,
 }, ref) => {
     const { rt } = useUnistyles();
     const webViewRef = React.useRef<WebView>(null);
@@ -46,6 +48,7 @@ export const CodeEditor = React.forwardRef<CodeEditorHandle, CodeEditorProps>(({
         initialTheme: themeMode,
         initialBottomPadding: bottomPadding,
         initialReadOnly: readOnly,
+        lineWrapping: lineWrapping,
     }), []);
 
     const postCommand = React.useCallback((command: EditorCommand) => {

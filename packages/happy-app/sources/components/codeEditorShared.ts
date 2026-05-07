@@ -27,6 +27,7 @@ export function buildEditorHtml(args: {
     initialTheme: 'light' | 'dark';
     initialBottomPadding: number;
     initialReadOnly: boolean;
+    lineWrapping?: boolean;
 }): string {
     const {
         initialValueBase64,
@@ -34,6 +35,7 @@ export function buildEditorHtml(args: {
         initialTheme,
         initialBottomPadding,
         initialReadOnly,
+        lineWrapping = false,
     } = args;
     const safeLanguage = JSON.stringify(initialLanguage);
     const safeTheme = JSON.stringify(initialTheme);
@@ -110,6 +112,7 @@ export function buildEditorHtml(args: {
         var initialTheme = ${safeTheme};
         var initialBottomPadding = ${safeBottomPadding};
         var initialReadOnly = ${initialReadOnly ? 'true' : 'false'};
+        var lineWrapping = ${lineWrapping ? 'true' : 'false'};
 
         var view = null;
         var fallback = document.getElementById('fallback');
@@ -313,6 +316,7 @@ export function buildEditorHtml(args: {
                 bottomPaddingCompartment.of(buildBottomPaddingExtension(initialBottomPadding)),
                 targetLineField,
                 CM.search.highlightSelectionMatches(),
+                lineWrapping ? CM.view.EditorView.lineWrapping : [],
                 CM.view.keymap.of([].concat(
                   CM.commands.defaultKeymap,
                   CM.commands.historyKeymap,
