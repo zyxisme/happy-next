@@ -327,13 +327,11 @@ export default function StatusScreen() {
                             disabled={!hasStagedFiles || isOperating}
                             style={{ paddingHorizontal: 8, paddingVertical: 4 }}
                         >
-                            <Text style={{
-                                fontSize: 17,
-                                color: hasStagedFiles && !isOperating ? theme.colors.header.tint : theme.colors.textSecondary,
-                                ...Typography.default('semiBold'),
-                            }}>
-                                {t('status.commit')}
-                            </Text>
+                            <Octicons
+                                name="git-commit"
+                                size={20}
+                                color={hasStagedFiles && !isOperating ? theme.colors.header.tint : theme.colors.textSecondary}
+                            />
                         </Pressable>
                     ),
                 }}

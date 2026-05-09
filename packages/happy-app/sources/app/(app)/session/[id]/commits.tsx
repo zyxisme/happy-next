@@ -363,7 +363,7 @@ export default function CommitsScreen() {
                                 : `/session/${sessionId}/status`
                             )}
                             style={diffStats
-                                ? { flexDirection: 'row', alignItems: 'center', paddingLeft: 8, paddingRight: 0, paddingVertical: 4, gap: 6 }
+                                ? { flexDirection: 'row', alignItems: 'center', paddingLeft: 8, paddingRight: 10, paddingVertical: 4, gap: 6 }
                                 : { paddingHorizontal: 8, paddingVertical: 4 }
                             }
                         >

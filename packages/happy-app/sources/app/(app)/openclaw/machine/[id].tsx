@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Platform, ActionSheetIOS, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Platform, useWindowDimensions } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -438,57 +438,19 @@ export default function OpenClawMachineDetailPage() {
 
     // Handle menu button press
     const handleMenuPress = React.useCallback(() => {
-        if (Platform.OS === 'ios') {
-            // Build options based on machine type
-            const isDirectType = machine?.type === 'direct';
-            const isHappyType = machine?.type === 'happy';
-            let options: string[];
-            let destructiveIndex: number;
-
-            if (isDirectType) {
-                options = [t('common.cancel'), t('openclaw.renameMachine'), t('openclaw.editGatewayUrl'), t('openclaw.editGatewayPassword'), t('openclaw.deleteMachine')];
-                destructiveIndex = 4;
-            } else if (isHappyType) {
-                options = [t('common.cancel'), t('openclaw.renameMachine'), t('openclaw.editGatewayPassword'), t('openclaw.deleteMachine')];
-                destructiveIndex = 3;
-            } else {
-                options = [t('common.cancel'), t('openclaw.renameMachine'), t('openclaw.deleteMachine')];
-                destructiveIndex = 2;
-            }
-
-            ActionSheetIOS.showActionSheetWithOptions(
-                {
-                    options,
-                    destructiveButtonIndex: destructiveIndex,
-                    cancelButtonIndex: 0,
-                },
-                (buttonIndex) => {
-                    if (isDirectType) {
-                        if (buttonIndex === 1) handleRenameMachine();
-                        else if (buttonIndex === 2) handleEditGatewayUrl();
-                        else if (buttonIndex === 3) handleEditGatewayPassword();
-                        else if (buttonIndex === 4) handleDeleteMachine();
-                    } else if (isHappyType) {
-                        if (buttonIndex === 1) handleRenameMachine();
-                        else if (buttonIndex === 2) handleEditHappyGatewayToken();
-                        else if (buttonIndex === 3) handleDeleteMachine();
-                    } else {
-                        if (buttonIndex === 1) handleRenameMachine();
-                        else if (buttonIndex === 2) handleDeleteMachine();
-                    }
-                }
-            );
-        } else {
-            // For Android and Web, use ActionMenuModal
-            setMenuVisible(true);
-        }
-    }, [machine?.type, handleRenameMachine, handleEditGatewayUrl, handleEditGatewayPassword, handleEditHappyGatewayToken, handleDeleteMachine]);
+        setMenuVisible(true);
+    }, []);
 
     // Menu items for ActionMenuModal
     const menuItems: ActionMenuItem[] = React.useMemo(() => {
-        const items: ActionMenuItem[] = [
-            { label: t('openclaw.renameMachine'), onPress: handleRenameMachine },
-        ];
+        const items: ActionMenuItem[] = [];
+
+        if (isConnected && !isUpdating) {
+            items.push({ label: t('openclaw.newSession'), onPress: handleNewSession });
+        }
+
+        items.push({ label: t('openclaw.renameMachine'), onPress: handleRenameMachine });
+
         // Add direct config options for direct type machines
         if (machine?.type === 'direct') {
             items.push(
@@ -504,7 +466,7 @@ export default function OpenClawMachineDetailPage() {
         }
         items.push({ label: t('openclaw.deleteMachine'), onPress: handleDeleteMachine, destructive: true });
         return items;
-    }, [machine?.type, handleRenameMachine, handleEditGatewayUrl, handleEditGatewayPassword, handleEditHappyGatewayToken, handleDeleteMachine]);
+    }, [isConnected, isUpdating, machine?.type, handleNewSession, handleRenameMachine, handleEditGatewayUrl, handleEditGatewayPassword, handleEditHappyGatewayToken, handleDeleteMachine]);
 
     // Get machine name
     const machineName = machine?.metadata?.name ||
@@ -599,30 +561,17 @@ export default function OpenClawMachineDetailPage() {
                         </View>
                     ),
                     headerRight: () => (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Pressable
-                                onPress={handleNewSession}
-                                style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-                                disabled={!isConnected || isUpdating}
-                            >
-                                <Ionicons
-                                    name="add"
-                                    size={24}
-                                    color={isConnected && !isUpdating ? theme.colors.header.tint : theme.colors.textSecondary}
-                                />
-                            </Pressable>
-                            <Pressable
-                                onPress={handleMenuPress}
-                                style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-                                disabled={isUpdating}
-                            >
-                                <Ionicons
-                                    name="ellipsis-vertical"
-                                    size={20}
-                                    color={isUpdating ? theme.colors.textSecondary : theme.colors.header.tint}
-                                />
-                            </Pressable>
-                        </View>
+                        <Pressable
+                            onPress={handleMenuPress}
+                            style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
+                            disabled={isUpdating}
+                        >
+                            <Ionicons
+                                name="ellipsis-vertical"
+                                size={20}
+                                color={isUpdating ? theme.colors.textSecondary : theme.colors.header.tint}
+                            />
+                        </Pressable>
                     ),
                 }}
             />

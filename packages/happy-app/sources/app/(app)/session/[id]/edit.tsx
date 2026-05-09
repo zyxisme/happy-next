@@ -329,18 +329,16 @@ export default function EditScreen() {
                         <Pressable
                             onPress={handleSave}
                             disabled={!hasChanges || isSaving}
-                            style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                            style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
                         >
                             {isSaving ? (
                                 <ActivityIndicator size="small" color={theme.colors.header.tint} />
                             ) : (
-                                <Text style={{
-                                    fontSize: 17,
-                                    color: hasChanges ? theme.colors.header.tint : theme.colors.textSecondary,
-                                    ...Typography.default('semiBold'),
-                                }}>
-                                    {t('common.save')}
-                                </Text>
+                                <Ionicons
+                                    name="save-outline"
+                                    size={22}
+                                    color={hasChanges ? theme.colors.header.tint : theme.colors.textSecondary}
+                                />
                             )}
                         </Pressable>
                     ),
