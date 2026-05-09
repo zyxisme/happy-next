@@ -16,6 +16,9 @@ OpenClaw renders rich AI content blocks, Claude Opus 4.7 and GPT-5.5 support, im
 - Mobile text selection: in-app selection page rebuilt to use browser-native long-press with static syntax highlighting (Lezer), fixing first-tap selection on Android and removing the markdownCopyV2 toggle so all mobile users get the improved experience
 - Mobile reliability: fix Android text-selection page crash caused by iOS-only WebView props under the new Fabric architecture
 - AskUserQuestion: fix empty/missing answers — frontend now keys answers by the full question text to match Claude Code CLI's internal lookup
+- iOS 26: align navigation header icons and pin App Store builds to Xcode 26.4.1 (required by Apple for App Store Connect uploads)
+- Header action menus: refine action menus on session edit/status/commits, script editor, and OpenClaw machine detail pages for cleaner interactions
+- Dependencies: upgrade react-native-audio-api and react-native-keyboard-controller for improved iOS audio recording and keyboard handling
 
 ## Version 7 - 2026-03-18
 
