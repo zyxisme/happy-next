@@ -86,6 +86,7 @@ export default {
         plugins: [
             require("./plugins/withCIGradleMemory.js"),
             require("./plugins/withEinkCompatibility.js"),
+            require("./plugins/withRNAudioAPIIosFFmpeg.js"),
             [
                 "expo-build-properties",
                 {
