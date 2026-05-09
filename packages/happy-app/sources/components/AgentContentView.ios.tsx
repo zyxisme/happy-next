@@ -1,8 +1,8 @@
 import { useHeaderHeight } from '@/utils/responsive';
 import * as React from 'react';
 import { View } from 'react-native';
-import { useKeyboardHandler, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AgentContentViewProps {
@@ -14,41 +14,21 @@ interface AgentContentViewProps {
 
 export const AgentContentView: React.FC<AgentContentViewProps> = React.memo(({ input, content, placeholder, betweenContentAndInput }) => {
     const safeArea = useSafeAreaInsets();
-    const height = useReanimatedKeyboardAnimation();
     const headerHeight = useHeaderHeight();
-    const animatedPadding = useSharedValue(0);
-    useKeyboardHandler({
-        onEnd(e) {
-            'worklet';
-            animatedPadding.value = e.progress === 1 ? (-height.height.value - safeArea.bottom) : 0;
-        },
-        onStart(e) {
-            'worklet';
-            animatedPadding.value = 0;
-        },
-    },[safeArea.bottom]);
-    const animatedStyle = useAnimatedStyle(() => ({
-        paddingTop: animatedPadding.value,
-        transform: [{ translateY: height.height.value + safeArea.bottom * height.progress.value }]
-    }), [safeArea.bottom]);
-    const animatedInputStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: height.height.value + safeArea.bottom * height.progress.value }]
-    }), [safeArea.bottom]);
-    const animatePlaceholderdStyle = useAnimatedStyle(() => ({
-        paddingTop: height.progress.value === 1 ? height.height.value : 0,
-        transform: [{ translateY: (height.height.value  + safeArea.bottom * height.progress.value) / 2 }]
-    }), [safeArea.bottom]);
     return (
         <View style={{ flexBasis:0, flexGrow:1 }}>
             <View style={{ flexBasis:0, flexGrow:1 }}>
                 {content && (
-                    <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }, animatedStyle]}>
+                    <KeyboardStickyView
+                        offset={{ opened: safeArea.bottom }}
+                        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                    >
                         {content}
-                    </Animated.View>
+                    </KeyboardStickyView>
                 )}
                 {placeholder && (
                     <Animated.ScrollView 
-                        style={[{ position: 'absolute', top: safeArea.top + headerHeight, left: 0, right: 0, bottom: 0 }, animatePlaceholderdStyle]}
+                        style={{ position: 'absolute', top: safeArea.top + headerHeight, left: 0, right: 0, bottom: 0 }}
                         contentContainerStyle={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}
                         keyboardShouldPersistTaps="handled"
                         alwaysBounceVertical={false}
@@ -57,10 +37,10 @@ export const AgentContentView: React.FC<AgentContentViewProps> = React.memo(({ i
                     </Animated.ScrollView>
                 )}
             </View>
-            <Animated.View style={[animatedInputStyle]}>
+            <KeyboardStickyView offset={{ opened: safeArea.bottom }}>
                 {betweenContentAndInput}
                 {input}
-            </Animated.View>
+            </KeyboardStickyView>
         </View>
     );
 });

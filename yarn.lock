@@ -12740,10 +12740,12 @@ react-is@^19.0.0, react-is@^19.1.0:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-19.2.4.tgz#a080758243c572ccd4a63386537654298c99d135"
   integrity sha512-W+EWGn2v0ApPKgKKCy/7s7WHXkboGcsrXE+2joLyVxkbyVQfO3MUEaUQDHoSmb8TFFrSKYa9mw64WZHNHSDzYA==
 
-react-native-audio-api@^0.8.2:
-  version "0.8.4"
-  resolved "https://registry.yarnpkg.com/react-native-audio-api/-/react-native-audio-api-0.8.4.tgz#f2a0ccfcaba44c2820fe0b517237fe85f6c8988a"
-  integrity sha512-OvS5KFK1lAcile4z4easHUxS5i/D2UKF2kTRjEv6HVARs/zqUXahFj6NxhS/PzZ0VEmRDZD7d3V6rfCcO7xgEQ==
+react-native-audio-api@^0.12.1:
+  version "0.12.1"
+  resolved "https://registry.yarnpkg.com/react-native-audio-api/-/react-native-audio-api-0.12.1.tgz#6f1674f53e1fbbef2d940526a8b0dc84e519167c"
+  integrity sha512-4SWtsgUNOfVLQ6jaOfmXklc+JiB4a04x6gzd1nX4NN3F8e2CQ7cH4aNuIo7E86nNk+epncZVyr124S+V6mxumw==
+  dependencies:
+    semver "^7.7.3"
 
 react-native-device-info@^14.1.1:
   version "14.1.1"
@@ -12787,10 +12789,10 @@ react-native-is-edge-to-edge@1.2.1, react-native-is-edge-to-edge@^1.1.6, react-n
   resolved "https://registry.yarnpkg.com/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.2.1.tgz#64e10851abd9d176cbf2b40562f751622bde3358"
   integrity sha512-FLbPWl/MyYQWz+KwqOZsSyj2JmLKglHatd3xLZWskXOpRaio4LfEDEz8E/A6uD8QoTHW6Aobw1jbEwK7KMgR7Q==
 
-react-native-keyboard-controller@1.20.7:
-  version "1.20.7"
-  resolved "https://registry.yarnpkg.com/react-native-keyboard-controller/-/react-native-keyboard-controller-1.20.7.tgz#e1be1c15a5eb10b96a40a0812d8472e6e4bd8f29"
-  integrity sha512-G8S5jz1FufPrcL1vPtReATx+jJhT/j+sTqxMIb30b1z7cYEfMlkIzOCyaHgf6IMB2KA9uBmnA5M6ve2A9Ou4kw==
+react-native-keyboard-controller@^1.21.7:
+  version "1.21.7"
+  resolved "https://registry.yarnpkg.com/react-native-keyboard-controller/-/react-native-keyboard-controller-1.21.7.tgz#2e9c6ab2d309a81d678420dcaaa7314b0324d42d"
+  integrity sha512-gs+8nI8HYnRdDt4NWbk1iVuS6kDLf2taJvp+h/TjM1FBdtnQmlYLJ6buNiUqSnkIH4OFEAxdNr3/GOOYdLfkUQ==
   dependencies:
     react-native-is-edge-to-edge "^1.2.1"
 

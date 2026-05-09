@@ -3,7 +3,6 @@ import * as React from 'react';
 import { Drawer } from 'expo-router/drawer';
 import { useIsTablet } from '@/utils/responsive';
 import { SidebarView } from './SidebarView';
-import { Slot } from 'expo-router';
 import { useWindowDimensions } from 'react-native';
 
 export const SidebarNavigator = React.memo(() => {
