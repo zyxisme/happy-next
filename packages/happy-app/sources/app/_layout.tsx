@@ -315,17 +315,18 @@ export default function RootLayout() {
                     <BottomSheetModalProvider>
                         <AuthProvider initialCredentials={initState.credentials}>
                             <ThemeProvider value={navigationTheme}>
-                                <StatusBarProvider />
-                                <ModalProvider>
-                                    <CommandPaletteProvider>
-                                        <RealtimeProvider>
-                                            <HorizontalSafeAreaWrapper>
-                                                <SidebarNavigator />
-                                            </HorizontalSafeAreaWrapper>
-                                        </RealtimeProvider>
-                                    </CommandPaletteProvider>
-                                </ModalProvider>
-                                <ToastHost />
+                                <StatusBarProvider>
+                                    <ModalProvider>
+                                        <CommandPaletteProvider>
+                                            <RealtimeProvider>
+                                                <HorizontalSafeAreaWrapper>
+                                                    <SidebarNavigator />
+                                                </HorizontalSafeAreaWrapper>
+                                            </RealtimeProvider>
+                                        </CommandPaletteProvider>
+                                    </ModalProvider>
+                                    <ToastHost />
+                                </StatusBarProvider>
                             </ThemeProvider>
                         </AuthProvider>
                     </BottomSheetModalProvider>
