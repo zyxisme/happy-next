@@ -109,7 +109,7 @@ export function buildSpawnPlan(
       };
     }
     case 'codex': {
-      const codexArgs = ['-y', '@openai/codex@0.125.0', 'exec', '--dangerously-bypass-approvals-and-sandbox'];
+      const codexArgs = ['-y', '@openai/codex@0.130.0', 'exec', '--dangerously-bypass-approvals-and-sandbox'];
       if (executionType === 'resume') {
         codexArgs.push('resume', childSessionId!, prompt);
       } else {
