@@ -342,12 +342,12 @@ export const getBuiltInProfile = (id: string): AIBackendProfile | null => {
         case 'google-ai':
             // Google AI profile: Uses Gemini CLI with Google's AI models
             // Authentication: Run 'happy connect gemini' for OAuth, or set GEMINI_API_KEY in daemon env
-            // Model selection: GEMINI_MODEL env var (defaults to gemini-3-pro-preview)
+            // Model selection: GEMINI_MODEL env var (defaults to gemini-3.1-pro-preview)
             return {
                 id: 'google-ai',
                 name: 'Google AI (Gemini)',
                 environmentVariables: [
-                    { name: 'GEMINI_MODEL', value: '${GEMINI_MODEL:-gemini-3-pro-preview}' },
+                    { name: 'GEMINI_MODEL', value: '${GEMINI_MODEL:-gemini-3.1-pro-preview}' },
                 ],
                 defaultPermissionMode: 'default',
                 compatibility: { claude: false, codex: false, gemini: true },

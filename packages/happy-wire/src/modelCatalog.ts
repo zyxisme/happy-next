@@ -85,8 +85,8 @@ export const MODEL_MODES = [
     'gpt-5.1-codex-max-xhigh',
     'gpt-5.1-codex-mini-medium',
     'gpt-5.1-codex-mini-high',
-    'gemini-3-pro-preview',
-    'gemini-3-flash-preview',
+    'gemini-3.1-pro-preview',
+    'gemini-3-flash',
     'gemini-2.5-pro',
 ] as const;
 
@@ -132,8 +132,8 @@ export const CLAUDE_MODEL_MODES = [
 
 export const GEMINI_MODEL_MODES = [
     MODEL_MODE_DEFAULT,
-    'gemini-3-pro-preview',
-    'gemini-3-flash-preview',
+    'gemini-3.1-pro-preview',
+    'gemini-3-flash',
     'gemini-2.5-pro',
 ] as const satisfies readonly ModelMode[];
 
@@ -240,9 +240,9 @@ const CLAUDE_MODE_TO_SELECTION: Partial<Record<ModelMode, { family: ClaudeModelF
 
 export const GEMINI_MODEL_OPTIONS = [
     { value: MODEL_MODE_DEFAULT, label: 'Use CLI configured model', shortLabel: 'CLI', description: 'Use profile/CLI defaults' },
-    { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro (Preview)', shortLabel: '3 Pro', description: 'Most capable' },
-    { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash (Preview)', shortLabel: '3 Flash', description: 'Fast and efficient' },
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', shortLabel: '2.5 Pro', description: 'Most capable' },
+    { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview)', shortLabel: '3.1 Pro', description: 'Most capable' },
+    { value: 'gemini-3-flash', label: 'Gemini 3 Flash', shortLabel: '3 Flash', description: 'Fast and efficient' },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', shortLabel: '2.5 Pro', description: 'Previous generation' },
 ] as const;
 
 export const CODEX_MODEL_FAMILY_OPTIONS = [
@@ -380,8 +380,8 @@ const MODEL_NAME_LABELS: Record<string, string> = {
     'claude-opus-4-6': 'Claude Opus 4.6',
     'claude-sonnet-4-6': 'Claude Sonnet 4.6',
     'claude-haiku-4-5': 'Claude Haiku 4.5',
-    'gemini-3-pro-preview': 'Gemini 3 Pro (Preview)',
-    'gemini-3-flash-preview': 'Gemini 3 Flash (Preview)',
+    'gemini-3.1-pro-preview': 'Gemini 3.1 Pro (Preview)',
+    'gemini-3-flash': 'Gemini 3 Flash',
     'gemini-2.5-pro': 'Gemini 2.5 Pro',
 };
 
@@ -494,8 +494,8 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
     'gpt-5.1-codex-max': 258_400,
     'gpt-5.1-codex-mini': 258_400,
     // Gemini models
-    'gemini-3-pro-preview': 1_000_000,
-    'gemini-3-flash-preview': 1_000_000,
+    'gemini-3.1-pro-preview': 1_000_000,
+    'gemini-3-flash': 1_000_000,
     'gemini-2.5-pro': 1_000_000,
 };
 
