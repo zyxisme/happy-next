@@ -332,7 +332,7 @@ export const settingsDefaults: Settings = {
     analyticsOptOut: false,
     experiments: false,
     useEnhancedSessionWizard: false,
-    alwaysShowContextSize: false,
+    alwaysShowContextSize: true,
     agentInputEnterToSend: true,
     avatarStyle: 'brutalist',
     showFlavorIcons: false,
