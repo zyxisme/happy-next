@@ -17,7 +17,8 @@ import { ActionMenuModal } from '@/components/ActionMenuModal';
 import type { ActionMenuItem } from '@/components/ActionMenu';
 import { useLinkedSessions } from '@/hooks/useLinkedSessions';
 import { useNavigateToSession } from '@/hooks/useNavigateToSession';
-import { getSessionName } from '@/utils/sessionUtils';
+import { getSessionName, getSessionAvatarId } from '@/utils/sessionUtils';
+import { Avatar } from '@/components/Avatar';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Clipboard from 'expo-clipboard';
@@ -765,16 +766,23 @@ export default function DooTaskDetail() {
                             style={[styles.sessionCard, { backgroundColor: theme.colors.surface }]}
                             onPress={() => navigateToSession(session.id)}
                         >
-                            <Text style={[styles.sessionTitle, { color: theme.colors.text }]} numberOfLines={1}>
-                                {getSessionName(session)}
-                            </Text>
-                            <Text style={[styles.sessionMeta, { color: theme.colors.textSecondary }]}>
-                                {[
-                                    session.metadata?.flavor || 'claude',
-                                    session.metadata?.host,
-                                    formatSessionAge(session.createdAt),
-                                ].filter(Boolean).join(' · ')}
-                            </Text>
+                            <Avatar
+                                id={getSessionAvatarId(session)}
+                                size={36}
+                                flavor={session.metadata?.flavor}
+                            />
+                            <View style={styles.sessionCardContent}>
+                                <Text style={[styles.sessionTitle, { color: theme.colors.text }]} numberOfLines={1}>
+                                    {getSessionName(session)}
+                                </Text>
+                                <Text style={[styles.sessionMeta, { color: theme.colors.textSecondary }]}>
+                                    {[
+                                        session.metadata?.flavor || 'claude',
+                                        session.metadata?.host,
+                                        formatSessionAge(session.createdAt),
+                                    ].filter(Boolean).join(' · ')}
+                                </Text>
+                            </View>
                         </Pressable>
                     ))}
                 </View>
@@ -939,7 +947,13 @@ const styles = StyleSheet.create((_theme) => ({
     fileName: { ...Typography.default(), fontSize: 14 },
     fileSize: { ...Typography.default(), fontSize: 12 },
     sessionCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingVertical: 10,
+        gap: 12,
+    },
+    sessionCardContent: {
+        flex: 1,
         gap: 2,
     },
     sessionTitle: { ...Typography.default('semiBold'), fontSize: 14 },
