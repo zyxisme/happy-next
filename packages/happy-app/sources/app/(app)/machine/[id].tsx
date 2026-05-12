@@ -33,6 +33,7 @@ import type { ActionMenuItem } from '@/components/ActionMenu';
 import { useShallow } from 'zustand/react/shallow';
 import { FolderPickerSheet } from '@/components/FolderPickerSheet';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 
 const styles = StyleSheet.create((theme) => ({
     pathInputContainer: {
@@ -76,11 +77,6 @@ const styles = StyleSheet.create((theme) => ({
     },
 }));
 
-// Header button width constants
-const HEADER_BUTTON_WIDTH = 40; // 24px icon + 16px padding
-const HEADER_PADDING = Platform.OS === 'ios' ? 16 : 32; // 8*2 or 16*2
-const HEADER_CENTER_PADDING = 24; // 12*2 for centerContainer
-
 export default function MachineDetailScreen() {
     const { theme } = useUnistyles();
     const { id: machineId } = useLocalSearchParams<{ id: string }>();
@@ -117,7 +113,7 @@ export default function MachineDetailScreen() {
     }, [machineId]);
 
     // Left: back button (1), Right: edit button (1) - use larger side * 2 for symmetry
-    const headerTitleMaxWidth = screenWidth - (HEADER_BUTTON_WIDTH * 2) - HEADER_PADDING - HEADER_CENTER_PADDING;
+    const headerTitleMaxWidth = getNativeHeaderTitleWidth({ screenWidth, rightActionCount: 1 });
     // Variant D only
 
     const machineSessions = useMemo(() => {

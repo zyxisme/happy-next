@@ -14,11 +14,7 @@ import { showCopiedToast } from '@/components/Toast';
 import { Ionicons } from '@expo/vector-icons';
 import { highlightMarkdownToHtml } from '@/utils/highlightMarkdownToHtml';
 import { MONO_FONT_STACK } from '@/components/codeEditorShared';
-
-const HEADER_BUTTON_WIDTH = 40;
-const HEADER_BUTTONS_COUNT = 2;
-const HEADER_PADDING = Platform.OS === 'ios' ? 16 : 32;
-const HEADER_CENTER_PADDING = 24;
+import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 
 interface TokenRule {
     selector: string;
@@ -124,7 +120,7 @@ export default function TextSelectionScreen() {
         });
     }, [fullText, isDark, theme.colors.surface, theme.colors.text, bottomPadding]);
 
-    const headerTitleMaxWidth = screenWidth - (HEADER_BUTTON_WIDTH * HEADER_BUTTONS_COUNT) - HEADER_PADDING - HEADER_CENTER_PADDING;
+    const headerTitleMaxWidth = getNativeHeaderTitleWidth({ screenWidth, rightActionCount: 1 });
 
     const handleCopyAll = React.useCallback(async () => {
         if (!fullText) {

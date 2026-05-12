@@ -11,7 +11,6 @@ import {
     Text,
     ScrollView,
     Pressable,
-    Platform,
     useWindowDimensions,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -21,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '@/text';
 import { Typography } from '@/constants/Typography';
 import { layout } from '@/components/layout';
+import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import { ItemGroup } from '@/components/ItemGroup';
 import { Item } from '@/components/Item';
 import { useOpenClawConnection } from '@/openclaw/connection';
@@ -82,11 +82,6 @@ const styles = StyleSheet.create((theme) => ({
 
 type SessionKind = 'direct' | 'group' | 'global';
 
-// Header button width constants
-const HEADER_BUTTON_WIDTH = 40; // 24px icon + 16px padding
-const HEADER_PADDING = Platform.OS === 'ios' ? 16 : 32; // 8*2 or 16*2
-const HEADER_CENTER_PADDING = 24; // 12*2 for centerContainer
-
 export default function OpenClawNewSessionPage() {
     const router = useRouter();
     const { theme } = useUnistyles();
@@ -95,7 +90,7 @@ export default function OpenClawNewSessionPage() {
     const { width: screenWidth } = useWindowDimensions();
 
     // Left: back button (1), Right: placeholder (1) - use larger side * 2 for symmetry
-    const headerTitleMaxWidth = screenWidth - (HEADER_BUTTON_WIDTH * 2) - HEADER_PADDING - HEADER_CENTER_PADDING;
+    const headerTitleMaxWidth = getNativeHeaderTitleWidth({ screenWidth, rightActionCount: 1 });
 
     // Connection hook
     const {

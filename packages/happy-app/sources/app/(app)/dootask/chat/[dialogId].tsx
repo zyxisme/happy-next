@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
@@ -19,6 +19,7 @@ import { ChatInput } from '@/components/dootask/ChatInput';
 import { ImageViewer } from '@/components/ImageViewer';
 import { MessageContextMenu, ContextMenuAction, MessagePreview } from '@/components/dootask/MessageContextMenu';
 import { layout } from '@/components/layout';
+import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import type { DooTaskDialogMsg, PendingMessage, DisplayMessage, DooTaskDialog, DooTaskDialogUser } from '@/sync/dootask/types';
 import { generateMockMessages, MOCK_USER_NAMES, MOCK_USER_AVATARS } from '@/components/dootask/__dev__/mockChatMessages';
 
@@ -42,6 +43,7 @@ function nowTimestamp(): string {
 export default React.memo(function DooTaskChat() {
     const { dialogId, taskName } = useLocalSearchParams<{ dialogId: string; taskName?: string }>();
     const { theme } = useUnistyles();
+    const { width: screenWidth } = useWindowDimensions();
     const router = useRouter();
     const profile = useDootaskProfile();
     const userCache = useDootaskUserCache();
@@ -562,9 +564,14 @@ export default React.memo(function DooTaskChat() {
         ? `${t('dootask.taskChat')} (${dialogMembers.length})`
         : t('dootask.taskChat');
 
+    const headerTitleWidth = React.useMemo(() => getNativeHeaderTitleWidth({
+        screenWidth,
+        rightActionCount: 1,
+    }), [screenWidth]);
+
     const headerTitle = React.useCallback(() => (
-        <ChatHeaderTitle title={chatTitle} subtitle={subtitle} />
-    ), [chatTitle, subtitle]);
+        <ChatHeaderTitle title={chatTitle} subtitle={subtitle} width={headerTitleWidth} />
+    ), [chatTitle, headerTitleWidth, subtitle]);
 
     const headerRight = React.useCallback(() => (
         <Pressable style={styles.headerIconButton} onPress={handleOpenDetail} hitSlop={15}>

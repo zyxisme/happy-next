@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '@/text';
 import { Typography } from '@/constants/Typography';
 import { layout } from '@/components/layout';
+import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import { ItemGroup } from '@/components/ItemGroup';
 import { Item } from '@/components/Item';
 import { useOpenClawMachine, useMachine, storage } from '@/sync/storage';
@@ -150,12 +151,6 @@ const SessionItem = React.memo(({ session, onPress, showDivider = true }: Sessio
     );
 });
 
-// Header button width constants
-const HEADER_BUTTON_WIDTH = 40; // 24px icon + 16px padding
-const HEADER_TWO_BUTTONS_WIDTH = 88; // 40 + 40 + 8 gap
-const HEADER_PADDING = Platform.OS === 'ios' ? 16 : 32; // 8*2 or 16*2
-const HEADER_CENTER_PADDING = 24; // 12*2 for centerContainer
-
 export default function OpenClawMachineDetailPage() {
     const router = useRouter();
     const { theme } = useUnistyles();
@@ -164,7 +159,7 @@ export default function OpenClawMachineDetailPage() {
     const { width: screenWidth } = useWindowDimensions();
 
     // Left: back button (1), Right: add + menu buttons (2) - use larger side * 2 for symmetry
-    const headerTitleMaxWidth = screenWidth - (HEADER_TWO_BUTTONS_WIDTH * 2) - HEADER_PADDING - HEADER_CENTER_PADDING;
+    const headerTitleMaxWidth = getNativeHeaderTitleWidth({ screenWidth, rightActionCount: 2 });
 
     // Get machine data
     const machine = useOpenClawMachine(machineId ?? '');

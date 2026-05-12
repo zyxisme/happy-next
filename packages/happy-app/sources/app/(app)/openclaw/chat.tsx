@@ -32,16 +32,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '@/text';
 import { Typography } from '@/constants/Typography';
 import { layout } from '@/components/layout';
+import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import { MarkdownView } from '@/components/markdown/MarkdownView';
 import { MultiTextInput, KeyPressEvent } from '@/components/MultiTextInput';
 import { useOpenClawConnection } from '@/openclaw/connection';
 import { useOpenClawMachine } from '@/sync/storage';
 import type { OpenClawChatMessage, OpenClawChatEvent, OpenClawContentBlock, OpenClawToolStreamEvent } from '@/openclaw/types';
-
-// Header button width constants
-const HEADER_BUTTON_WIDTH = 40; // 24px icon + 16px padding
-const HEADER_PADDING = Platform.OS === 'ios' ? 16 : 32;
-const HEADER_CENTER_PADDING = 24;
 
 // Special ID for streaming message
 const STREAMING_MESSAGE_ID = '__streaming__';
@@ -694,7 +690,7 @@ export default function OpenClawChatPage() {
     }>();
 
     // Left: back button (1), Right: loading indicator (1)
-    const headerTitleMaxWidth = screenWidth - (HEADER_BUTTON_WIDTH * 2) - HEADER_PADDING - HEADER_CENTER_PADDING;
+    const headerTitleMaxWidth = getNativeHeaderTitleWidth({ screenWidth, rightActionCount: 1 });
 
     // Get machine data
     const machine = useOpenClawMachine(machineId ?? '');

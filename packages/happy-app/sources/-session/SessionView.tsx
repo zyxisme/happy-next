@@ -28,6 +28,7 @@ import { handleImagePasteEvent } from '@/utils/imagePaste';
 import { isRunningOnMac } from '@/utils/platform';
 import { useDeviceType, useIsLandscape, useIsTablet } from '@/utils/responsive';
 import { formatPathRelativeToHome, generateCopyTitle, getSessionAvatarId, getSessionName, useSessionStatus, copySessionMetadata, copySessionModeSettings } from '@/utils/sessionUtils';
+import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import { isVersionSupported, useLatestCliVersion } from '@/utils/versionUtils';
 import { log } from '@/log';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,13 +36,12 @@ import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import * as React from 'react';
 import { useMemo } from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnistyles } from 'react-native-unistyles';
 
 const SILENT_REFRESH_INDICATOR_DELAY_MS = 3000;
 const SILENT_REFRESH_FAILED_TIMEOUT_MS = 12000;
-
 export const SessionView = React.memo((props: { id: string }) => {
     const sessionId = props.id;
     const router = useRouter();
@@ -53,11 +53,17 @@ export const SessionView = React.memo((props: { id: string }) => {
     const deviceType = useDeviceType();
     const realtimeStatus = useRealtimeStatus();
     const isTablet = useIsTablet();
+    const { width: screenWidth } = useWindowDimensions();
     const runningTaskCount = useOrchestratorRunningTaskCount(sessionId);
     const hasRuns = useOrchestratorHasRuns(sessionId);
     const handleOpenSessionRuns = React.useCallback(() => {
         router.push(`/orchestrator?controllerSessionId=${encodeURIComponent(sessionId)}`);
     }, [router, sessionId]);
+
+    const headerTitleWidth = React.useMemo(() => getNativeHeaderTitleWidth({
+        screenWidth,
+        rightActionCount: hasRuns ? 2 : 1,
+    }), [hasRuns, screenWidth]);
 
     // Track if we've confirmed the session doesn't exist after data loads
     const [sessionNotFound, setSessionNotFound] = React.useState(false);
@@ -170,6 +176,7 @@ export const SessionView = React.memo((props: { id: string }) => {
                         <ChatHeaderTitle
                             title={headerProps.title}
                             subtitle={headerProps.subtitle}
+                            width={headerTitleWidth}
                         />
                     ),
                     headerRight: session ? () => (

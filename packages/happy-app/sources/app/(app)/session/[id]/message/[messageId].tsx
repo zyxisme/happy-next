@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import { Text, View, ActivityIndicator, Platform, Pressable, useWindowDimensions } from "react-native";
+import { Text, View, ActivityIndicator, Pressable, useWindowDimensions } from "react-native";
 import { useMessage, useSession, useSessionMessages } from "@/sync/storage";
 import { sync } from '@/sync/sync';
 import { Deferred } from "@/components/Deferred";
@@ -11,13 +11,8 @@ import { Message } from '@/sync/typesMessage';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Typography } from '@/constants/Typography';
 import { Ionicons } from '@expo/vector-icons';
-import { layout } from '@/components/layout';
+import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import { LongPressCopy, useCopySelectable } from '@/components/LongPressCopy';
-
-// Header button width constants
-const HEADER_BUTTON_WIDTH = 60;
-const HEADER_PADDING = Platform.OS === 'ios' ? 16 : 32;
-const HEADER_CENTER_PADDING = 24;
 
 const stylesheet = StyleSheet.create((theme) => ({
     loadingContainer: {
@@ -47,10 +42,7 @@ export default React.memo(() => {
     const styles = stylesheet;
     const { width: screenWidth } = useWindowDimensions();
 
-    // Left: back button (1), Right: status indicator (1)
-    // Use the smaller of screenWidth and headerMaxWidth to account for max-width constraint
-    const effectiveHeaderWidth = Math.min(screenWidth, layout.headerMaxWidth);
-    const headerTitleMaxWidth = effectiveHeaderWidth - (HEADER_BUTTON_WIDTH * 2) - HEADER_PADDING - HEADER_CENTER_PADDING;
+    const headerTitleMaxWidth = getNativeHeaderTitleWidth({ screenWidth, rightActionCount: 1 });
     
     // Trigger session visibility when component mounts
     React.useEffect(() => {
