@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, ActivityIndicator, Text, Pressable, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import TabView from 'react-native-bottom-tabs';
+import TabView from './NativeBottomTabs';
 import { useFriendRequests, useSocketStatus, useRealtimeStatus, useDootaskProfile } from '@/sync/storage';
 import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
 import { useInboxHasContent } from '@/hooks/useInboxHasContent';
