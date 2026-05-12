@@ -311,15 +311,15 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     };
     const nativeTabRoutes: NativeTabRoute[] = [
         {
-            key: 'sessions',
-            title: t('tabs.sessions'),
-            focusedIcon: require('@/assets/images/brutalist/Brutalism 15.png'),
-        },
-        {
             key: 'inbox',
             title: t('tabs.inbox'),
             focusedIcon: require('@/assets/images/brutalist/Brutalism 27.png'),
             badge: inboxBadge,
+        },
+        {
+            key: 'sessions',
+            title: t('tabs.sessions'),
+            focusedIcon: require('@/assets/images/brutalist/Brutalism 15.png'),
         },
         ...(showDootaskTab ? [{
             key: 'dootask' as const,
