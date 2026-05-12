@@ -1063,7 +1063,6 @@ const ChatHeaderRight = React.memo((props: {
                         height: 44,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginRight: Platform.select({ web: -8, default: -4 }),
                     }}
                 >
                     <Avatar
