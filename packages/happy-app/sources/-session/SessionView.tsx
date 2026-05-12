@@ -1065,13 +1065,15 @@ const ChatHeaderRight = React.memo((props: {
                         justifyContent: 'center',
                     }}
                 >
-                    <Avatar
-                        id={props.avatarId}
-                        size={32}
-                        monochrome={!props.isConnected}
-                        flavor={props.flavor}
-                        sessionIcon={props.sessionIcon}
-                    />
+                    <View style={{ width: 32, height: 32, borderRadius: 16, overflow: 'hidden' }}>
+                        <Avatar
+                            id={props.avatarId}
+                            size={32}
+                            monochrome={!props.isConnected}
+                            flavor={props.flavor}
+                            sessionIcon={props.sessionIcon}
+                        />
+                    </View>
                 </Pressable>
             )}
         </View>
