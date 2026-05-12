@@ -3,7 +3,7 @@ import { AgentInput } from '@/components/AgentInput';
 import { Avatar } from '@/components/Avatar';
 import { MultiTextInputHandle } from '@/components/MultiTextInput';
 import { getSuggestions } from '@/components/autocomplete/suggestions';
-import { ChatHeaderView } from '@/components/ChatHeaderView';
+import { ChatHeaderTitle } from '@/components/ChatHeaderTitle';
 import { ChatList } from '@/components/ChatList';
 import { Deferred } from '@/components/Deferred';
 import { DuplicateSheet } from '@/components/DuplicateSheet';
@@ -26,13 +26,13 @@ import { t } from '@/text';
 import { tracking, trackMessageSent } from '@/track';
 import { handleImagePasteEvent } from '@/utils/imagePaste';
 import { isRunningOnMac } from '@/utils/platform';
-import { useDeviceType, useHeaderHeight, useIsLandscape, useIsTablet } from '@/utils/responsive';
+import { useDeviceType, useIsLandscape, useIsTablet } from '@/utils/responsive';
 import { formatPathRelativeToHome, generateCopyTitle, getSessionAvatarId, getSessionName, useSessionStatus, copySessionMetadata, copySessionModeSettings } from '@/utils/sessionUtils';
 import { isVersionSupported, useLatestCliVersion } from '@/utils/versionUtils';
 import { log } from '@/log';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as React from 'react';
 import { useMemo } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
@@ -51,7 +51,6 @@ export const SessionView = React.memo((props: { id: string }) => {
     const safeArea = useSafeAreaInsets();
     const isLandscape = useIsLandscape();
     const deviceType = useDeviceType();
-    const headerHeight = useHeaderHeight();
     const realtimeStatus = useRealtimeStatus();
     const isTablet = useIsTablet();
     const runningTaskCount = useOrchestratorRunningTaskCount(sessionId);
@@ -163,96 +162,38 @@ export const SessionView = React.memo((props: { id: string }) => {
                 }} />
             )}
 
-            {/* Header - always shown on desktop/Mac, hidden in landscape mode only on actual phones */}
-            {!(isLandscape && deviceType === 'phone' && Platform.OS !== 'web') && (
-                <View style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    zIndex: 1000
-                }}>
-                    <ChatHeaderView
-                        {...headerProps}
-                        onBackPress={() => router.back()}
-                        headerRight={session ? () => (
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                {hasRuns && (
-                                    <Pressable
-                                        onPress={handleOpenSessionRuns}
-                                        hitSlop={15}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={t('settings.orchestratorOpenRuns')}
-                                        style={{
-                                            width: 38,
-                                            height: 38,
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            marginRight: 2,
-                                        }}
-                                    >
-                                        <Ionicons
-                                            name="layers-outline"
-                                            size={22}
-                                            color={theme.colors.header.tint}
-                                        />
-                                        {runningTaskCount > 0 && (
-                                            <View style={{
-                                                position: 'absolute',
-                                                top: 2,
-                                                right: 0,
-                                                backgroundColor: theme.colors.button.primary.background,
-                                                borderRadius: 8,
-                                                minWidth: 16,
-                                                height: 16,
-                                                paddingHorizontal: 3,
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                            }}>
-                                                <Text style={{
-                                                    color: theme.colors.button.primary.tint,
-                                                    fontSize: 10,
-                                                    fontWeight: '600',
-                                                }}>
-                                                    {runningTaskCount > 99 ? '99+' : runningTaskCount}
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </Pressable>
-                                )}
-                                {headerProps.avatarId && headerProps.onAvatarPress && (
-                                    <Pressable
-                                        onPress={headerProps.onAvatarPress}
-                                        hitSlop={15}
-                                        style={{
-                                            width: 44,
-                                            height: 44,
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            marginRight: Platform.select({ web: -8, default: -4 }),
-                                        }}
-                                    >
-                                        <Avatar
-                                            id={headerProps.avatarId}
-                                            size={32}
-                                            monochrome={!headerProps.isConnected}
-                                            flavor={headerProps.flavor}
-                                            sessionIcon={headerProps.sessionIcon}
-                                        />
-                                    </Pressable>
-                                )}
-                            </View>
-                        ) : undefined}
-                    />
-                    {/* Voice status bar below header - not on tablet (shown in sidebar) */}
-                    {!isTablet && realtimeStatus !== 'disconnected' && (
-                        <VoiceAssistantStatusBar variant="full" />
-                    )}
-                </View>
-            )}
+            {/* Native header config — iOS uses system header, Android/Web go through createHeader */}
+            <Stack.Screen
+                options={{
+                    headerShown: !(isLandscape && deviceType === 'phone' && Platform.OS !== 'web'),
+                    headerBackTitle: '',
+                    headerTitle: () => (
+                        <ChatHeaderTitle
+                            title={headerProps.title}
+                            subtitle={headerProps.subtitle}
+                        />
+                    ),
+                    headerRight: session ? () => (
+                        <ChatHeaderRight
+                            avatarId={headerProps.avatarId}
+                            isConnected={headerProps.isConnected}
+                            flavor={headerProps.flavor}
+                            sessionIcon={headerProps.sessionIcon}
+                            onAvatarPress={headerProps.onAvatarPress}
+                            hasRuns={hasRuns}
+                            runningTaskCount={runningTaskCount}
+                            onOpenRuns={handleOpenSessionRuns}
+                        />
+                    ) : undefined,
+                }}
+            />
 
             {/* Content based on state */}
-            <View style={{ flex: 1, paddingTop: !(isLandscape && deviceType === 'phone' && Platform.OS !== 'web') ? safeArea.top + headerHeight + (!isTablet && realtimeStatus !== 'disconnected' ? 48 : 0) : 0 }}>
+            <View style={{ flex: 1 }}>
+                {/* Voice status bar below header - not on tablet (shown in sidebar), hidden in landscape phone */}
+                {!(isLandscape && deviceType === 'phone' && Platform.OS !== 'web') && !isTablet && realtimeStatus !== 'disconnected' && (
+                    <VoiceAssistantStatusBar variant="full" />
+                )}
                 {!isDataReady ? (
                     // Loading state - initial data not ready
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -1056,3 +997,84 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         </>
     )
 }
+
+const ChatHeaderRight = React.memo((props: {
+    avatarId?: string;
+    isConnected?: boolean;
+    flavor?: string | null;
+    sessionIcon?: string | null;
+    onAvatarPress?: () => void;
+    hasRuns: boolean;
+    runningTaskCount: number;
+    onOpenRuns: () => void;
+}) => {
+    const { theme } = useUnistyles();
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {props.hasRuns && (
+                <Pressable
+                    onPress={props.onOpenRuns}
+                    hitSlop={15}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('settings.orchestratorOpenRuns')}
+                    style={{
+                        width: 38,
+                        height: 38,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 2,
+                    }}
+                >
+                    <Ionicons
+                        name="layers-outline"
+                        size={22}
+                        color={theme.colors.header.tint}
+                    />
+                    {props.runningTaskCount > 0 && (
+                        <View style={{
+                            position: 'absolute',
+                            top: 2,
+                            right: 0,
+                            backgroundColor: theme.colors.button.primary.background,
+                            borderRadius: 8,
+                            minWidth: 16,
+                            height: 16,
+                            paddingHorizontal: 3,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}>
+                            <Text style={{
+                                color: theme.colors.button.primary.tint,
+                                fontSize: 10,
+                                fontWeight: '600',
+                            }}>
+                                {props.runningTaskCount > 99 ? '99+' : props.runningTaskCount}
+                            </Text>
+                        </View>
+                    )}
+                </Pressable>
+            )}
+            {props.avatarId && props.onAvatarPress && (
+                <Pressable
+                    onPress={props.onAvatarPress}
+                    hitSlop={15}
+                    style={{
+                        width: 44,
+                        height: 44,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: Platform.select({ web: -8, default: -4 }),
+                    }}
+                >
+                    <Avatar
+                        id={props.avatarId}
+                        size={32}
+                        monochrome={!props.isConnected}
+                        flavor={props.flavor}
+                        sessionIcon={props.sessionIcon}
+                    />
+                </Pressable>
+            )}
+        </View>
+    );
+});

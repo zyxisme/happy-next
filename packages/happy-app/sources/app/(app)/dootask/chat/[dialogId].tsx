@@ -5,7 +5,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
 import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
-import { ChatHeaderView } from '@/components/ChatHeaderView';
+import { ChatHeaderTitle } from '@/components/ChatHeaderTitle';
 import { AgentContentView } from '@/components/AgentContentView';
 import { storage, useDootaskProfile, useDootaskUserCache, useDootaskUserAvatars, useDootaskUserDisabledAt } from '@/sync/storage';
 import { useShallow } from 'zustand/react/shallow';
@@ -549,7 +549,6 @@ export default React.memo(function DooTaskChat() {
         }
     }, [profile, id, dialogMembersLoading, dialogMembers.length]);
 
-    // Render ChatHeaderView directly (same style as SessionView)
     // Right side: DooTask icon / dialog avatar (tappable to open detail modal)
     const resolvedDialogAvatar = React.useMemo(() => {
         if (!dialogInfo?.avatar || !profile?.serverUrl) return null;
@@ -563,30 +562,27 @@ export default React.memo(function DooTaskChat() {
         ? `${t('dootask.taskChat')} (${dialogMembers.length})`
         : t('dootask.taskChat');
 
-    const header = React.useMemo(() => (
-        <ChatHeaderView
-            title={chatTitle}
-            subtitle={subtitle}
-            onBackPress={() => router.back()}
-            headerRight={() => (
-                <Pressable style={styles.headerIconButton} onPress={handleOpenDetail}>
-                    {resolvedDialogAvatar ? (
-                        <Image
-                            source={{ uri: resolvedDialogAvatar }}
-                            style={{ width: 28, height: 28, borderRadius: 14 }}
-                            contentFit="cover"
-                        />
-                    ) : (
-                        <Image
-                            source={require('@/assets/images/icon-dootask.png')}
-                            style={{ width: 28, height: 28 }}
-                            contentFit="contain"
-                        />
-                    )}
-                </Pressable>
+    const headerTitle = React.useCallback(() => (
+        <ChatHeaderTitle title={chatTitle} subtitle={subtitle} />
+    ), [chatTitle, subtitle]);
+
+    const headerRight = React.useCallback(() => (
+        <Pressable style={styles.headerIconButton} onPress={handleOpenDetail}>
+            {resolvedDialogAvatar ? (
+                <Image
+                    source={{ uri: resolvedDialogAvatar }}
+                    style={{ width: 28, height: 28, borderRadius: 14 }}
+                    contentFit="cover"
+                />
+            ) : (
+                <Image
+                    source={require('@/assets/images/icon-dootask.png')}
+                    style={{ width: 28, height: 28 }}
+                    contentFit="contain"
+                />
             )}
-        />
-    ), [chatTitle, subtitle, router, resolvedDialogAvatar, handleOpenDetail]);
+        </Pressable>
+    ), [styles.headerIconButton, handleOpenDetail, resolvedDialogAvatar]);
 
     // Image press -> open viewer
     // For file-upload images: show all file images as a gallery
@@ -648,8 +644,7 @@ export default React.memo(function DooTaskChat() {
 
     return (
         <>
-            <Stack.Screen options={{ headerShown: false }} />
-            {header}
+            <Stack.Screen options={{ headerTitle, headerRight, headerBackTitle: '' }} />
             <View style={[styles.body, { backgroundColor: theme.colors.surface, maxWidth: layout.maxWidth, alignSelf: 'center', width: '100%' }]}>
                 <AgentContentView
                     content={content}

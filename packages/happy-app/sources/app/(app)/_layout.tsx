@@ -48,7 +48,7 @@ export default function RootLayout() {
             <Stack.Screen
                 name="inbox/index"
                 options={{
-                    headerShown: false,
+                    headerShown: true,
                     headerTitle: t('tabs.inbox'),
                     headerBackTitle: t('common.home')
                 }}
@@ -72,7 +72,8 @@ export default function RootLayout() {
             <Stack.Screen
                 name="session/[id]"
                 options={{
-                    headerShown: false
+                    headerShown: true,
+                    headerBackTitle: ''
                 }}
             />
             <Stack.Screen

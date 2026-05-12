@@ -21,19 +21,15 @@ export default React.memo(() => {
 
     const staticRoute = STATIC_ROUTES[sessionId];
 
-    // When a static route is incorrectly matched as [id], show the header and render the static page.
-    // When transitioning away from a static route (e.g. via dangerouslySingular reuse),
-    // reset headerShown to false so the native header doesn't persist over SessionView's custom header.
+    // When a static route is incorrectly matched as [id], override the header
+    // title to match the static page. Otherwise leave the header to the chat
+    // configuration injected by SessionView.
     React.useEffect(() => {
         if (staticRoute) {
             navigation.setOptions({
                 headerShown: true,
                 headerTitle: staticRoute.title(),
                 headerBackTitle: t('common.back'),
-            });
-        } else {
-            navigation.setOptions({
-                headerShown: false,
             });
         }
     }, [staticRoute, navigation]);
