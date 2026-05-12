@@ -142,6 +142,41 @@ class ModalManagerClass implements IModal {
         this._checkboxStates.set(id, checked);
     }
 
+    private showSystemPrompt(
+        title: string,
+        message?: string,
+        options?: PromptOptions
+    ): Promise<string | null> {
+        return new Promise<string | null>((resolve) => {
+            const keyboardType = options?.inputType === 'email-address'
+                ? 'email-address'
+                : options?.inputType === 'numeric'
+                    ? 'numeric'
+                    : 'default';
+            const promptType = options?.inputType === 'secure-text' ? 'secure-text' : 'plain-text';
+
+            // @ts-ignore - Alert.prompt is iOS only and uses a slightly different signature
+            Alert.prompt(
+                title,
+                message,
+                [
+                    {
+                        text: options?.cancelText || t('common.cancel'),
+                        style: 'cancel',
+                        onPress: () => resolve(null)
+                    },
+                    {
+                        text: options?.confirmText || t('common.ok'),
+                        onPress: (text?: string) => resolve(text ?? null)
+                    }
+                ],
+                promptType,
+                options?.defaultValue,
+                keyboardType
+            );
+        });
+    }
+
     private showPromptModal(
         title: string,
         message?: string,
@@ -175,29 +210,8 @@ class ModalManagerClass implements IModal {
         message?: string,
         options?: PromptOptions
     ): Promise<string | null> {
-        if (Platform.OS === 'ios' && !options?.inputType) {
-            // Use native Alert.prompt on iOS (only supports basic text input)
-            return new Promise<string | null>((resolve) => {
-                // @ts-ignore - Alert.prompt is iOS only
-                Alert.prompt(
-                    title,
-                    message,
-                    [
-                        {
-                            text: options?.cancelText || t('common.cancel'),
-                            style: 'cancel',
-                            onPress: () => resolve(null)
-                        },
-                        {
-                            text: options?.confirmText || t('common.ok'),
-                            onPress: (text?: string) => resolve(text ?? null)
-                        }
-                    ],
-                    'plain-text',
-                    options?.defaultValue,
-                    'default'
-                );
-            });
+        if (Platform.OS === 'ios' && !options?.checkbox) {
+            return this.showSystemPrompt(title, message, options);
         }
 
         const result = this.showPromptModal(title, message, options);
