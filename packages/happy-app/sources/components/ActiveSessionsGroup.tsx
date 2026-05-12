@@ -18,7 +18,6 @@ import { Modal } from '@/modal';
 import { ProjectGitStatus } from './ProjectGitStatus';
 import { t } from '@/text';
 import { useNavigateToSession } from '@/hooks/useNavigateToSession';
-import { useIsTablet } from '@/utils/responsive';
 import { useHappyAction } from '@/hooks/useHappyAction';
 import { HappyError } from '@/utils/errors';
 import { getWorktreeInfo, cleanupWorktree } from '@/utils/worktreeOps';
@@ -367,7 +366,6 @@ const CompactSessionRow = React.memo(({ session, selected, showBorder }: { sessi
     const sessionName = getSessionName(session);
     const runningTaskCount = useOrchestratorRunningTaskCount(session.id);
     const navigateToSession = useNavigateToSession();
-    const isTablet = useIsTablet();
     const swipeableRef = React.useRef<Swipeable | null>(null);
     const swipeEnabled = Platform.OS !== 'web';
 
@@ -447,15 +445,8 @@ const CompactSessionRow = React.memo(({ session, selected, showBorder }: { sessi
                 styles.sessionRow,
                 selected && styles.sessionRowSelected
             ]}
-            onPressIn={() => {
-                if (isTablet) {
-                    navigateToSession(session.id);
-                }
-            }}
             onPress={() => {
-                if (!isTablet) {
-                    navigateToSession(session.id);
-                }
+                navigateToSession(session.id);
             }}
         >
             <View style={styles.avatarContainer}>

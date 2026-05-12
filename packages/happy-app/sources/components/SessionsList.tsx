@@ -503,7 +503,6 @@ const SessionItem = React.memo(({ session, selected, isFirst, isLast, isSingle }
     const compactSessionView = useSetting('compactSessionView');
     const runningTaskCount = useOrchestratorRunningTaskCount(session.id);
     const navigateToSession = useNavigateToSession();
-    const isTablet = useIsTablet();
     const swipeableRef = React.useRef<Swipeable | null>(null);
     const swipeEnabled = Platform.OS !== 'web';
 
@@ -543,15 +542,8 @@ const SessionItem = React.memo(({ session, selected, isFirst, isLast, isSingle }
                     isFirst ? styles.sessionItemFirst :
                         isLast ? styles.sessionItemLast : {}
             ]}
-            onPressIn={() => {
-                if (isTablet) {
-                    navigateToSession(session.id);
-                }
-            }}
             onPress={() => {
-                if (!isTablet) {
-                    navigateToSession(session.id);
-                }
+                navigateToSession(session.id);
             }}
         >
             {!compactSessionView && (
