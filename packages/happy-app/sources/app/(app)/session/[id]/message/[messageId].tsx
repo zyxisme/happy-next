@@ -97,18 +97,6 @@ export default React.memo(() => {
             {message && message.kind === 'tool-call' && message.tool && (
                 <Stack.Screen
                     options={{
-                        headerLeft: () => (
-                            <Pressable
-                                onPress={() => router.back()}
-                                style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-                            >
-                                <Ionicons
-                                    name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
-                                    size={Platform.OS === 'ios' ? 28 : 24}
-                                    color={theme.colors.header.tint}
-                                />
-                            </Pressable>
-                        ),
                         headerTitle: () => <ToolHeader tool={message.tool} maxWidth={headerTitleMaxWidth} />,
                         headerRight: () => <ToolStatusIndicator tool={message.tool} />,
                         headerStyle: {

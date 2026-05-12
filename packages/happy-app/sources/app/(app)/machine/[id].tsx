@@ -540,18 +540,6 @@ export default function MachineDetailScreen() {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    headerLeft: () => (
-                        <Pressable
-                            onPress={() => router.back()}
-                            style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-                        >
-                            <Ionicons
-                                name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
-                                size={Platform.OS === 'ios' ? 28 : 24}
-                                color={theme.colors.header.tint}
-                            />
-                        </Pressable>
-                    ),
                     headerTitle: () => (
                         <View style={{ alignItems: 'center', justifyContent: 'center', maxWidth: headerTitleMaxWidth }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', maxWidth: '100%' }}>

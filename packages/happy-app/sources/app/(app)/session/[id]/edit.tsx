@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, ActivityIndicator, Pressable, Keyboard, Platform, KeyboardAvoidingView as RNKeyboardAvoidingView } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useLocalSearchParams, Stack } from 'expo-router';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Crypto from 'expo-crypto';
 import { Text } from '@/components/StyledText';
 import { Typography } from '@/constants/Typography';
@@ -130,7 +130,7 @@ function getEditorLanguage(path: string): string {
 }
 
 export default function EditScreen() {
-    const router = useRouter();
+    const navigation = useNavigation();
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
     const { id: sessionId } = useLocalSearchParams<{ id: string }>();
@@ -282,17 +282,23 @@ export default function EditScreen() {
         }
     }, [content, hasChanges, isSaving, originalHash, sessionId, filePath]);
 
-    // Confirm discard on back navigation
-    const handleBack = React.useCallback(async () => {
-        if (hasChanges) {
-            const confirmed = await Modal.confirm(
+    // Intercept back navigation (system button, gesture, custom) to confirm discard
+    const allowExitRef = React.useRef(false);
+    React.useEffect(() => {
+        return navigation.addListener('beforeRemove', (e) => {
+            if (allowExitRef.current || !hasChanges) return;
+            e.preventDefault();
+            Modal.confirm(
                 t('common.discard'),
                 t('artifacts.discardChangesDescription'),
-            );
-            if (!confirmed) return;
-        }
-        router.back();
-    }, [hasChanges, router]);
+            ).then((confirmed) => {
+                if (confirmed) {
+                    allowExitRef.current = true;
+                    navigation.dispatch(e.data.action);
+                }
+            });
+        });
+    }, [navigation, hasChanges]);
 
     if (isLoading) {
         return (
@@ -320,11 +326,6 @@ export default function EditScreen() {
             <Stack.Screen
                 options={{
                     headerTitle: fileName,
-                    headerLeft: () => (
-                        <Pressable onPress={handleBack} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
-                            <Ionicons name="chevron-back" size={24} color={theme.colors.header.tint} />
-                        </Pressable>
-                    ),
                     headerRight: () => (
                         <Pressable
                             onPress={handleSave}
@@ -342,7 +343,6 @@ export default function EditScreen() {
                             )}
                         </Pressable>
                     ),
-                    headerBackVisible: false,
                 }}
             />
             {Platform.OS === 'ios' ? (

@@ -26,7 +26,7 @@ import { AgentContentView } from '@/components/AgentContentView';
 import { randomUUID } from 'expo-crypto';
 import { Image } from 'expo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '@/text';
@@ -684,7 +684,6 @@ const MessageItem = React.memo(({ message, onRetry }: MessageItemProps) => {
 });
 
 export default function OpenClawChatPage() {
-    const router = useRouter();
     const { theme } = useUnistyles();
     const safeArea = useSafeAreaInsets();
     const { width: screenWidth } = useWindowDimensions();
@@ -1159,18 +1158,6 @@ export default function OpenClawChatPage() {
         <View style={styles.container}>
             <Stack.Screen
                 options={{
-                    headerLeft: () => (
-                        <Pressable
-                            onPress={() => router.back()}
-                            style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-                        >
-                            <Ionicons
-                                name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
-                                size={Platform.OS === 'ios' ? 28 : 24}
-                                color={theme.colors.header.tint}
-                            />
-                        </Pressable>
-                    ),
                     headerTitle: () => (
                         <View style={{ alignItems: 'center', justifyContent: 'center', maxWidth: headerTitleMaxWidth }}>
                             <Text

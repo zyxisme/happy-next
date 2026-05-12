@@ -157,18 +157,6 @@ export default function OpenClawNewSessionPage() {
         <View style={styles.container}>
             <Stack.Screen
                 options={{
-                    headerLeft: () => (
-                        <Pressable
-                            onPress={() => router.back()}
-                            style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-                        >
-                            <Ionicons
-                                name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
-                                size={Platform.OS === 'ios' ? 28 : 24}
-                                color={theme.colors.header.tint}
-                            />
-                        </Pressable>
-                    ),
                     headerTitle: () => (
                         <View style={{ alignItems: 'center', justifyContent: 'center', maxWidth: headerTitleMaxWidth }}>
                             <Text
@@ -195,7 +183,6 @@ export default function OpenClawNewSessionPage() {
                             </View>
                         </View>
                     ),
-                    headerRight: () => <View style={{ width: 24, height: 24 }} />,
                 }}
             />
             <ScrollView

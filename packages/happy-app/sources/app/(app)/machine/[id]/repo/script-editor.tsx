@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { View, ActivityIndicator, Pressable, Keyboard, Platform, KeyboardAvoidingView as RNKeyboardAvoidingView } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, Stack, useFocusEffect } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { Text } from '@/components/StyledText';
 import { Typography } from '@/constants/Typography';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,7 +33,7 @@ interface ScriptEditorData {
  * Saves changes back to Zustand store + server KV via saveRegisteredRepos.
  */
 export default React.memo(function ScriptEditorScreen() {
-    const router = useRouter();
+    const navigation = useNavigation();
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
     const editorRef = React.useRef<CodeEditorHandle>(null);
@@ -126,17 +127,23 @@ export default React.memo(function ScriptEditorScreen() {
         }
     }, [content, hasChanges, isSaving, data]);
 
-    // Confirm discard on back navigation
-    const handleBack = React.useCallback(async () => {
-        if (hasChanges) {
-            const confirmed = await Modal.confirm(
+    // Intercept back navigation (system button, gesture, custom) to confirm discard
+    const allowExitRef = React.useRef(false);
+    React.useEffect(() => {
+        return navigation.addListener('beforeRemove', (e) => {
+            if (allowExitRef.current || !hasChanges) return;
+            e.preventDefault();
+            Modal.confirm(
                 t('common.discard'),
                 t('artifacts.discardChangesDescription'),
-            );
-            if (!confirmed) return;
-        }
-        router.back();
-    }, [hasChanges, router]);
+            ).then((confirmed) => {
+                if (confirmed) {
+                    allowExitRef.current = true;
+                    navigation.dispatch(e.data.action);
+                }
+            });
+        });
+    }, [navigation, hasChanges]);
 
     // If temp data was not found, show nothing (edge case: expired data)
     if (!data) {
@@ -184,11 +191,6 @@ export default React.memo(function ScriptEditorScreen() {
             <Stack.Screen
                 options={{
                     headerTitle: data.title,
-                    headerLeft: () => (
-                        <Pressable onPress={handleBack} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
-                            <Ionicons name="chevron-back" size={24} color={theme.colors.header.tint} />
-                        </Pressable>
-                    ),
                     headerRight: () => (
                         <Pressable
                             onPress={handleSave}
@@ -206,7 +208,6 @@ export default React.memo(function ScriptEditorScreen() {
                             )}
                         </Pressable>
                     ),
-                    headerBackVisible: false,
                     headerTitleAlign: 'center',
                 }}
             />
