@@ -1,9 +1,10 @@
 import { useSocketStatus, useFriendRequests } from '@/sync/storage';
 import * as React from 'react';
-import { Text, View, Pressable, useWindowDimensions } from 'react-native';
+import { Text, View, Pressable, useWindowDimensions, Dimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useHeaderHeight } from '@/utils/responsive';
+import { isRunningOnMac } from '@/utils/platform';
 import { Typography } from '@/constants/Typography';
 import { StatusDot } from './StatusDot';
 import { FABWide } from './FABWide';
@@ -189,6 +190,16 @@ export const SidebarView = React.memo(() => {
     // 3 icons (108px total), threshold 328px → left-justify below ~340px
     const shouldLeftJustify = sidebarWidth < 340 || !!dootaskProfile;
 
+    // iPad Stage Manager / Mac Catalyst draws window controls (traffic lights)
+    // at the top-left, OUTSIDE of safeAreaInsets — system chrome that overlays
+    // the app's content. Detect the most common cases via heuristic and reserve
+    // ~80px so the logo/title clear them. (A real fix would need a native module
+    // calling iOS 26's window control APIs.)
+    const screenWidth = Dimensions.get('screen').width;
+    const isWindowedIos = Platform.OS === 'ios' && windowWidth < screenWidth - 1;
+    const hasWindowControls = isWindowedIos || isRunningOnMac();
+    const windowControlsInset = hasWindowControls ? 80 : 0;
+
     const handleNewSession = React.useCallback(() => {
         router.push('/new');
     }, [router]);
@@ -216,7 +227,7 @@ export const SidebarView = React.memo(() => {
     return (
         <>
             <View style={[styles.container, { paddingTop: safeArea.top }]}>
-                <View style={[styles.header, { height: headerHeight, paddingLeft: safeArea.left + 16 }]}>
+                <View style={[styles.header, { height: headerHeight, paddingLeft: Math.max(safeArea.left, windowControlsInset) + 16 }]}>
                     {/* Logo - always first */}
                     <Pressable style={styles.logoContainer} onPress={() => router.push('/(app)')}>
                         <Image
