@@ -17,6 +17,7 @@ interface AvatarProps {
     imageUrl?: string | null;
     thumbhash?: string | null;
     sessionIcon?: string | null;  // preset key, image URL (http/https), or emoji
+    hideBadges?: boolean;  // when true, skip flavor / sessionIcon overlays
 }
 
 const flavorIcons = {
@@ -68,7 +69,7 @@ const styles = StyleSheet.create((theme) => ({
 }));
 
 export const Avatar = React.memo((props: AvatarProps) => {
-    const { flavor, size = 48, imageUrl, thumbhash, sessionIcon, ...avatarProps } = props;
+    const { flavor, size = 48, imageUrl, thumbhash, sessionIcon, hideBadges, ...avatarProps } = props;
     const avatarStyle = useSetting('avatarStyle');
     const showFlavorIcons = useSetting('showFlavorIcons');
     const { theme } = useUnistyles();
@@ -134,8 +135,8 @@ export const Avatar = React.memo((props: AvatarProps) => {
             />
         );
 
-        const hasSessionIcon = !!sessionIcon;
-        const hasFlavorIcon = showFlavorIcons && !!flavor;
+        const hasSessionIcon = !hideBadges && !!sessionIcon;
+        const hasFlavorIcon = !hideBadges && showFlavorIcons && !!flavor;
 
         if (hasSessionIcon || hasFlavorIcon) {
             const sessionIconRight = hasFlavorIcon ? Math.round(circleSize * 0.55) : -2;
@@ -176,8 +177,8 @@ export const Avatar = React.memo((props: AvatarProps) => {
         AvatarComponent = AvatarGradient;
     }
 
-    const hasSessionIcon = !!sessionIcon;
-    const hasFlavorIcon = !!showFlavorIcons; // Generated avatars always show flavor icon when setting is on
+    const hasSessionIcon = !hideBadges && !!sessionIcon;
+    const hasFlavorIcon = !hideBadges && !!showFlavorIcons; // Generated avatars always show flavor icon when setting is on
 
     if (hasSessionIcon || hasFlavorIcon) {
         // Compute offset: when both badges shown, sessionIcon shifts left

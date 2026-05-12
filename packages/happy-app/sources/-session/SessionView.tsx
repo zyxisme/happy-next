@@ -1065,6 +1065,7 @@ const ChatHeaderRight = React.memo((props: {
                         id={props.avatarId}
                         size={36}
                         monochrome={!props.isConnected}
+                        hideBadges
                     />
                 </Pressable>
             )}
