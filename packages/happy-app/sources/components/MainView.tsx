@@ -71,8 +71,8 @@ const styles = StyleSheet.create((theme) => ({
         flexGrow: 1,
     },
     titleContainer: {
-        flex: 1,
         alignItems: 'center',
+        justifyContent: 'center',
     },
     titleText: {
         fontSize: 17,
