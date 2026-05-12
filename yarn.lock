@@ -12747,6 +12747,15 @@ react-native-audio-api@^0.12.1:
   dependencies:
     semver "^7.7.3"
 
+react-native-bottom-tabs@1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/react-native-bottom-tabs/-/react-native-bottom-tabs-1.2.0.tgz#c937cec4da07840ff8693e6064e7e88fa993c097"
+  integrity sha512-ScVPko86ts+m6JMNtI24MCSYJCOZc1aZkn9qwS9ly3o0ubajRWDpCzgRJfRFysi08bKrcqAXKVCHZNHvNb2PTA==
+  dependencies:
+    react-freeze "^1.0.0"
+    sf-symbols-typescript "^2.0.0"
+    use-latest-callback "^0.2.1"
+
 react-native-device-info@^14.1.1:
   version "14.1.1"
   resolved "https://registry.yarnpkg.com/react-native-device-info/-/react-native-device-info-14.1.1.tgz#f50c03902f87e4a99b1c51ed85163b795f02b3ea"
@@ -13797,7 +13806,7 @@ setprototypeof@~1.2.0:
   resolved "https://registry.yarnpkg.com/setprototypeof/-/setprototypeof-1.2.0.tgz#66c9a24a73f9fc28cbe66b09fed3d33dcaf1b424"
   integrity sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==
 
-sf-symbols-typescript@^2.1.0:
+sf-symbols-typescript@^2.0.0, sf-symbols-typescript@^2.1.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/sf-symbols-typescript/-/sf-symbols-typescript-2.2.0.tgz#926d6e0715e3d8784cadf7658431e36581254208"
   integrity sha512-TPbeg0b7ylrswdGCji8FRGFAKuqbpQlLbL8SOle3j1iHSs5Ob5mhvMAxWN2UItOjgALAB5Zp3fmMfj8mbWvXKw==

@@ -117,6 +117,7 @@ export default {
             "react-native-audio-api",
             "@livekit/react-native-expo-plugin",
             "@config-plugins/react-native-webrtc",
+            "react-native-bottom-tabs",
             [
                 "expo-audio",
                 {

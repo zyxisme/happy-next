@@ -1,8 +1,10 @@
 import * as React from 'react';
-import { View, ActivityIndicator, Text, Pressable } from 'react-native';
+import { View, ActivityIndicator, Text, Pressable, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import TabView from 'react-native-bottom-tabs';
 import { useFriendRequests, useSocketStatus, useRealtimeStatus, useDootaskProfile } from '@/sync/storage';
 import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
+import { useInboxHasContent } from '@/hooks/useInboxHasContent';
 import { useIsTablet } from '@/utils/responsive';
 import { useRouter, Stack } from 'expo-router';
 import { EmptySessionsTablet } from './EmptySessionsTablet';
@@ -242,10 +244,18 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     const friendRequests = useFriendRequests();
     const realtimeStatus = useRealtimeStatus();
     const dootaskProfile = useDootaskProfile();
+    const inboxHasContent = useInboxHasContent();
     const showDootaskTab = !!dootaskProfile;
 
     // Tab state management
     const [activeTab, setActiveTab] = React.useState<TabType>('sessions');
+
+    // If user is on a tab that becomes unavailable, snap back to sessions
+    React.useEffect(() => {
+        if (!showDootaskTab && activeTab === 'dootask') {
+            setActiveTab('sessions');
+        }
+    }, [showDootaskTab, activeTab]);
 
     const handleNewSession = React.useCallback(() => {
         router.push('/new');
@@ -273,7 +283,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
         router.push('/dootask/add-project');
     }, [router]);
 
-    // Regular phone mode with tabs - define this before any conditional returns
+    // Web fallback content swap
     const renderTabContent = React.useCallback(() => {
         switch (activeTab) {
             case 'inbox':
@@ -287,6 +297,55 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
                 return <SessionsListWrapper />;
         }
     }, [activeTab]);
+
+    // Native tab routes for react-native-bottom-tabs
+    const inboxBadge = friendRequests.length > 0
+        ? (friendRequests.length > 99 ? '99+' : String(friendRequests.length))
+        : (inboxHasContent ? '·' : undefined);
+
+    type NativeTabRoute = {
+        key: TabType;
+        title: string;
+        focusedIcon: any;
+        badge?: string;
+    };
+    const nativeTabRoutes: NativeTabRoute[] = [
+        {
+            key: 'sessions',
+            title: t('tabs.sessions'),
+            focusedIcon: require('@/assets/images/brutalist/Brutalism 15.png'),
+        },
+        {
+            key: 'inbox',
+            title: t('tabs.inbox'),
+            focusedIcon: require('@/assets/images/brutalist/Brutalism 27.png'),
+            badge: inboxBadge,
+        },
+        ...(showDootaskTab ? [{
+            key: 'dootask' as const,
+            title: t('tabs.dootask'),
+            focusedIcon: require('@/assets/images/brutalist/Specified 2.png'),
+        }] : []),
+        {
+            key: 'settings',
+            title: t('tabs.settings'),
+            focusedIcon: require('@/assets/images/brutalist/Brutalism 9.png'),
+        },
+    ];
+    const nativeActiveIndex = Math.max(0, nativeTabRoutes.findIndex(r => r.key === activeTab));
+    const handleNativeIndexChange = React.useCallback((idx: number) => {
+        const next = nativeTabRoutes[idx];
+        if (next) setActiveTab(next.key);
+    }, [nativeTabRoutes]);
+    const renderNativeScene = React.useCallback(({ route }: { route: NativeTabRoute }) => {
+        switch (route.key) {
+            case 'sessions': return <SessionsListWrapper />;
+            case 'inbox': return <InboxView />;
+            case 'dootask': return <DooTaskListView />;
+            case 'settings': return <SettingsViewWrapper />;
+            default: return null;
+        }
+    }, []);
 
     // Sidebar variant
     if (variant === 'sidebar') {
@@ -329,38 +388,68 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     }
 
     // Regular phone mode with tabs
+    const stackScreen = (
+        <Stack.Screen
+            options={{
+                headerShown: true,
+                headerShadowVisible: false,
+                headerStyle: { backgroundColor: theme.colors.groupped.background },
+                headerTitle: () => <HeaderTitle activeTab={activeTab as ActiveTabType} />,
+                headerLeft: () => <HeaderLogo />,
+                headerRight: () => <HeaderRight activeTab={activeTab as ActiveTabType} onDootaskCreate={handleCreatePress} />,
+            }}
+        />
+    );
+
+    const dootaskSheet = showDootaskTab && (
+        <DooTaskCreateSheet
+            visible={createMenuVisible}
+            onClose={handleCreateMenuClose}
+            onSelectTask={handleSelectTask}
+            onSelectProject={handleSelectProject}
+        />
+    );
+
+    // Web: keep state-based content swap + custom TabBar (no native tab bar primitives on web)
+    if (Platform.OS === 'web') {
+        return (
+            <>
+                {stackScreen}
+                <View style={styles.phoneContainer}>
+                    {realtimeStatus !== 'disconnected' && (
+                        <VoiceAssistantStatusBar variant="full" />
+                    )}
+                    {renderTabContent()}
+                </View>
+                <TabBar
+                    activeTab={activeTab}
+                    onTabPress={handleTabPress}
+                    inboxBadgeCount={friendRequests.length}
+                    showDootaskTab={showDootaskTab}
+                />
+                {dootaskSheet}
+            </>
+        );
+    }
+
+    // Native (iOS / Android): use real UITabBar / Material BottomNavigationView
     return (
         <>
-            <Stack.Screen
-                options={{
-                    headerShown: true,
-                    headerShadowVisible: false,
-                    headerStyle: { backgroundColor: theme.colors.groupped.background },
-                    headerTitle: () => <HeaderTitle activeTab={activeTab as ActiveTabType} />,
-                    headerLeft: () => <HeaderLogo />,
-                    headerRight: () => <HeaderRight activeTab={activeTab as ActiveTabType} onDootaskCreate={handleCreatePress} />,
-                }}
-            />
+            {stackScreen}
             <View style={styles.phoneContainer}>
                 {realtimeStatus !== 'disconnected' && (
                     <VoiceAssistantStatusBar variant="full" />
                 )}
-                {renderTabContent()}
-            </View>
-            <TabBar
-                activeTab={activeTab}
-                onTabPress={handleTabPress}
-                inboxBadgeCount={friendRequests.length}
-                showDootaskTab={showDootaskTab}
-            />
-            {showDootaskTab && (
-                <DooTaskCreateSheet
-                    visible={createMenuVisible}
-                    onClose={handleCreateMenuClose}
-                    onSelectTask={handleSelectTask}
-                    onSelectProject={handleSelectProject}
+                <TabView
+                    navigationState={{ index: nativeActiveIndex, routes: nativeTabRoutes }}
+                    onIndexChange={handleNativeIndexChange}
+                    renderScene={renderNativeScene}
+                    tabBarActiveTintColor={theme.colors.text}
+                    tabBarInactiveTintColor={theme.colors.textSecondary}
+                    hapticFeedbackEnabled
                 />
-            )}
+            </View>
+            {dootaskSheet}
         </>
     );
 });
