@@ -22,7 +22,7 @@ export default function RootLayout() {
             initialRouteName='index'
             screenOptions={{
                 header: shouldUseCustomHeader ? createHeader : undefined,
-                headerBackTitle: t('common.back'),
+                headerBackButtonDisplayMode: 'minimal',
                 headerShadowVisible: false,
                 contentStyle: {
                     backgroundColor: theme.colors.surface,
