@@ -216,7 +216,7 @@ export const SidebarView = React.memo(() => {
     return (
         <>
             <View style={[styles.container, { paddingTop: safeArea.top }]}>
-                <View style={[styles.header, { height: headerHeight }]}>
+                <View style={[styles.header, { height: headerHeight, paddingLeft: safeArea.left + 16 }]}>
                     {/* Logo - always first */}
                     <Pressable style={styles.logoContainer} onPress={() => router.push('/(app)')}>
                         <Image
