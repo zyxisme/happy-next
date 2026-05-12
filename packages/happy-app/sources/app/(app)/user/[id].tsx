@@ -611,7 +611,7 @@ const styles = StyleSheet.create((theme) => ({
         ...Typography.default(),
     },
     sharedSessionDivider: {
-        height: Platform.select({ ios: 0.33, default: 0 }),
+        height: Platform.select({ ios: StyleSheet.hairlineWidth, default: 0 }),
         backgroundColor: theme.colors.divider,
     },
 }));

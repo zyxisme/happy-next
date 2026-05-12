@@ -106,7 +106,7 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         flexShrink: 1,
     },
     divider: {
-        height: Platform.select({ ios: 0.33, default: 0 }),
+        height: Platform.select({ ios: StyleSheet.hairlineWidth, default: 0 }),
         backgroundColor: theme.colors.divider,
     },
     pressablePressed: {

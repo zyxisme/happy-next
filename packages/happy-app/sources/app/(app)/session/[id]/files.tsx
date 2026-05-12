@@ -432,7 +432,7 @@ export default function FilesScreen() {
             {/* Repo Selector for multi-repo workspaces */}
             {workspaceRepos.length > 1 && (
                 <View style={{
-                    borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                    borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                     borderBottomColor: theme.colors.divider,
                 }}>
                     <RepoSelector
@@ -446,7 +446,7 @@ export default function FilesScreen() {
             {/* Search Input */}
             <View style={{
                 padding: 16,
-                borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                 borderBottomColor: theme.colors.divider
             }}>
                 <View style={{
@@ -480,7 +480,7 @@ export default function FilesScreen() {
             {!isLoading && gitStatusFiles && (
                 <View style={{
                     padding: 16,
-                    borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                    borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                     borderBottomColor: theme.colors.divider
                 }}>
                     <View style={{
@@ -606,7 +606,7 @@ export default function FilesScreen() {
                                     backgroundColor: theme.colors.surfaceHigh,
                                     paddingHorizontal: 16,
                                     paddingVertical: 12,
-                                    borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                                    borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                                     borderBottomColor: theme.colors.divider
                                 }}>
                                     <Text style={{
@@ -643,7 +643,7 @@ export default function FilesScreen() {
                                         backgroundColor: theme.colors.surfaceHigh,
                                         paddingHorizontal: 16,
                                         paddingVertical: 12,
-                                        borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                                        borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                                         borderBottomColor: theme.colors.divider,
                                         flexDirection: 'row',
                                         alignItems: 'center',
@@ -692,7 +692,7 @@ export default function FilesScreen() {
                                         backgroundColor: theme.colors.surfaceHigh,
                                         paddingHorizontal: 16,
                                         paddingVertical: 12,
-                                        borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                                        borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                                         borderBottomColor: theme.colors.divider,
                                         flexDirection: 'row',
                                         alignItems: 'center',

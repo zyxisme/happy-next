@@ -696,7 +696,7 @@ export default function FileScreen() {
 
             {/* File path header - single line, scrollable, long press to copy */}
             <View style={{
-                borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                 borderBottomColor: theme.colors.divider,
                 backgroundColor: theme.colors.surfaceHigh,
                 flexDirection: 'row',
@@ -757,7 +757,7 @@ export default function FileScreen() {
                             flexDirection: 'row',
                             paddingHorizontal: 16,
                             paddingVertical: 12,
-                            borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                            borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                             borderBottomColor: theme.colors.divider,
                             backgroundColor: theme.colors.surface
                         }}>

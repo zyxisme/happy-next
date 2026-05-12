@@ -253,7 +253,7 @@ export default function BrowserScreen() {
                 <View style={{
                     padding: 12,
                     paddingTop: 8,
-                    borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                    borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                     borderBottomColor: theme.colors.divider,
                     backgroundColor: theme.colors.surfaceHigh,
                 }}>
@@ -298,7 +298,7 @@ export default function BrowserScreen() {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     style={{
-                        borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                        borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                         borderBottomColor: theme.colors.divider,
                         backgroundColor: theme.colors.surfaceHigh,
                         flexGrow: 0,

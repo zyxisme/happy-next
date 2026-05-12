@@ -212,7 +212,7 @@ function ToolDiffScreen() {
 
             {/* File path header */}
             <View style={{
-                borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                 borderBottomColor: theme.colors.divider,
                 backgroundColor: theme.colors.surfaceHigh,
                 flexDirection: 'row',

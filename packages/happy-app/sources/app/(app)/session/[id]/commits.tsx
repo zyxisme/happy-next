@@ -271,7 +271,7 @@ export default function CommitsScreen() {
                 alignItems: 'center',
                 paddingHorizontal: 16,
                 paddingVertical: 14,
-                borderBottomWidth: index < commits.length - 1 ? Platform.select({ ios: 0.33, default: 1 }) : 0,
+                borderBottomWidth: index < commits.length - 1 ? Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }) : 0,
                 borderBottomColor: theme.colors.divider,
             }}
         >
@@ -392,7 +392,7 @@ export default function CommitsScreen() {
                     <View>
                         {workspaceRepos.length > 1 && (
                             <View style={{
-                                borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                                borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                                 borderBottomColor: theme.colors.divider,
                             }}>
                                 <RepoSelector
@@ -410,7 +410,7 @@ export default function CommitsScreen() {
                                     alignItems: 'center',
                                     paddingHorizontal: 16,
                                     paddingVertical: 10,
-                                    borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                                    borderBottomWidth: Platform.select({ ios: StyleSheet.hairlineWidth, default: 1 }),
                                     borderBottomColor: theme.colors.divider,
                                     backgroundColor: theme.colors.surfaceHigh,
                                 }}
