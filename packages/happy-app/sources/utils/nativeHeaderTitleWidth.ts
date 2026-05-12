@@ -4,7 +4,8 @@ import { isRunningOnMac } from '@/utils/platform';
 // Reference: iPhone 14/15 Pro Max width (430pt). `base` is the title width at that screen size
 // for the given right-action count (1 ≈ back + 1 button, 2 ≈ back + 2 buttons). `min`/`max` clamp
 // the scaled value for small phones and tablets. Returns undefined on Web/Mac so the platform's
-// native header layout handles sizing.
+// native header layout handles sizing. Web still uses this for our custom header,
+// but with the effective centered content width clamped by the caller.
 const BASE_SCREEN_WIDTH = 430;
 
 const WIDTH_BY_ACTION_COUNT = {
@@ -28,7 +29,7 @@ export function getNativeHeaderTitleWidth(options: {
     rightActionCount?: number;
     leftActionCount?: number;
 }): number | undefined {
-    if (Platform.OS === 'web' || isRunningOnMac()) {
+    if (isRunningOnMac()) {
         return undefined;
     }
 

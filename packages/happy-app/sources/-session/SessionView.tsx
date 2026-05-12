@@ -1,4 +1,5 @@
 import { AgentContentView } from '@/components/AgentContentView';
+import { layout } from '@/components/layout';
 import { AgentInput } from '@/components/AgentInput';
 import { Avatar } from '@/components/Avatar';
 import { MultiTextInputHandle } from '@/components/MultiTextInput';
@@ -32,7 +33,7 @@ import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import { isVersionSupported, useLatestCliVersion } from '@/utils/versionUtils';
 import { log } from '@/log';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused, useNavigation } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import * as React from 'react';
 import { useMemo } from 'react';
@@ -45,6 +46,7 @@ const SILENT_REFRESH_FAILED_TIMEOUT_MS = 12000;
 export const SessionView = React.memo((props: { id: string }) => {
     const sessionId = props.id;
     const router = useRouter();
+    const navigation = useNavigation();
     const session = useSession(sessionId);
     const isDataReady = useIsDataReady();
     const { theme } = useUnistyles();
@@ -62,8 +64,17 @@ export const SessionView = React.memo((props: { id: string }) => {
         router.push(`/orchestrator?controllerSessionId=${encodeURIComponent(sessionId)}`);
     }, [router, sessionId]);
 
+    const handleBackPress = React.useCallback(() => {
+        if (navigation.canGoBack()) {
+            router.back();
+        } else {
+            router.replace('/');
+        }
+    }, [navigation, router]);
+
     const headerTitleWidth = getNativeHeaderTitleWidth({
-        screenWidth,
+        screenWidth: Math.min(screenWidth, layout.headerMaxWidth),
+        leftActionCount: Platform.OS === 'web' ? 1 : undefined,
         rightActionCount: hasRuns ? 2 : 1,
     });
 
@@ -181,6 +192,9 @@ export const SessionView = React.memo((props: { id: string }) => {
                             width={headerTitleWidth}
                         />
                     ),
+                    headerLeft: Platform.OS === 'web' ? () => (
+                        <SessionHeaderBackButton onPress={handleBackPress} />
+                    ) : undefined,
                     headerRight: session ? () => (
                         <ChatHeaderRight
                             avatarId={headerProps.avatarId}
@@ -1005,6 +1019,31 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         </>
     )
 }
+
+
+const SessionHeaderBackButton = React.memo((props: { onPress: () => void }) => {
+    const { theme } = useUnistyles();
+    return (
+        <Pressable
+            onPress={props.onPress}
+            hitSlop={15}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+            style={{
+                width: 38,
+                height: 38,
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}
+        >
+            <Ionicons
+                name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
+                size={Platform.OS === 'ios' ? 28 : 24}
+                color={theme.colors.header.tint}
+            />
+        </Pressable>
+    );
+});
 
 const ChatHeaderRight = React.memo((props: {
     avatarId?: string;
