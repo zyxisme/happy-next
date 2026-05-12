@@ -51,7 +51,7 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         flex: 1,
         flexDirection: 'column',
         alignItems: 'flex-start',
-        marginLeft: 8,
+        marginLeft: 4,
         justifyContent: 'center',
     },
     titleText: {
@@ -185,7 +185,7 @@ export const SidebarView = React.memo(() => {
 
     // Calculate sidebar width and determine title positioning
     // Uses same formula as SidebarNavigator.tsx:18 for consistency
-    const { width: windowWidth } = useWindowDimensions();
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const sidebarWidth = Math.min(Math.max(Math.floor(windowWidth * 0.3), 250), 360);
     // 3 icons (108px total), threshold 328px → left-justify below ~340px
     const shouldLeftJustify = sidebarWidth < 340 || !!dootaskProfile;
@@ -193,12 +193,13 @@ export const SidebarView = React.memo(() => {
     // iPad Stage Manager / Mac Catalyst draws window controls (traffic lights)
     // at the top-left, OUTSIDE of safeAreaInsets — system chrome that overlays
     // the app's content. Detect the most common cases via heuristic and reserve
-    // ~80px so the logo/title clear them. (A real fix would need a native module
+    // ~60px so the logo/title clear them. (A real fix would need a native module
     // calling iOS 26's window control APIs.)
     const screenWidth = Dimensions.get('screen').width;
-    const isWindowedIos = Platform.OS === 'ios' && windowWidth < screenWidth - 1;
+    const screenHeight = Dimensions.get('screen').height;
+    const isWindowedIos = Platform.OS === 'ios' && (windowWidth < screenWidth - 1 || windowHeight < screenHeight - 1);
     const hasWindowControls = isWindowedIos || isRunningOnMac();
-    const windowControlsInset = hasWindowControls ? 80 : 0;
+    const windowControlsInset = hasWindowControls ? 60 : 0;
 
     const handleNewSession = React.useCallback(() => {
         router.push('/new');
@@ -229,7 +230,7 @@ export const SidebarView = React.memo(() => {
             <View style={[styles.container, { paddingTop: safeArea.top }]}>
                 <View style={[styles.header, { height: headerHeight, paddingLeft: Math.max(safeArea.left, windowControlsInset) + 16 }]}>
                     {/* Logo - always first */}
-                    <Pressable style={styles.logoContainer} onPress={() => router.push('/(app)')}>
+                    <Pressable style={styles.logoContainer} onPress={() => router.navigate('/(app)')}>
                         <Image
                             source={theme.dark ? require('@/assets/images/logo-white.png') : require('@/assets/images/logo-black.png')}
                             contentFit="contain"
@@ -247,7 +248,7 @@ export const SidebarView = React.memo(() => {
                     {/* Navigation icons */}
                     <View style={styles.rightContainer}>
                         <Pressable
-                            onPress={() => router.push('/(app)/inbox')}
+                            onPress={() => router.navigate('/(app)/inbox')}
                             hitSlop={15}
                             style={styles.notificationButton}
                         >
@@ -270,7 +271,7 @@ export const SidebarView = React.memo(() => {
                         </Pressable>
                         {!!dootaskProfile && (
                             <Pressable
-                                onPress={() => router.push('/(app)/dootask')}
+                                onPress={() => router.navigate('/(app)/dootask')}
                                 hitSlop={15}
                             >
                                 <Image
@@ -282,18 +283,7 @@ export const SidebarView = React.memo(() => {
                             </Pressable>
                         )}
                         <Pressable
-                            onPress={() => router.push('/(app)/openclaw')}
-                            hitSlop={15}
-                        >
-                            <Image
-                                source={require('@/assets/images/brutalist/Brutalism 117.png')}
-                                contentFit="contain"
-                                style={[{ width: 32, height: 32 }]}
-                                tintColor={theme.colors.header.tint}
-                            />
-                        </Pressable>
-                        <Pressable
-                            onPress={() => router.push('/settings')}
+                            onPress={() => router.navigate('/settings')}
                             hitSlop={15}
                         >
                             <Image
