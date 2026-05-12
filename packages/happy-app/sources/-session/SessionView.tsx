@@ -177,8 +177,6 @@ export const SessionView = React.memo((props: { id: string }) => {
                         <ChatHeaderRight
                             avatarId={headerProps.avatarId}
                             isConnected={headerProps.isConnected}
-                            flavor={headerProps.flavor}
-                            sessionIcon={headerProps.sessionIcon}
                             onAvatarPress={headerProps.onAvatarPress}
                             hasRuns={hasRuns}
                             runningTaskCount={runningTaskCount}
@@ -1001,8 +999,6 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
 const ChatHeaderRight = React.memo((props: {
     avatarId?: string;
     isConnected?: boolean;
-    flavor?: string | null;
-    sessionIcon?: string | null;
     onAvatarPress?: () => void;
     hasRuns: boolean;
     runningTaskCount: number;
@@ -1059,21 +1055,17 @@ const ChatHeaderRight = React.memo((props: {
                     onPress={props.onAvatarPress}
                     hitSlop={15}
                     style={{
-                        width: 44,
-                        height: 44,
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        overflow: 'hidden',
                     }}
                 >
-                    <View style={{ width: 32, height: 32, borderRadius: 16, overflow: 'hidden' }}>
-                        <Avatar
-                            id={props.avatarId}
-                            size={32}
-                            monochrome={!props.isConnected}
-                            flavor={props.flavor}
-                            sessionIcon={props.sessionIcon}
-                        />
-                    </View>
+                    <Avatar
+                        id={props.avatarId}
+                        size={36}
+                        monochrome={!props.isConnected}
+                    />
                 </Pressable>
             )}
         </View>
