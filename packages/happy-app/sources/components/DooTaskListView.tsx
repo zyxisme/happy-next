@@ -594,8 +594,8 @@ export const DooTaskListView = React.memo(() => {
     return (
         <View style={{ flex: 1, backgroundColor: theme.colors.groupped.background }}>
             <View style={{ flex: 1, maxWidth: 800, alignSelf: 'center', width: '100%' }}>
-                <FilterBar onRefreshTasks={triggerRefreshWithFeedback} />
                 <FlatList
+                    contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
                     data={tasks}
                     keyExtractor={(item) => String(item.id)}
                     renderItem={({ item }) => (
@@ -620,6 +620,7 @@ export const DooTaskListView = React.memo(() => {
                         }
                     }}
                     onEndReachedThreshold={0.5}
+                    ListHeaderComponent={<FilterBar onRefreshTasks={triggerRefreshWithFeedback} />}
                     ListEmptyComponent={
                         loading && !isPullRefreshing ? (
                             <ActivityIndicator style={{ marginTop: 40 }} />
@@ -653,7 +654,7 @@ export const DooTaskListView = React.memo(() => {
 });
 
 const styles = StyleSheet.create((_theme) => ({
-    filterBar: { paddingHorizontal: 16, paddingVertical: 8, gap: 12 },
+    filterBar: { paddingVertical: 8, gap: 12 },
     searchBox: {
         flexDirection: 'row',
         alignItems: 'center',

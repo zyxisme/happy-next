@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAcceptedFriends, useFriendRequests, useRequestedFriends, useFeedItems, useFeedLoaded, useFriendsLoaded, useRealtimeStatus } from '@/sync/storage';
 import { UserCard } from '@/components/UserCard';
@@ -150,6 +150,7 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
             <View style={styles.container}>
                 {tabletHeader}
                 <ScrollView
+                    contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
                     contentContainerStyle={{ flexGrow: 1 }}
                     refreshControl={refreshControl}
                 >
@@ -167,6 +168,7 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
             <View style={styles.container}>
                 {tabletHeader}
                 <ScrollView
+                    contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
                     contentContainerStyle={{ flexGrow: 1 }}
                     refreshControl={refreshControl}
                 >
@@ -190,6 +192,7 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
         <View style={styles.container}>
             {tabletHeader}
             <ScrollView
+                contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
                 contentContainerStyle={{
                     flexGrow: 1,
                     maxWidth: layout.maxWidth,

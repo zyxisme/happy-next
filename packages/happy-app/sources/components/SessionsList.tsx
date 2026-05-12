@@ -468,6 +468,7 @@ export function SessionsList() {
         <View style={styles.container}>
             <View style={styles.contentContainer}>
                 <FlatList
+                    contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
                     data={dataWithSelected}
                     renderItem={renderItem}
                     keyExtractor={keyExtractor}
