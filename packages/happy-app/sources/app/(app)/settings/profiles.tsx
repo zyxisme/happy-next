@@ -102,7 +102,6 @@ function ProfileManager({ onProfileSelect, selectedProfileId }: ProfileManagerPr
             <Stack.Screen
                 options={{
                     headerTitle: t('settings.profiles'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <ScrollView

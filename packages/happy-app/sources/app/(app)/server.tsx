@@ -181,7 +181,6 @@ export default function ServerConfigScreen() {
                 options={{
                     headerShown: true,
                     headerTitle: t('server.serverConfiguration'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
 

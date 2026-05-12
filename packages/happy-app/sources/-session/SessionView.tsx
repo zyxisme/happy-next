@@ -166,7 +166,6 @@ export const SessionView = React.memo((props: { id: string }) => {
             <Stack.Screen
                 options={{
                     headerShown: !(isLandscape && deviceType === 'phone' && Platform.OS !== 'web'),
-                    headerBackTitle: '',
                     headerTitle: () => (
                         <ChatHeaderTitle
                             title={headerProps.title}

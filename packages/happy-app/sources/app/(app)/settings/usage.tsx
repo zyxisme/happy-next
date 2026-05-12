@@ -30,7 +30,6 @@ export default function UsageSettingsScreen() {
             <Stack.Screen
                 options={{
                     headerTitle: t('settings.usage'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <ScrollView

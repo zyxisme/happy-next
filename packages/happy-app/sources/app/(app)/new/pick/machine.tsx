@@ -109,7 +109,6 @@ export default function MachinePickerScreen() {
                     options={{
                         headerShown: true,
                         headerTitle: t('wizard.step2Title'),
-                        headerBackTitle: t('common.back')
                     }}
                 />
                 <View style={styles.container}>
@@ -129,7 +128,6 @@ export default function MachinePickerScreen() {
                 options={{
                     headerShown: true,
                     headerTitle: t('wizard.step2Title'),
-                    headerBackTitle: t('common.back')
                 }}
             />
             <View style={styles.container}>

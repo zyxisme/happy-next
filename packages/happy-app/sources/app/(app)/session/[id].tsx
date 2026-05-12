@@ -29,7 +29,6 @@ export default React.memo(() => {
             navigation.setOptions({
                 headerShown: true,
                 headerTitle: staticRoute.title(),
-                headerBackTitle: t('common.back'),
             });
         }
     }, [staticRoute, navigation]);

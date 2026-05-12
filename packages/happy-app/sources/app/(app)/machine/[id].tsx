@@ -518,7 +518,6 @@ export default function MachineDetailScreen() {
                     options={{
                         headerShown: true,
                         headerTitle: '',
-                        headerBackTitle: t('machine.back')
                     }}
                 />
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>

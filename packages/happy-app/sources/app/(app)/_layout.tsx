@@ -50,7 +50,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('tabs.inbox'),
-                    headerBackTitle: t('common.home')
                 }}
             />
             <Stack.Screen
@@ -58,7 +57,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('feed.noticeDetail'),
-                    headerBackTitle: t('common.back')
                 }}
             />
             <Stack.Screen
@@ -66,21 +64,18 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('settings.title'),
-                    headerBackTitle: t('common.home')
                 }}
             />
             <Stack.Screen
                 name="session/[id]"
                 options={{
                     headerShown: true,
-                    headerBackTitle: ''
                 }}
             />
             <Stack.Screen
                 name="session/[id]/message/[messageId]"
                 options={{
                     headerShown: true,
-                    headerBackTitle: t('common.back'),
                     headerTitle: t('common.message')
                 }}
             />
@@ -89,7 +84,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: '',
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -97,7 +91,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('common.files'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -105,7 +98,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('common.fileViewer'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -113,7 +105,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('browser.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -121,7 +112,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('commits.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -129,7 +119,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('commits.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -137,7 +126,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('status.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -145,7 +133,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('files.editFileTitle'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -153,7 +140,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: 'Preview',
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -161,7 +147,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('common.fileViewer'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -169,7 +154,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('session.sharing.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -206,28 +190,24 @@ export default function RootLayout() {
                 name="settings/voice/elevenlabs"
                 options={{
                     headerTitle: t('settingsVoice.elevenLabsTitle'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
                 name="settings/voice/happy-voice"
                 options={{
                     headerTitle: t('settingsVoice.happyVoiceTitle'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
                 name="settings/voice/language"
                 options={{
                     headerTitle: t('settingsVoice.preferredLanguage'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
                 name="settings/voice/welcome-message"
                 options={{
                     headerTitle: t('settingsVoice.welcomeMessage'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -247,7 +227,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('navigation.linkNewDevice'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -255,7 +234,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('navigation.restoreWithSecretKey'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -263,7 +241,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('navigation.whatsNew'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -271,7 +248,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('artifacts.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -285,7 +261,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('artifacts.new'),
-                    headerBackTitle: t('common.cancel'),
                 }}
             />
             <Stack.Screen
@@ -293,7 +268,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('artifacts.edit'),
-                    headerBackTitle: t('common.cancel'),
                 }}
             />
             <Stack.Screen
@@ -301,7 +275,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('settings.orchestratorRuns'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -309,7 +282,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('settings.orchestratorRunDetails'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -317,7 +289,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('settings.orchestratorTaskDetails'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -325,7 +296,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('textSelection.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -333,7 +303,6 @@ export default function RootLayout() {
                 options={({ navigation }) => ({
                     headerShown: true,
                     headerTitle: t('navigation.friends'),
-                    headerBackTitle: t('common.back'),
                     headerRight: () => (
                         <TouchableOpacity
                             onPress={() => navigation.navigate('friends/search' as never)}
@@ -351,7 +320,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('friends.addFriend'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -359,7 +327,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('session.sharing.sharedSession'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -367,7 +334,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: '',
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -430,7 +396,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('sessionHistory.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -438,7 +403,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('claudeHistory.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -446,7 +410,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('agentHistory.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -454,7 +417,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: 'Connect to Claude',
-                    headerBackTitle: t('common.back'),
                     // headerStyle: {
                     //     backgroundColor: Platform.OS === 'web' ? theme.colors.header.background : '#1F1E1C',
                     // },
@@ -469,7 +431,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('settings.connectDootask'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -477,7 +438,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('dootask.createTask'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -485,7 +445,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('dootask.createProject'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -493,7 +452,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('dootask.taskDetail'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -501,35 +459,30 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('dootask.chatTitle'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
                 name="new/pick/machine"
                 options={{
                     headerTitle: '',
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
                 name="new/pick/path"
                 options={{
                     headerTitle: '',
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
                 name="new/pick/profile-edit"
                 options={{
                     headerTitle: '',
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
                 name="new/index"
                 options={{
                     headerTitle: t('newSession.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
 <Stack.Screen
@@ -537,14 +490,12 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('tabs.openclaw'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
                 name="openclaw/add"
                 options={{
                     headerTitle: t('openclaw.addMachine'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -552,7 +503,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('repoEdit.title'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -560,7 +510,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: '',
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -568,7 +517,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: '',
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -576,7 +524,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: '',
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen
@@ -584,7 +531,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('openclaw.newSession'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <Stack.Screen

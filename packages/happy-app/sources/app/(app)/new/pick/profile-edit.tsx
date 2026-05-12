@@ -60,7 +60,6 @@ export default function ProfileEditScreen() {
             <Stack.Screen
                 options={{
                     headerTitle: profile.name ? t('profiles.editProfile') : t('profiles.addProfile'),
-                    headerBackTitle: t('common.back'),
                 }}
             />
             <View style={[

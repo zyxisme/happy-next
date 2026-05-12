@@ -339,7 +339,6 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
                     headerTitle: () => <HeaderTitle activeTab={activeTab as ActiveTabType} />,
                     headerLeft: () => <HeaderLogo />,
                     headerRight: () => <HeaderRight activeTab={activeTab as ActiveTabType} onDootaskCreate={handleCreatePress} />,
-                    headerBackTitle: '',
                 }}
             />
             <View style={styles.phoneContainer}>

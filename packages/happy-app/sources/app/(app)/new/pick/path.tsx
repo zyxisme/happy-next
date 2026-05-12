@@ -151,7 +151,6 @@ export default function PathPickerScreen() {
                     options={{
                         headerShown: true,
                         headerTitle: t('wizard.selectPath'),
-                        headerBackTitle: t('common.back'),
                         headerRight: () => (
                             <Pressable
                                 onPress={handleSelectPath}
@@ -188,7 +187,6 @@ export default function PathPickerScreen() {
                 options={{
                     headerShown: true,
                     headerTitle: t('wizard.selectPath'),
-                    headerBackTitle: t('common.back'),
                     headerRight: () => (
                         <Pressable
                             onPress={handleSelectPath}
