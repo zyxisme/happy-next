@@ -343,7 +343,6 @@ export default function DevScreen() {
                     title="API Endpoint"
                     detail={getServerUrl()}
                     onPress={handleEditServerUrl}
-                    detailStyle={{ flex: 1, textAlign: 'right', minWidth: '70%' }}
                 />
                 <Item
                     title="Socket.IO Status"
