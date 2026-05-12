@@ -1,4 +1,9 @@
 import axios from 'axios';
+import { delay } from '@/utils/time';
+import { logger } from '@/ui/logger';
+
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 2000, 4000];
 
 interface DownloadedImage {
     base64: string;
@@ -9,18 +14,29 @@ interface DownloadedImage {
  * Downloads an image from URL and returns it as base64.
  */
 export async function downloadImage(url: string): Promise<DownloadedImage> {
-    const response = await axios.get(url, {
-        responseType: 'arraybuffer',
-    });
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const response = await axios.get(url, {
+                responseType: 'arraybuffer',
+            });
 
-    const buffer = Buffer.from(response.data);
-    const base64 = buffer.toString('base64');
+            const buffer = Buffer.from(response.data);
+            const base64 = buffer.toString('base64');
 
-    // Determine mime type from response headers or URL
-    let mimeType = response.headers['content-type'] || 'image/jpeg';
-    if (mimeType.includes(';')) {
-        mimeType = mimeType.split(';')[0].trim();
+            let mimeType = response.headers['content-type'] || 'image/jpeg';
+            if (mimeType.includes(';')) {
+                mimeType = mimeType.split(';')[0].trim();
+            }
+
+            return { base64, mimeType };
+        } catch (error) {
+            lastError = error;
+            if (attempt < MAX_RETRIES) {
+                logger.debug(`[downloadImage] Attempt ${attempt + 1}/${MAX_RETRIES + 1} failed for ${url}, retrying in ${RETRY_DELAYS[attempt]}ms`, error);
+                await delay(RETRY_DELAYS[attempt]);
+            }
+        }
     }
-
-    return { base64, mimeType };
+    throw lastError;
 }
