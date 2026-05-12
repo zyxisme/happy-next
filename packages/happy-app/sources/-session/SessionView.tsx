@@ -51,6 +51,8 @@ export const SessionView = React.memo((props: { id: string }) => {
     const safeArea = useSafeAreaInsets();
     const isLandscape = useIsLandscape();
     const deviceType = useDeviceType();
+    const isIpad = Platform.OS === 'ios' && Platform.isPad;
+    const shouldUseCompactLandscapeSessionLayout = isLandscape && !isIpad && deviceType === 'phone';
     const realtimeStatus = useRealtimeStatus();
     const isTablet = useIsTablet();
     const { width: screenWidth } = useWindowDimensions();
@@ -148,7 +150,7 @@ export const SessionView = React.memo((props: { id: string }) => {
     return (
         <>
             {/* Status bar shadow for landscape mode */}
-            {isLandscape && deviceType === 'phone' && (
+            {shouldUseCompactLandscapeSessionLayout && (
                 <View style={{
                     position: 'absolute',
                     top: 0,
@@ -171,7 +173,7 @@ export const SessionView = React.memo((props: { id: string }) => {
             {/* Native header config — iOS uses system header, Android/Web go through createHeader */}
             <Stack.Screen
                 options={{
-                    headerShown: !(isLandscape && deviceType === 'phone' && Platform.OS !== 'web'),
+                    headerShown: !(shouldUseCompactLandscapeSessionLayout && Platform.OS !== 'web'),
                     headerTitle: () => (
                         <ChatHeaderTitle
                             title={headerProps.title}
@@ -195,7 +197,7 @@ export const SessionView = React.memo((props: { id: string }) => {
             {/* Content based on state */}
             <View style={{ flex: 1 }}>
                 {/* Voice status bar below header - not on tablet (shown in sidebar), hidden in landscape phone */}
-                {!(isLandscape && deviceType === 'phone' && Platform.OS !== 'web') && !isTablet && realtimeStatus !== 'disconnected' && (
+                {!(shouldUseCompactLandscapeSessionLayout && Platform.OS !== 'web') && !isTablet && realtimeStatus !== 'disconnected' && (
                     <VoiceAssistantStatusBar variant="full" />
                 )}
                 {!isDataReady ? (
@@ -232,6 +234,8 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
     const isFocused = useIsFocused();
     const isLandscape = useIsLandscape();
     const deviceType = useDeviceType();
+    const isIpad = Platform.OS === 'ios' && Platform.isPad;
+    const shouldUseCompactLandscapeSessionLayout = isLandscape && !isIpad && deviceType === 'phone';
     const [message, setMessage] = React.useState('');
     const realtimeStatus = useRealtimeStatus();
     const { messages, isLoaded, fetchVersion } = useSessionMessages(sessionId);
@@ -900,7 +904,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
 
 
             {/* CLI Version Warning Overlay - Subtle centered pill */}
-            {shouldShowCliWarning && !(isLandscape && deviceType === 'phone') && (
+            {shouldShowCliWarning && !shouldUseCompactLandscapeSessionLayout && (
                 <Pressable
                     onPress={handleDismissCliWarning}
                     style={{
@@ -945,7 +949,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
 
             {/* Back button for landscape phone mode when header is hidden */}
             {
-                isLandscape && deviceType === 'phone' && (
+                shouldUseCompactLandscapeSessionLayout && (
                     <Pressable
                         onPress={() => router.back()}
                         style={{
