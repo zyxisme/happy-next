@@ -60,10 +60,10 @@ export const SessionView = React.memo((props: { id: string }) => {
         router.push(`/orchestrator?controllerSessionId=${encodeURIComponent(sessionId)}`);
     }, [router, sessionId]);
 
-    const headerTitleWidth = React.useMemo(() => getNativeHeaderTitleWidth({
+    const headerTitleWidth = getNativeHeaderTitleWidth({
         screenWidth,
         rightActionCount: hasRuns ? 2 : 1,
-    }), [hasRuns, screenWidth]);
+    });
 
     // Track if we've confirmed the session doesn't exist after data loads
     const [sessionNotFound, setSessionNotFound] = React.useState(false);
@@ -1024,7 +1024,7 @@ const ChatHeaderRight = React.memo((props: {
                         height: 38,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginRight: 2,
+                        marginRight: 4,
                     }}
                 >
                     <Ionicons

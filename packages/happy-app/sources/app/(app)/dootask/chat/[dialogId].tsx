@@ -564,10 +564,10 @@ export default React.memo(function DooTaskChat() {
         ? `${t('dootask.taskChat')} (${dialogMembers.length})`
         : t('dootask.taskChat');
 
-    const headerTitleWidth = React.useMemo(() => getNativeHeaderTitleWidth({
+    const headerTitleWidth = getNativeHeaderTitleWidth({
         screenWidth,
         rightActionCount: 1,
-    }), [screenWidth]);
+    });
 
     const headerTitle = React.useCallback(() => (
         <ChatHeaderTitle title={chatTitle} subtitle={subtitle} width={headerTitleWidth} />

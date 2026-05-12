@@ -11,6 +11,7 @@ import { Message } from '@/sync/typesMessage';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Typography } from '@/constants/Typography';
 import { Ionicons } from '@expo/vector-icons';
+import { layout } from '@/components/layout';
 import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import { LongPressCopy, useCopySelectable } from '@/components/LongPressCopy';
 
@@ -42,7 +43,10 @@ export default React.memo(() => {
     const styles = stylesheet;
     const { width: screenWidth } = useWindowDimensions();
 
-    const headerTitleMaxWidth = getNativeHeaderTitleWidth({ screenWidth, rightActionCount: 1 });
+    const headerTitleMaxWidth = getNativeHeaderTitleWidth({
+        screenWidth: Math.min(screenWidth, layout.headerMaxWidth),
+        rightActionCount: 1,
+    });
     
     // Trigger session visibility when component mounts
     React.useEffect(() => {

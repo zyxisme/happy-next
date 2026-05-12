@@ -1,6 +1,10 @@
 import { Platform } from 'react-native';
 import { isRunningOnMac } from '@/utils/platform';
 
+// Reference: iPhone 14/15 Pro Max width (430pt). `base` is the title width at that screen size
+// for the given right-action count (1 ≈ back + 1 button, 2 ≈ back + 2 buttons). `min`/`max` clamp
+// the scaled value for small phones and tablets. Returns undefined on Web/Mac so the platform's
+// native header layout handles sizing.
 const BASE_SCREEN_WIDTH = 430;
 
 const WIDTH_BY_ACTION_COUNT = {
