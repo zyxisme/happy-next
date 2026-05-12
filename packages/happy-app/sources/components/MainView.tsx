@@ -4,7 +4,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useFriendRequests, useSocketStatus, useRealtimeStatus, useDootaskProfile } from '@/sync/storage';
 import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
 import { useIsTablet } from '@/utils/responsive';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { EmptySessionsTablet } from './EmptySessionsTablet';
 import { SessionsList } from './SessionsList';
 import { FABWide } from './FABWide';
@@ -13,7 +13,6 @@ import { InboxView } from './InboxView';
 import { SettingsViewWrapper } from './SettingsViewWrapper';
 import { DooTaskListView } from './DooTaskListView';
 import { SessionsListWrapper } from './SessionsListWrapper';
-import { Header } from './navigation/Header';
 import { HeaderLogo } from './HeaderLogo';
 import { VoiceAssistantStatusBar } from './VoiceAssistantStatusBar';
 import { StatusDot } from './StatusDot';
@@ -332,19 +331,21 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     // Regular phone mode with tabs
     return (
         <>
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    headerShadowVisible: false,
+                    headerStyle: { backgroundColor: theme.colors.groupped.background },
+                    headerTitle: () => <HeaderTitle activeTab={activeTab as ActiveTabType} />,
+                    headerLeft: () => <HeaderLogo />,
+                    headerRight: () => <HeaderRight activeTab={activeTab as ActiveTabType} onDootaskCreate={handleCreatePress} />,
+                    headerBackTitle: '',
+                }}
+            />
             <View style={styles.phoneContainer}>
-                <View style={{ backgroundColor: theme.colors.groupped.background }}>
-                    <Header
-                        title={<HeaderTitle activeTab={activeTab as ActiveTabType} />}
-                        headerRight={() => <HeaderRight activeTab={activeTab as ActiveTabType} onDootaskCreate={handleCreatePress} />}
-                        headerLeft={() => <HeaderLogo />}
-                        headerShadowVisible={false}
-                        headerTransparent={true}
-                    />
-                    {realtimeStatus !== 'disconnected' && (
-                        <VoiceAssistantStatusBar variant="full" />
-                    )}
-                </View>
+                {realtimeStatus !== 'disconnected' && (
+                    <VoiceAssistantStatusBar variant="full" />
+                )}
                 {renderTabContent()}
             </View>
             <TabBar
