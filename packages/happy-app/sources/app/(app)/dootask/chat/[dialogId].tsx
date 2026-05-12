@@ -567,17 +567,17 @@ export default React.memo(function DooTaskChat() {
     ), [chatTitle, subtitle]);
 
     const headerRight = React.useCallback(() => (
-        <Pressable style={styles.headerIconButton} onPress={handleOpenDetail}>
+        <Pressable style={styles.headerIconButton} onPress={handleOpenDetail} hitSlop={15}>
             {resolvedDialogAvatar ? (
                 <Image
                     source={{ uri: resolvedDialogAvatar }}
-                    style={{ width: 28, height: 28, borderRadius: 14 }}
+                    style={{ width: 36, height: 36 }}
                     contentFit="cover"
                 />
             ) : (
                 <Image
                     source={require('@/assets/images/icon-dootask.png')}
-                    style={{ width: 28, height: 28 }}
+                    style={{ width: 36, height: 36 }}
                     contentFit="contain"
                 />
             )}
@@ -644,7 +644,7 @@ export default React.memo(function DooTaskChat() {
 
     return (
         <>
-            <Stack.Screen options={{ headerTitle, headerRight, headerBackTitle: '' }} />
+            <Stack.Screen options={{ headerTitle, headerRight }} />
             <View style={[styles.body, { backgroundColor: theme.colors.surface, maxWidth: layout.maxWidth, alignSelf: 'center', width: '100%' }]}>
                 <AgentContentView
                     content={content}
@@ -695,9 +695,9 @@ const styles = StyleSheet.create((_theme) => ({
         alignItems: 'center',
     },
     headerIconButton: {
-        width: 44,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        overflow: 'hidden',
     },
 }));
