@@ -29,7 +29,7 @@ export const ru: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: 'Входящие',
-        sessions: 'Терминалы',
+        sessions: 'Сессии',
         openclaw: 'OpenClaw',
         dootask: 'DooTask',
         settings: 'Настройки',

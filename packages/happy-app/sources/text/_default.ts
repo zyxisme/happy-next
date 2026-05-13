@@ -18,7 +18,7 @@ export const en = {
     tabs: {
         // Tab navigation labels
         inbox: 'Inbox',
-        sessions: 'Terminals',
+        sessions: 'Sessions',
         openclaw: 'OpenClaw',
         dootask: 'DooTask',
         settings: 'Settings',

@@ -21,7 +21,7 @@ export const ja: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: '受信トレイ',
-        sessions: 'ターミナル',
+        sessions: 'セッション',
         openclaw: 'OpenClaw',
         dootask: 'DooTask',
         settings: '設定',
