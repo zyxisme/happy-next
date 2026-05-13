@@ -88,13 +88,13 @@ export const TabBar = React.memo(({ activeTab, onTabPress, inboxBadgeCount = 0, 
 
     const tabs: { key: TabType; icon: any; label: string }[] = React.useMemo(() => {
         const items: { key: TabType; icon: any; label: string }[] = [
-            { key: 'inbox', icon: require('@/assets/images/brutalist/Brutalism 27.png'), label: t('tabs.inbox') },
-            { key: 'sessions', icon: require('@/assets/images/brutalist/Brutalism 15.png'), label: t('tabs.sessions') },
+            { key: 'inbox', icon: require('@/assets/images/navigation/inbox.png'), label: t('tabs.inbox') },
+            { key: 'sessions', icon: require('@/assets/images/navigation/session.png'), label: t('tabs.sessions') },
         ];
         if (showDootaskTab) {
-            items.push({ key: 'dootask', icon: require('@/assets/images/brutalist/Specified 2.png'), label: t('tabs.dootask') });
+            items.push({ key: 'dootask', icon: require('@/assets/images/navigation/todo.png'), label: t('tabs.dootask') });
         }
-        items.push({ key: 'settings', icon: require('@/assets/images/brutalist/Brutalism 9.png'), label: t('tabs.settings') });
+        items.push({ key: 'settings', icon: require('@/assets/images/navigation/setting.png'), label: t('tabs.settings') });
         return items;
     }, [showDootaskTab]);
 

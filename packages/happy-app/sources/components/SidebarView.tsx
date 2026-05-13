@@ -261,9 +261,9 @@ export const SidebarView = React.memo(() => {
                             style={styles.notificationButton}
                         >
                             <Image
-                                source={require('@/assets/images/brutalist/Brutalism 27.png')}
+                                source={require('@/assets/images/navigation/inbox.png')}
                                 contentFit="contain"
-                                style={[{ width: 32, height: 32 }]}
+                                style={[{ width: 24, height: 24, margin: 4 }]}
                                 tintColor={theme.colors.header.tint}
                             />
                             {friendRequests.length > 0 && (
@@ -283,9 +283,9 @@ export const SidebarView = React.memo(() => {
                                 hitSlop={15}
                             >
                                 <Image
-                                    source={require('@/assets/images/brutalist/Specified 2.png')}
+                                    source={require('@/assets/images/navigation/todo.png')}
                                     contentFit="contain"
-                                    style={[{ width: 32, height: 32 }]}
+                                    style={[{ width: 24, height: 24, margin: 4 }]}
                                     tintColor={theme.colors.header.tint}
                                 />
                             </Pressable>
@@ -295,9 +295,9 @@ export const SidebarView = React.memo(() => {
                             hitSlop={15}
                         >
                             <Image
-                                source={require('@/assets/images/brutalist/Brutalism 9.png')}
+                                source={require('@/assets/images/navigation/setting.png')}
                                 contentFit="contain"
-                                style={[{ width: 32, height: 32 }]}
+                                style={[{ width: 24, height: 24, margin: 4 }]}
                                 tintColor={theme.colors.header.tint}
                             />
                         </Pressable>

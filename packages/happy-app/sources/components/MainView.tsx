@@ -313,23 +313,23 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
         {
             key: 'inbox',
             title: t('tabs.inbox'),
-            focusedIcon: require('@/assets/images/brutalist/Brutalism 27.png'),
+            focusedIcon: require('@/assets/images/navigation/inbox.png'),
             badge: inboxBadge,
         },
         {
             key: 'sessions',
             title: t('tabs.sessions'),
-            focusedIcon: require('@/assets/images/brutalist/Brutalism 15.png'),
+            focusedIcon: require('@/assets/images/navigation/session.png'),
         },
         ...(showDootaskTab ? [{
             key: 'dootask' as const,
             title: t('tabs.dootask'),
-            focusedIcon: require('@/assets/images/brutalist/Specified 2.png'),
+            focusedIcon: require('@/assets/images/navigation/todo.png'),
         }] : []),
         {
             key: 'settings',
             title: t('tabs.settings'),
-            focusedIcon: require('@/assets/images/brutalist/Brutalism 9.png'),
+            focusedIcon: require('@/assets/images/navigation/setting.png'),
         },
     ];
     const nativeActiveIndex = Math.max(0, nativeTabRoutes.findIndex(r => r.key === activeTab));
