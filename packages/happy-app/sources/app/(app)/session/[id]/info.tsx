@@ -183,16 +183,8 @@ function SessionInfoContent({ session }: { session: Session }) {
     const worktreeBasePath = selectedRepo?.basePath;
     const worktreePath = selectedRepo?.path;
 
-    // Web uses browser history (router.back == window.history.back), which can land
-    // anywhere when the session was opened via direct URL, refresh, or external link.
-    // Native has a deterministic expo-router stack, so two back() calls reliably return to the list.
     const navigateAfterArchive = useCallback(() => {
-        if (Platform.OS === 'web') {
-            router.replace('/');
-        } else {
-            router.back();
-            router.back();
-        }
+        router.dismissAll();
     }, [router]);
 
     // Use HappyAction for archiving - it handles errors automatically
