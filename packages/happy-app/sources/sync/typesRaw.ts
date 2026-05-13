@@ -847,10 +847,10 @@ export function normalizeRawMessage(id: string, localId: string | null, createdA
     // Zod transform handles normalization during validation
     let parsed = rawRecordSchema.safeParse(raw);
     if (!parsed.success) {
-        console.error('=== VALIDATION ERROR ===');
-        console.error('Zod issues:', JSON.stringify(parsed.error.issues, null, 2));
-        console.error('Raw message:', JSON.stringify(raw, null, 2));
-        console.error('=== END ERROR ===');
+        console.warn('=== VALIDATION WARNING ===');
+        console.warn('Zod issues:', JSON.stringify(parsed.error.issues, null, 2));
+        console.warn('Raw message:', JSON.stringify(raw, null, 2));
+        console.warn('=== END WARNING ===');
         return null;
     }
     raw = parsed.data;
