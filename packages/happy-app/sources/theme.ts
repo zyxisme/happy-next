@@ -58,6 +58,7 @@ export const lightTheme = {
             color: Platform.select({ default: '#000000', web: 'rgba(0, 0, 0, 0.1)' }),
             opacity: 0.1,
         },
+        transparent: 'rgba(0, 0, 0, 0)',
 
         //
         // System components
@@ -268,6 +269,7 @@ export const darkTheme = {
             color: Platform.select({ default: '#000000', web: 'rgba(0, 0, 0, 0.1)' }),
             opacity: 0.1,
         },
+        transparent: 'rgba(0, 0, 0, 0)',
 
         //
         // System components
