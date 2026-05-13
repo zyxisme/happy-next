@@ -301,7 +301,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     // Native tab routes for react-native-bottom-tabs
     const inboxBadge = friendRequests.length > 0
         ? (friendRequests.length > 99 ? '99+' : String(friendRequests.length))
-        : (inboxHasContent ? '·' : undefined);
+        : (inboxHasContent ? ' ' : undefined);
 
     type NativeTabRoute = {
         key: TabType;
