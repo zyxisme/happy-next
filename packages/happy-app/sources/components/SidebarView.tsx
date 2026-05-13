@@ -205,6 +205,14 @@ export const SidebarView = React.memo(() => {
         router.push('/new');
     }, [router]);
 
+    const handleGoHome = React.useCallback(() => {
+        try {
+            router.dismissAll();
+        } catch (_) {
+            // Already at root of the current stack.
+        }
+    }, [router]);
+
     // Title content used in both centered and left-justified modes (DRY)
     const titleContent = (
         <>
@@ -230,7 +238,7 @@ export const SidebarView = React.memo(() => {
             <View style={[styles.container, { paddingTop: safeArea.top }]}>
                 <View style={[styles.header, { height: headerHeight, paddingLeft: Math.max(safeArea.left, windowControlsInset) + 16 }]}>
                     {/* Logo - always first */}
-                    <Pressable style={styles.logoContainer} onPress={() => router.navigate('/(app)')}>
+                    <Pressable style={styles.logoContainer} onPress={handleGoHome}>
                         <Image
                             source={theme.dark ? require('@/assets/images/logo-white.png') : require('@/assets/images/logo-black.png')}
                             contentFit="contain"
