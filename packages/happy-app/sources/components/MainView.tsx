@@ -383,8 +383,15 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     // Tablet in phone mode - special case (when showing index view on tablets, show empty view)
     if (isTablet) {
         // Just show an empty view on tablets for the index view
-        // The sessions list is shown in the sidebar, so the main area should be blank
-        return <View style={styles.emptyStateContentContainer} />;
+        // The sessions list is shown in the sidebar, so the main area should be blank.
+        // Also explicitly clear any phone-mode header options that may have been set
+        // before the window resized into tablet split view.
+        return (
+            <>
+                <Stack.Screen options={{ headerShown: false }} />
+                <View style={styles.emptyStateContentContainer} />
+            </>
+        );
     }
 
     // Regular phone mode with tabs
