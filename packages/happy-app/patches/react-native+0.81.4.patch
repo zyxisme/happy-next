@@ -1,0 +1,22 @@
+diff --git a/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTEnhancedScrollView.mm b/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTEnhancedScrollView.mm
+index c593d9e..e4e5049 100644
+--- a/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTEnhancedScrollView.mm
++++ b/node_modules/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTEnhancedScrollView.mm
+@@ -41,6 +41,17 @@
+     // scrollbar flip because we also flip it with whole `UIScrollView` flip.
+     self.semanticContentAttribute = UISemanticContentAttributeForceLeftToRight;
+ 
++    // Workaround for facebook/react-native#54181: iOS 26's UIScrollEdgeEffect
++    // (the Liquid Glass scroll-edge backdrop) paints a translucent shadow gradient
++    // over the visible content area when an inverted FlatList (scaleY = -1) sits
++    // under a native navigation header. Hiding the top edge effect prevents UIKit
++    // from instantiating the internal PocketMask + ShadowLayer that produces the
++    // fade. Verified via lldb on iOS 26: setting topEdgeEffect.hidden = YES
++    // removes the fade immediately.
++    if (@available(iOS 26.0, *)) {
++      self.topEdgeEffect.hidden = YES;
++    }
++
+     __weak __typeof(self) weakSelf = self;
+     _delegateSplitter = [[RCTGenericDelegateSplitter alloc] initWithDelegateUpdateBlock:^(id delegate) {
+       [weakSelf setPrivateDelegate:delegate];

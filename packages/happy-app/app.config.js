@@ -92,6 +92,17 @@ export default {
                 {
                     android: {
                         ...(abiFilters && { buildArchs: abiFilters })
+                    },
+                    ios: {
+                        // Disable Expo 54's prebuilt React Native (React.xcframework) so the
+                        // Pods target compiles RN core from source. This is what allows the
+                        // patch in patches/react-native+0.81.4.patch (RCTEnhancedScrollView.mm)
+                        // to actually land in the binary. Trade-off: first iOS build after
+                        // pod install is significantly slower; incremental builds are similar.
+                        // Workaround for facebook/react-native#54181 (iOS 26 Liquid Glass
+                        // scroll-edge fade with inverted FlatList). Remove this once that
+                        // upstream issue is fixed and the patch is no longer needed.
+                        buildReactNativeFromSource: true
                     }
                 }
             ],
