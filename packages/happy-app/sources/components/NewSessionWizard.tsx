@@ -1233,7 +1233,7 @@ export function NewSessionWizard({ onComplete, onCancel, initialPrompt = '' }: N
     const modelModeOptions = useMemo<Array<{ value: ModelMode; label: string; description: string; icon: keyof typeof Ionicons.glyphMap }>>(() => {
         const withIcon = (value: ModelMode, label: string, description: string) => {
             if (value === MODEL_MODE_DEFAULT) return { value, label, description, icon: 'settings-outline' as const };
-            if (value === 'gemini-3-flash' || value.endsWith('-low') || value.includes('haiku')) {
+            if (value.includes('flash') || value.endsWith('-low') || value.includes('haiku')) {
                 return { value, label, description, icon: 'speedometer-outline' as const };
             }
             if (value.includes('medium') || value.includes('sonnet') || value.includes('2.5-pro')) {
