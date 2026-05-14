@@ -13,104 +13,9 @@ import { t } from '@/text';
 import { MultiTextInput, MultiTextInputHandle } from '@/components/MultiTextInput';
 import { formatPathRelativeToHome } from '@/utils/sessionUtils';
 import { resolveAbsolutePath } from '@/utils/pathUtils';
-import { machineListDirectory, type MachineDirectoryEntry } from '@/sync/ops';
-
-type CompletionKind = 'directories' | 'recent' | 'suggested';
-
-type PathCompletion = {
-    path: string;
-    kind: CompletionKind;
-};
+import { useDirectoryCompletions } from '@/utils/pathCompletion';
 
 const MAX_COMPLETIONS = 8;
-
-function isAbsolutePath(path: string): boolean {
-    return path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path);
-}
-
-function trimTrailingSeparators(path: string): string {
-    if (path === '/' || /^[A-Za-z]:[\\/]?$/.test(path)) {
-        return path;
-    }
-    return path.replace(/[\\/]+$/, '');
-}
-
-function joinPathSegment(base: string, segment: string): string {
-    if (!base || base === '.') return segment;
-    if (base === '~') return `~/${segment}`;
-    if (base === '/') return `/${segment}`;
-    return `${trimTrailingSeparators(base)}/${segment}`;
-}
-
-function normalizeDisplayPath(path: string): string {
-    if (path === '~') return path;
-    return trimTrailingSeparators(path);
-}
-
-function normalizeAbsolutePath(path: string): string {
-    const isWindows = /^[A-Za-z]:[\\/]/.test(path);
-    const separator = isWindows ? '\\' : '/';
-    const parts: string[] = [];
-    const prefix = isWindows ? path.slice(0, 2) : path.startsWith('/') ? '/' : '';
-    const rest = isWindows ? path.slice(2).replace(/^[\\/]+/, '') : path.replace(/^\/+/, '');
-
-    rest.split(/[\\/]+/).forEach((part) => {
-        if (!part || part === '.') return;
-        if (part === '..') {
-            parts.pop();
-            return;
-        }
-        parts.push(part);
-    });
-
-    if (isWindows) {
-        return `${prefix}${separator}${parts.join(separator)}`;
-    }
-    return `${prefix}${parts.join(separator)}` || '/';
-}
-
-function toAbsolutePathForList(input: string, homeDir?: string): string | null {
-    const trimmed = input.trim();
-    if (!trimmed) return null;
-
-    if (trimmed.startsWith('~')) {
-        const resolved = resolveAbsolutePath(trimmed, homeDir);
-        return resolved.startsWith('~') ? null : resolved;
-    }
-
-    if (isAbsolutePath(trimmed)) {
-        return trimmed;
-    }
-
-    if (!homeDir) return null;
-
-    if (trimmed === '.') return homeDir;
-    if (trimmed.startsWith('./')) {
-        return normalizeAbsolutePath(joinPathSegment(homeDir, trimmed.slice(2)));
-    }
-    if (trimmed === '..' || trimmed.startsWith('../')) {
-        return normalizeAbsolutePath(joinPathSegment(homeDir, trimmed));
-    }
-
-    return null;
-}
-
-function getParentCompletionQuery(input: string, homeDir?: string): { parentDisplay: string; parentAbsolute: string; prefix: string } | null {
-    const trimmed = input.trim();
-    if (!trimmed || trimmed === '~') return null;
-    if (!trimmed.includes('/') && !trimmed.includes('\\')) return null;
-
-    const normalized = trimmed.replace(/\\/g, '/');
-    const lastSlash = normalized.lastIndexOf('/');
-    if (lastSlash < 0) return null;
-
-    const parentDisplay = lastSlash === 0 ? '/' : normalized.slice(0, lastSlash);
-    const prefix = normalized.slice(lastSlash + 1);
-    const parentAbsolute = toAbsolutePathForList(parentDisplay, homeDir);
-    if (!parentAbsolute) return null;
-
-    return { parentDisplay, parentAbsolute, prefix };
-}
 
 const stylesheet = StyleSheet.create((theme) => ({
     container: {
@@ -189,9 +94,6 @@ export default function PathPickerScreen() {
         return formatPathRelativeToHome(params.selectedPath, m?.metadata?.homeDir);
     });
     const [isInputFocused, setIsInputFocused] = useState(false);
-    const [directoryCompletions, setDirectoryCompletions] = useState<PathCompletion[]>([]);
-    const [isLoadingCompletions, setIsLoadingCompletions] = useState(false);
-    const directoryCacheRef = useRef(new Map<string, { entries: MachineDirectoryEntry[]; expiresAt: number }>());
 
     const machine = useMemo(() => {
         return machines.find(m => m.id === params.machineId);
@@ -239,161 +141,47 @@ export default function PathPickerScreen() {
 
     const homeDir = machine?.metadata?.homeDir;
 
-    const defaultSuggestedCompletions = React.useMemo<PathCompletion[]>(() => ([
-        '~',
-        '~/projects',
-        '~/Documents',
-        '~/Desktop'
-    ].map((path) => ({ path, kind: 'suggested' as const }))), []);
+    const defaultSuggestedPaths = React.useMemo(() => ['~', '~/projects', '~/Documents', '~/Desktop'], []);
 
-    const recentPathCompletions = React.useMemo<PathCompletion[]>(() => {
+    const recentPathDisplays = React.useMemo(() => {
+        return recentPaths.slice(0, MAX_COMPLETIONS).map((path) => formatPathRelativeToHome(path, homeDir));
+    }, [homeDir, recentPaths]);
+
+    const recentPathMatches = React.useMemo(() => {
         const query = customPath.trim().toLowerCase();
-        if (!query) {
-            return recentPaths.slice(0, MAX_COMPLETIONS).map((path) => ({
-                path: formatPathRelativeToHome(path, homeDir),
-                kind: 'recent',
-            }));
-        }
-
+        if (!query) return recentPathDisplays;
         return recentPaths
             .map((path) => formatPathRelativeToHome(path, homeDir))
             .filter((path) => {
-                const normalized = path.toLowerCase();
-                return normalized.includes(query) || resolveAbsolutePath(path, homeDir).toLowerCase().includes(query);
+                return path.toLowerCase().includes(query)
+                    || resolveAbsolutePath(path, homeDir).toLowerCase().includes(query);
             })
-            .slice(0, MAX_COMPLETIONS)
-            .map((path) => ({ path, kind: 'recent' }));
-    }, [customPath, homeDir, recentPaths]);
+            .slice(0, MAX_COMPLETIONS);
+    }, [customPath, homeDir, recentPathDisplays, recentPaths]);
 
-    React.useEffect(() => {
-        if (!isInputFocused || !params.machineId) {
-            setDirectoryCompletions([]);
-            setIsLoadingCompletions(false);
-            return;
-        }
+    const { completions: directoryCompletions, loading: isLoadingCompletions } = useDirectoryCompletions({
+        machineId: params.machineId,
+        input: customPath,
+        homeDir,
+        enabled: isInputFocused,
+    });
 
-        const input = customPath.trim();
-        if (!input) {
-            setDirectoryCompletions([]);
-            setIsLoadingCompletions(false);
-            return;
-        }
-
-        let cancelled = false;
-
-        const readDirectory = async (absolutePath: string): Promise<MachineDirectoryEntry[] | null> => {
-            const cached = directoryCacheRef.current.get(absolutePath);
-            const now = Date.now();
-            if (cached && cached.expiresAt > now) {
-                return cached.entries;
-            }
-
-            const response = await machineListDirectory(params.machineId!, absolutePath);
-            if (!response.success || !response.entries) {
-                return null;
-            }
-
-            directoryCacheRef.current.set(absolutePath, {
-                entries: response.entries,
-                expiresAt: now + 30_000,
-            });
-            return response.entries;
-        };
-
-        const buildDirectoryCompletions = (
-            entries: MachineDirectoryEntry[],
-            parentDisplay: string,
-            prefix = ''
-        ): PathCompletion[] => {
-            const lowerPrefix = prefix.toLowerCase();
-            return entries
-                .filter((entry) => entry.type === 'directory')
-                .filter((entry) => !lowerPrefix || entry.name.toLowerCase().startsWith(lowerPrefix))
-                .slice(0, MAX_COMPLETIONS)
-                .map((entry) => ({
-                    path: joinPathSegment(normalizeDisplayPath(parentDisplay), entry.name),
-                    kind: 'directories' as const,
-                }));
-        };
-
-        const timer = setTimeout(() => {
-            setIsLoadingCompletions(true);
-
-            (async () => {
-                const absoluteInput = toAbsolutePathForList(input, homeDir);
-                if (absoluteInput) {
-                    const childEntries = await readDirectory(absoluteInput);
-                    if (cancelled) return;
-                    if (childEntries) {
-                        setDirectoryCompletions(buildDirectoryCompletions(childEntries, input));
-                        setIsLoadingCompletions(false);
-                        return;
-                    }
-                }
-
-                const parentQuery = getParentCompletionQuery(input, homeDir);
-                if (parentQuery) {
-                    const parentEntries = await readDirectory(parentQuery.parentAbsolute);
-                    if (cancelled) return;
-                    if (parentEntries) {
-                        setDirectoryCompletions(buildDirectoryCompletions(parentEntries, parentQuery.parentDisplay, parentQuery.prefix));
-                        setIsLoadingCompletions(false);
-                        return;
-                    }
-                }
-
-                setDirectoryCompletions([]);
-                setIsLoadingCompletions(false);
-            })().catch(() => {
-                if (cancelled) return;
-                setDirectoryCompletions([]);
-                setIsLoadingCompletions(false);
-            });
-        }, 200);
-
-        return () => {
-            cancelled = true;
-            clearTimeout(timer);
-        };
-    }, [customPath, homeDir, isInputFocused, params.machineId]);
-
-    const recommendedPaths = React.useMemo<PathCompletion[]>(() => {
+    const recommendedPaths = React.useMemo(() => {
+        const defaultList = recentPathDisplays.length > 0 ? recentPathDisplays : defaultSuggestedPaths;
         const trimmed = customPath.trim();
 
-        if (!isInputFocused) {
-            return recentPaths.length > 0
-                ? recentPaths.slice(0, MAX_COMPLETIONS).map((path) => ({
-                    path: formatPathRelativeToHome(path, homeDir),
-                    kind: 'recent' as const,
-                }))
-                : defaultSuggestedCompletions;
-        }
+        if (!isInputFocused || !trimmed) return defaultList;
 
-        let baseList: PathCompletion[];
-        if (trimmed) {
-            baseList = directoryCompletions.length > 0
-                ? directoryCompletions
-                : recentPathCompletions;
-        } else {
-            baseList = recentPaths.length > 0
-                ? recentPaths.slice(0, MAX_COMPLETIONS).map((path) => ({
-                    path: formatPathRelativeToHome(path, homeDir),
-                    kind: 'recent' as const,
-                }))
-                : defaultSuggestedCompletions;
-        }
-
-        if (!trimmed) return baseList;
-        if (baseList.some((c) => c.path === trimmed)) return baseList;
-        return [{ path: trimmed, kind: 'directories' as const }, ...baseList];
+        const baseList = directoryCompletions.length > 0 ? directoryCompletions : recentPathMatches;
+        if (baseList.includes(trimmed)) return baseList;
+        return [trimmed, ...baseList];
     }, [
         customPath,
-        defaultSuggestedCompletions,
+        defaultSuggestedPaths,
         directoryCompletions,
-        homeDir,
         isInputFocused,
-        recentPathCompletions,
-        recentPaths,
+        recentPathDisplays,
+        recentPathMatches,
     ]);
 
     const recommendedTitle = isInputFocused && customPath.trim()
@@ -426,17 +214,17 @@ export default function PathPickerScreen() {
 
     const renderRecommendedItems = React.useCallback(() => {
         if (recommendedPaths.length > 0) {
-            return recommendedPaths.map((completion, index) => (
+            return recommendedPaths.map((path, index) => (
                 <Item
-                    key={`${completion.kind}:${completion.path}`}
-                    title={completion.path}
+                    key={path}
+                    title={path}
                     leftElement={renderPathIcon()}
                     onPress={() => {
-                        if (completion.path === customPath.trim()) {
+                        if (path === customPath.trim()) {
                             handleSelectPath();
                             return;
                         }
-                        setCustomPath(completion.path);
+                        setCustomPath(path);
                         inputRef.current?.focus();
                     }}
                     showChevron={false}

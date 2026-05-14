@@ -20,6 +20,7 @@ import { t } from '@/text';
 import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { machineSpawnNewSession } from '@/sync/ops';
 import { resolveAbsolutePath } from '@/utils/pathUtils';
+import { useDirectoryCompletions } from '@/utils/pathCompletion';
 import { MultiTextInput, type MultiTextInputHandle } from '@/components/MultiTextInput';
 import { SessionTypeSelector } from '@/components/SessionTypeSelector';
 import { createWorktree } from '@/utils/createWorktree';
@@ -91,6 +92,7 @@ export default function MachineDetailScreen() {
     const [isSpawning, setIsSpawning] = useState(false);
     const inputRef = useRef<MultiTextInputHandle>(null);
     const [showAllPaths, setShowAllPaths] = useState(false);
+    const [isPathInputFocused, setIsPathInputFocused] = useState(false);
     const [sessionType, setSessionType] = useState<'simple' | 'worktree'>('simple');
     const [selectedRepos, setSelectedRepos] = useState<SelectedRepo[]>([]);
     const [addDirBranchMenu, setAddDirBranchMenu] = useState<{ visible: boolean; items: ActionMenuItem[] }>({ visible: false, items: [] });
@@ -142,10 +144,22 @@ export default function MachineDetailScreen() {
         return Array.from(paths).sort();
     }, [machineSessions]);
 
-    const pathsToShow = useMemo(() => {
-        if (showAllPaths) return recentPaths;
-        return recentPaths.slice(0, 5);
-    }, [recentPaths, showAllPaths]);
+    const { completions: directoryCompletions } = useDirectoryCompletions({
+        machineId,
+        input: customPath,
+        homeDir: machine?.metadata?.homeDir,
+        enabled: isPathInputFocused,
+    });
+
+    const isShowingCompletions = isPathInputFocused
+        && customPath.trim().length > 0
+        && directoryCompletions.length > 0;
+
+    const pathsToShow = useMemo<string[]>(() => {
+        if (isShowingCompletions) return directoryCompletions;
+        const list = showAllPaths ? recentPaths : recentPaths.slice(0, 5);
+        return list.map((path) => formatPathRelativeToHome(path, machine?.metadata?.homeDir));
+    }, [isShowingCompletions, directoryCompletions, recentPaths, showAllPaths, machine?.metadata?.homeDir]);
 
     // Determine daemon status from metadata
     const daemonStatus = useMemo(() => {
@@ -632,11 +646,14 @@ export default function MachineDetailScreen() {
                                             ref={inputRef}
                                             value={hasWorktreeRepos ? '' : customPath}
                                             onChangeText={setCustomPath}
+                                            onFocus={() => setIsPathInputFocused(true)}
                                             placeholder={hasWorktreeRepos ? t('machine.worktreeAutoPath') : 'Enter custom path'}
                                             maxHeight={76}
                                             paddingTop={8}
                                             paddingBottom={8}
                                             paddingRight={48}
+                                            autoCapitalize="none"
+                                            autoCorrect={false}
                                         />
                                     </View>
                                     <Pressable
@@ -663,14 +680,14 @@ export default function MachineDetailScreen() {
                                     </Pressable>
                                 </View>
                             </View>
-                            {!hasWorktreeRepos && pathsToShow.map((path, index) => {
-                                const display = formatPathRelativeToHome(path, machine.metadata?.homeDir);
+                            {!hasWorktreeRepos && pathsToShow.map((display, index) => {
                                 const isSelected = customPath.trim() === display;
                                 const isLast = index === pathsToShow.length - 1;
-                                const hideDivider = isLast && pathsToShow.length <= 5;
+                                const hasShowAllToggle = !isShowingCompletions && recentPaths.length > 5;
+                                const hideDivider = isLast && !hasShowAllToggle;
                                 return (
                                     <Item
-                                        key={path}
+                                        key={display}
                                         title={display}
                                         leftElement={<Ionicons name="folder-outline" size={18} color={theme.colors.textSecondary} />}
                                         onPress={isMachineOnline(machine) ? () => {
@@ -685,7 +702,7 @@ export default function MachineDetailScreen() {
                                     />
                                 );
                             })}
-                            {!hasWorktreeRepos && recentPaths.length > 5 && (
+                            {!hasWorktreeRepos && !isShowingCompletions && recentPaths.length > 5 && (
                                 <Item
                                     title={showAllPaths ? t('machineLauncher.showLess') : t('machineLauncher.showAll', { count: recentPaths.length })}
                                     onPress={() => setShowAllPaths(!showAllPaths)}
