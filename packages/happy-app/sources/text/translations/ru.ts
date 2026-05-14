@@ -1641,6 +1641,8 @@ export const ru: TranslationStructure = {
         enterPathPlaceholder: 'Введите путь (напр. ~/projects)',
         recentPaths: 'Недавние пути',
         suggestedPaths: 'Рекомендуемые пути',
+        directorySuggestions: 'Предлагаемые каталоги',
+        noMatchingDirectories: 'Нет подходящих каталогов',
         noMachineSelected: 'Машина не выбрана',
         detectingClis: 'Обнаружение CLI...',
         noClisDetected: 'CLI не обнаружены',

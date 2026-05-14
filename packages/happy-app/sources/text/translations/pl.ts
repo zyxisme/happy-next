@@ -1642,6 +1642,8 @@ export const pl: TranslationStructure = {
         enterPathPlaceholder: 'Wprowadź ścieżkę (np. ~/projects)',
         recentPaths: 'Ostatnie ścieżki',
         suggestedPaths: 'Sugerowane ścieżki',
+        directorySuggestions: 'Sugestie katalogów',
+        noMatchingDirectories: 'Brak pasujących katalogów',
         noMachineSelected: 'Nie wybrano maszyny',
         detectingClis: 'Wykrywanie CLI...',
         noClisDetected: 'Nie wykryto CLI',

@@ -1618,6 +1618,8 @@ export const zhHans: TranslationStructure = {
         enterPathPlaceholder: '输入路径（例如 ~/projects）',
         recentPaths: '最近路径',
         suggestedPaths: '推荐路径',
+        directorySuggestions: '目录建议',
+        noMatchingDirectories: '没有匹配的目录',
         noMachineSelected: '未选择机器',
         detectingClis: '正在检测 CLI...',
         noClisDetected: '未检测到 CLI',

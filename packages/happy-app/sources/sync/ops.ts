@@ -82,6 +82,10 @@ interface SessionListDirectoryResponse {
     error?: string;
 }
 
+export type MachineDirectoryEntry = DirectoryEntry;
+
+export type MachineListDirectoryResponse = SessionListDirectoryResponse;
+
 // Directory tree operation types
 interface SessionGetDirectoryTreeRequest {
     path: string;
@@ -502,6 +506,29 @@ export async function machineBash(
             stdout: '',
             stderr: error instanceof Error ? error.message : 'Unknown error',
             exitCode: -1
+        };
+    }
+}
+
+/**
+ * List directory contents on a machine. Machine-scoped common handlers validate
+ * paths relative to the daemon user's home directory.
+ */
+export async function machineListDirectory(
+    machineId: string,
+    path: string
+): Promise<MachineListDirectoryResponse> {
+    try {
+        const result = await apiSocket.machineRPC<MachineListDirectoryResponse, SessionListDirectoryRequest>(
+            machineId,
+            'listDirectory',
+            { path }
+        );
+        return result;
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to list directory'
         };
     }
 }

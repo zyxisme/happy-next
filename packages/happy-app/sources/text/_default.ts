@@ -1648,6 +1648,8 @@ export const en = {
         enterPathPlaceholder: 'Enter path (e.g. ~/projects)',
         recentPaths: 'Recent Paths',
         suggestedPaths: 'Suggested Paths',
+        directorySuggestions: 'Directory Suggestions',
+        noMatchingDirectories: 'No matching directories',
         noMachineSelected: 'No machine selected',
 
         // Machine picker

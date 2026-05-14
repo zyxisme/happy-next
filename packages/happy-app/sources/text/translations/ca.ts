@@ -1616,6 +1616,8 @@ export const ca: TranslationStructure = {
         enterPathPlaceholder: 'Introduir ruta (p. ex. ~/projects)',
         recentPaths: 'Rutes recents',
         suggestedPaths: 'Rutes suggerides',
+        directorySuggestions: 'Directoris suggerits',
+        noMatchingDirectories: 'No hi ha directoris coincidents',
         noMachineSelected: 'Cap màquina seleccionada',
         detectingClis: 'Detectant CLIs...',
         noClisDetected: 'No s\'han detectat CLIs',

@@ -1617,6 +1617,8 @@ export const it: TranslationStructure = {
         enterPathPlaceholder: 'Inserisci percorso (es. ~/projects)',
         recentPaths: 'Percorsi recenti',
         suggestedPaths: 'Percorsi suggeriti',
+        directorySuggestions: 'Directory suggerite',
+        noMatchingDirectories: 'Nessuna directory corrispondente',
         noMachineSelected: 'Nessuna macchina selezionata',
         detectingClis: 'Rilevamento CLI...',
         noClisDetected: 'Nessun CLI rilevato',

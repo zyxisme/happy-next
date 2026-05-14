@@ -1619,6 +1619,8 @@ export const zhHant: TranslationStructure = {
         enterPathPlaceholder: '輸入路徑（例如 ~/projects）',
         recentPaths: '最近路徑',
         suggestedPaths: '推薦路徑',
+        directorySuggestions: '目錄建議',
+        noMatchingDirectories: '沒有匹配的目錄',
         noMachineSelected: '未選擇機器',
         detectingClis: '正在偵測 CLI...',
         noClisDetected: '未偵測到 CLI',

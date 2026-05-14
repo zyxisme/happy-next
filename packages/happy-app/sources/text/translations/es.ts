@@ -1618,6 +1618,8 @@ export const es: TranslationStructure = {
         enterPathPlaceholder: 'Ingresar ruta (ej. ~/projects)',
         recentPaths: 'Rutas recientes',
         suggestedPaths: 'Rutas sugeridas',
+        directorySuggestions: 'Directorios sugeridos',
+        noMatchingDirectories: 'No hay directorios coincidentes',
         noMachineSelected: 'Ninguna máquina seleccionada',
         detectingClis: 'Detectando CLIs...',
         noClisDetected: 'No se detectaron CLIs',

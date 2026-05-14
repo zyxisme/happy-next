@@ -1619,6 +1619,8 @@ export const ja: TranslationStructure = {
         enterPathPlaceholder: 'パスを入力（例: ~/projects）',
         recentPaths: '最近のパス',
         suggestedPaths: 'おすすめのパス',
+        directorySuggestions: 'ディレクトリ候補',
+        noMatchingDirectories: '一致するディレクトリはありません',
         noMachineSelected: 'マシンが選択されていません',
         detectingClis: 'CLIを検出中...',
         noClisDetected: 'CLIが検出されませんでした',

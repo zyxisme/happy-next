@@ -38,8 +38,12 @@ interface MultiTextInputProps {
     lineHeight?: number;
     style?: StyleProp<ViewStyle>;
     onKeyPress?: OnKeyPressCallback;
+    onFocus?: () => void;
+    onBlur?: () => void;
     onSelectionChange?: (selection: { start: number; end: number }) => void;
     onStateChange?: (state: TextInputState) => void;
+    autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+    autoCorrect?: boolean;
 }
 
 export const MultiTextInput = React.forwardRef<MultiTextInputHandle, MultiTextInputProps>((props, ref) => {
@@ -206,10 +210,12 @@ export const MultiTextInput = React.forwardRef<MultiTextInputHandle, MultiTextIn
                 value={value}
                 onChangeText={handleTextChange}
                 onKeyPress={handleKeyPress}
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
                 onSelectionChange={handleSelectionChange}
                 multiline={true}
-                autoCapitalize="sentences"
-                autoCorrect={true}
+                autoCapitalize={props.autoCapitalize ?? 'sentences'}
+                autoCorrect={props.autoCorrect ?? true}
                 keyboardType="default"
                 returnKeyType="default"
                 autoComplete="off"
