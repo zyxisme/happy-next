@@ -53,6 +53,13 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
+                name="dootask/index"
+                options={{
+                    headerShown: true,
+                    headerTitle: t('tabs.dootask'),
+                }}
+            />
+            <Stack.Screen
                 name="inbox/notice/[id]"
                 options={{
                     headerShown: true,

@@ -1,18 +1,16 @@
 import * as React from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAcceptedFriends, useFriendRequests, useRequestedFriends, useFeedItems, useFeedLoaded, useFriendsLoaded, useRealtimeStatus } from '@/sync/storage';
 import { UserCard } from '@/components/UserCard';
 import { t } from '@/text';
-import { trackFriendsSearch, trackFriendsProfileView } from '@/track';
+import { trackFriendsProfileView } from '@/track';
 import { ItemGroup } from '@/components/ItemGroup';
 import { UpdateBanner } from './UpdateBanner';
 import { Typography } from '@/constants/Typography';
 import { useRouter } from 'expo-router';
 import { layout } from '@/components/layout';
 import { useIsTablet } from '@/utils/responsive';
-import { Header } from './navigation/Header';
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { FeedItemCard } from './FeedItemCard';
 import { VoiceAssistantStatusBar } from './VoiceAssistantStatusBar';
@@ -60,43 +58,6 @@ const styles = StyleSheet.create((theme) => ({
 interface InboxViewProps {
 }
 
-// Header components for tablet mode only (phone mode header is in MainView)
-function HeaderTitleTablet() {
-    const { theme } = useUnistyles();
-    return (
-        <Text style={{
-            fontSize: 17,
-            color: theme.colors.header.tint,
-            fontWeight: '600',
-            ...Typography.default('semiBold'),
-        }}>
-            {t('tabs.inbox')}
-        </Text>
-    );
-}
-
-function HeaderRightTablet() {
-    const router = useRouter();
-    const { theme } = useUnistyles();
-    return (
-        <Pressable
-            onPress={() => {
-                trackFriendsSearch();
-                router.push('/friends/search');
-            }}
-            hitSlop={15}
-            style={{
-                width: 32,
-                height: 32,
-                alignItems: 'center',
-                justifyContent: 'center',
-            }}
-        >
-            <Ionicons name="person-add-outline" size={24} color={theme.colors.header.tint} />
-        </Pressable>
-    );
-}
-
 export const InboxView = React.memo(({}: InboxViewProps) => {
     const router = useRouter();
     const friends = useAcceptedFriends();
@@ -130,25 +91,14 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
         />
     );
 
-    const tabletHeader = isTablet ? (
-        <View style={{ backgroundColor: theme.colors.groupped.background }}>
-            <Header
-                title={<HeaderTitleTablet />}
-                headerRight={() => <HeaderRightTablet />}
-                headerLeft={() => null}
-                headerShadowVisible={false}
-                headerTransparent={true}
-            />
-            {realtimeStatus !== 'disconnected' && (
-                <VoiceAssistantStatusBar variant="full" />
-            )}
-        </View>
+    const statusBar = isTablet && realtimeStatus !== 'disconnected' ? (
+        <VoiceAssistantStatusBar variant="full" />
     ) : null;
 
     if (isLoading) {
         return (
             <View style={styles.container}>
-                {tabletHeader}
+                {statusBar}
                 <ScrollView
                     contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
                     contentContainerStyle={{ flexGrow: 1 }}
@@ -166,7 +116,7 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
     if (isEmpty) {
         return (
             <View style={styles.container}>
-                {tabletHeader}
+                {statusBar}
                 <ScrollView
                     contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
                     contentContainerStyle={{ flexGrow: 1 }}
@@ -190,7 +140,7 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
 
     return (
         <View style={styles.container}>
-            {tabletHeader}
+            {statusBar}
             <ScrollView
                 contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
                 contentContainerStyle={{
