@@ -1,0 +1,56 @@
+diff --git a/node_modules/react-native-keyboard-controller/ios/observers/movement/observer/KeyboardMovementObserver+Listeners.swift b/node_modules/react-native-keyboard-controller/ios/observers/movement/observer/KeyboardMovementObserver+Listeners.swift
+index 464eec7..6bfdbbd 100644
+--- a/node_modules/react-native-keyboard-controller/ios/observers/movement/observer/KeyboardMovementObserver+Listeners.swift
++++ b/node_modules/react-native-keyboard-controller/ios/observers/movement/observer/KeyboardMovementObserver+Listeners.swift
+@@ -12,7 +12,7 @@ extension KeyboardMovementObserver {
+     let (duration, frame) = notification.keyboardMetaData()
+     if let keyboardFrame = frame {
+       tag = UIResponder.current.reactViewTag
+-      let keyboardHeight = keyboardFrame.cgRectValue.size.height
++      let keyboardHeight = visibleKeyboardHeight(in: keyboardFrame.cgRectValue)
+       self.keyboardHeight = keyboardHeight
+       self.notification = notification
+ 
+@@ -59,7 +59,7 @@ extension KeyboardMovementObserver {
+ 
+     let (duration, frame) = notification.keyboardMetaData()
+     if let keyboardFrame = frame {
+-      let keyboardHeight = keyboardFrame.cgRectValue.size.height
++      let keyboardHeight = visibleKeyboardHeight(in: keyboardFrame.cgRectValue)
+       tag = UIResponder.current.reactViewTag
+       self.keyboardHeight = keyboardHeight
+ 
+@@ -113,4 +113,33 @@ extension KeyboardMovementObserver {
+     keyboardDidTask = task
+     DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: task)
+   }
++
++  // happy-app patch for https://github.com/kirillzyusko/react-native-keyboard-controller/issues/1223
++  //
++  // In iPad multitasking (Split View / Stage Manager / iPadOS 26 windowed
++  // apps) UIKit reports the full physical keyboard height in screen
++  // coordinates. For a window that does not extend to the bottom of the
++  // physical screen, only part of that keyboard overlaps the app window.
++  //
++  // The reported UIWindow frame/bounds are scene-local. Use UIScreen's
++  // coordinateSpace to recover the window's visual offset on the physical
++  // screen, then add that offset to the keyboard/window intersection height.
++  private func visibleKeyboardHeight(in keyboardFrame: CGRect) -> CGFloat {
++    let raw = keyboardFrame.size.height
++    guard let window = keyboardTrackingView.window else { return raw }
++
++    let keyboardFrameInWindow = window.convert(keyboardFrame, from: nil)
++    let visible = window.bounds.intersection(keyboardFrameInWindow)
++
++    guard !visible.isNull, visible.height > 0 else {
++      return raw
++    }
++
++    let visibleHeight = min(raw, visible.height)
++    let gap = max(0, raw - visibleHeight)
++    let windowFrameInScreen = window.convert(window.bounds, to: window.screen.coordinateSpace)
++    let visualOffsetY = min(gap, max(0, windowFrameInScreen.minY))
++
++    return min(raw, visibleHeight + visualOffsetY)
++  }
+ }
