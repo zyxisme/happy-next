@@ -13,7 +13,6 @@ import { ItemList } from '@/components/ItemList';
 import { useUnifiedScanner } from '@/hooks/useUnifiedScanner';
 import { useLocalSettingMutable, useSetting, useDootaskProfile } from '@/sync/storage';
 import { storage } from '@/sync/storage';
-import { isUsingCustomServer } from '@/sync/serverConfig';
 import { trackWhatsNewClicked } from '@/track';
 import { Modal } from '@/modal';
 import { useMultiClick } from '@/hooks/useMultiClick';
@@ -36,7 +35,6 @@ export const SettingsView = React.memo(function SettingsView() {
     const auth = useAuth();
     const [devModeEnabled, setDevModeEnabled] = useLocalSettingMutable('devModeEnabled');
     const experiments = useSetting('experiments');
-    const isCustomServer = isUsingCustomServer();
     const allMachines = useAllMachines();
     const profile = useProfile();
     const displayName = getDisplayName(profile);

@@ -219,8 +219,7 @@ const HeaderRight = React.memo(({ activeTab, onDootaskCreate }: { activeTab: Act
 
     if (activeTab === 'settings') {
         if (!isCustomServer) {
-            // Empty view to maintain header centering
-            return <View style={styles.headerButton} />;
+            return null;
         }
         return (
             <Pressable
@@ -246,6 +245,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     const dootaskProfile = useDootaskProfile();
     const inboxHasContent = useInboxHasContent();
     const showDootaskTab = !!dootaskProfile;
+    const isCustomServer = isUsingCustomServer();
 
     // Tab state management
     const [activeTab, setActiveTab] = React.useState<TabType>('sessions');
@@ -403,7 +403,9 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
                 headerStyle: { backgroundColor: theme.colors.groupped.background },
                 headerTitle: () => <HeaderTitle activeTab={activeTab as ActiveTabType} />,
                 headerLeft: () => <HeaderLogo />,
-                headerRight: () => <HeaderRight activeTab={activeTab as ActiveTabType} onDootaskCreate={handleCreatePress} />,
+                headerRight: activeTab === 'settings' && !isCustomServer
+                    ? undefined
+                    : () => <HeaderRight activeTab={activeTab as ActiveTabType} onDootaskCreate={handleCreatePress} />,
             }}
         />
     );
