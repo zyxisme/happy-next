@@ -74,6 +74,7 @@ Running `happy` prints a QR code for device pairing.
 - 📁 **Code browser & git management** - Browse files, view diffs, stage/commit/discard from your phone
 - 📋 **DooTask integration** - Task management with real-time chat and one-click AI sessions
 - 📨 **Pending message queue** - Messages queued and auto-dispatched when CLI is ready
+- 📱 **Native mobile UX** - Platform-native bottom tabs and headers on iOS / Android, iPad windowed-mode polish
 
 ## How does it work?
 
@@ -99,10 +100,11 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - All three agents are first-class citizens with session resume, duplicate/fork, and history
 - Multi-agent history page with per-provider tabs, device and agent filter dropdowns
 - Per-agent model selection, cost tracking, and context window display
-- ACP and App-Server (JSON-RPC) backends for Codex, Codex v0.121.0 with fast mode
+- ACP and App-Server (JSON-RPC) backends for Codex, Codex v0.130.0 with fast mode
 - AI backend profiles with presets for DeepSeek, Z.AI, OpenAI, Azure, and Google AI
 - Claude Opus 4.7 support with empty thinking block filtering for clean 4.x rendering
 - GPT-5.5 support for Codex with low/medium/high/xhigh reasoning levels
+- Gemini 3.1 Pro and Gemini 3 Flash (GA) in the model catalog; wizard handles flash model variants
 
 ### Voice Assistant (Happy Voice)
 - LiveKit-based voice gateway with pluggable STT/LLM/TTS providers
@@ -146,6 +148,8 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - One-click AI session launch from any task (MCP server passthrough)
 - Create tasks and projects directly from the app with cross-platform date picker
 - Globalized WebSocket connection with real-time task updates and persistent server-side connection
+- DooTask recents merged into the main inbox with persistent cache and silent background refresh
+- Session avatars on DooTask-related sessions, chat header adapts to dialog type
 
 ### Self-Hosting
 - One-command `docker-compose up` (Web + API + Voice + Postgres + Redis + MinIO)
@@ -166,14 +170,17 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - `/duplicate` command to fork a session from any message
 - Message pagination, unread blue dot indicator, compact list view
 - Active/Inactive tab filter, session preview expand/collapse, metadata caching
+- Recent session history pagination for faster initial load
 - Session rename with lock (prevent AI auto-update), search in history
 - Options click-to-send / long-press-to-fill, scroll-to-bottom button
+- "Always show context size" defaults to on so usage is visible without opening session details
 - Web desktop: hover-to-show copy button on chat messages and right-click on options reusing the mobile long-press behavior
 - Mobile text selection: in-app selection page uses browser-native long-press with static syntax highlighting (Lezer) for reliable first-tap selection on Android
 - Pull-to-refresh, inset dividers, Agent tool display with robot icon
 - Tool input/output formatted as key-value pairs instead of raw JSON
 - `preview_html` tool for full-page HTML preview, colon-separated MCP tool naming
 - CLI hot-upgrade support mid-session
+- Path picker with directory autocomplete via remote machine listing (web + mobile)
 
 ### CLI
 - `happy update` self-upgrade, `happy --version` with all agent versions
@@ -187,6 +194,12 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Performance: payload trimming for mobile, lazy-load diffs, rendering optimization
 
 ### UI & Polish
+- Native platform-feel mobile UX: iOS / Android use the platform-native bottom tab bar and native header on home, chat, and inbox screens
+- Inbox-first bottom tab order, "Session" tab label, dedicated navigation icons (no more brutalist placeholders)
+- iOS polish: chevron-only back button, header avatar geometry/clipping fixes, centered native header title, centralized status bar controller
+- iOS 26 fixes: scroll-edge fade suppression, full-screen translucent chat overlay with keyboard, prompt modal presentation
+- iPad / Mac windowed-mode polish: sidebar header reserves space for window controls, fixed session header resize, top-tab insets, list divider rendering, and windowed keyboard overlap
+- Web: bottom tab bundling fix, session header navigation fix, path autocomplete focus handling
 - Dark mode fixes throughout the app
 - i18n improvements (Chinese Simplified/Traditional, CJK input handling)
 - Markdown rendering: tables, inline code, nested fences, clickable file paths

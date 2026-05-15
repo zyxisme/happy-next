@@ -74,6 +74,7 @@ happy gemini
 - 📁 **代码浏览器和 Git 管理** — 从手机浏览文件、查看 diff、暂存/提交/丢弃
 - 📋 **DooTask 集成** — 任务管理，实时聊天，一键 AI 会话
 - 📨 **待发消息队列** — CLI 繁忙时消息排队，就绪后自动分发
+- 📱 **原生移动体验** — iOS / Android 平台原生底栏与 header，iPad 窗口化模式适配
 
 ## 工作原理
 
@@ -99,10 +100,11 @@ Happy Next 是原版 Happy 的重大演进，以下是亮点：
 - 三个 Agent 均为一等公民，支持会话恢复、复制/分叉和历史记录
 - 多 Agent 历史页面，按供应商分标签页，支持设备和 Agent 类型筛选
 - 按 Agent 选择模型、费用追踪和上下文窗口显示
-- Codex 支持 ACP 和 App-Server（JSON-RPC）两种后端，Codex v0.121.0 支持 fast mode
+- Codex 支持 ACP 和 App-Server（JSON-RPC）两种后端，Codex v0.130.0 支持 fast mode
 - AI 后端配置文件，内置 DeepSeek、Z.AI、OpenAI、Azure 和 Google AI 预设
 - 新增 Claude Opus 4.7 支持，过滤 4.x 模型的空 thinking 块以保证渲染干净
 - 新增 GPT-5.5 Codex 支持，提供 low/medium/high/xhigh 四档推理强度
+- 新增 Gemini 3.1 Pro，Gemini 3 Flash 转 GA；Wizard 兼容 flash 模型变体
 
 ### 语音助手（Happy Voice）
 - 基于 LiveKit 的语音网关，支持可插拔的 STT/LLM/TTS 供应商
@@ -146,6 +148,8 @@ Happy Next 是原版 Happy 的重大演进，以下是亮点：
 - 从任一任务一键启动 AI 会话（MCP 服务透传）
 - 在应用内直接创建任务和项目，跨平台日期选择器
 - 全局化 WebSocket 连接，实时任务更新，持久化服务端连接
+- DooTask 最近会话合并进收件箱，持久化缓存 + 后台静默刷新
+- DooTask 关联会话显示头像，chat header 按对话类型自适应
 
 ### 自托管
 - 一条命令 `docker-compose up`（Web + API + Voice + Postgres + Redis + MinIO）
@@ -166,14 +170,17 @@ Happy Next 是原版 Happy 的重大演进，以下是亮点：
 - `/duplicate` 命令从任意消息分叉会话
 - 消息分页、未读蓝点指示器、紧凑列表视图
 - Active/Inactive 标签页过滤器、会话预览展开/折叠、元数据缓存
+- 最近会话历史分页，加快首屏加载
 - 会话重命名并锁定（防止 AI 自动更新）、历史搜索
 - 选项点击发送 / 长按填充、滚动到底部按钮
+- "始终显示上下文大小"默认开启，无需进入会话详情即可看到用量
 - Web 桌面端：消息悬浮显示复制按钮、右键 option 复用移动端长按行为
 - 移动端文本选择：选择页改用浏览器原生长按 + 静态语法高亮（Lezer），Android 首次长按即可选中
 - 下拉刷新、内嵌分隔线、Agent tool 展示（机器人图标）
 - 工具输入/输出格式化为 key-value 对（替代原始 JSON）
 - `preview_html` 工具全页面 HTML 预览，冒号分隔 MCP 工具命名
 - CLI 会话中途热升级
+- 路径选择器支持目录自动补全，通过远程机器列表实现（Web + 移动端）
 
 ### CLI
 - `happy update` 自更新、`happy --version` 显示所有 Agent 版本
@@ -187,6 +194,12 @@ Happy Next 是原版 Happy 的重大演进，以下是亮点：
 - 性能：移动端载荷精简、延迟加载 diff、渲染优化
 
 ### UI 和打磨
+- 原生平台感的移动体验：iOS / Android 首页、聊天、收件箱采用平台原生底栏与原生 header
+- 底栏顺序调整为收件箱优先，标签"Terminal"改名"Session"，并替换 brutalist 占位符为正式导航图标
+- iOS 打磨：返回按钮统一 chevron-only、header 头像几何/裁剪修正、原生 header 标题居中、集中式状态栏控制器
+- iOS 26 适配：scroll-edge 渐隐抑制、键盘下全屏半透明聊天叠层、prompt modal 呈现
+- iPad / Mac 窗口化打磨：侧栏 header 为窗口控件预留空间，修复 session header resize、top tab insets、列表分割线渲染、窗口键盘遮挡
+- Web：底栏 bundling 修复、session header 导航修复、路径补全焦点处理
 - 全应用暗色模式修复
 - i18n 改进（简体中文/繁体中文、CJK 输入处理）
 - Markdown 渲染：表格、内联代码、嵌套代码块、可点击文件路径

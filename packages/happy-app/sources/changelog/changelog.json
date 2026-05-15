@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "version": 9,
+      "date": "2026-05-15",
+      "summary": "Native iOS/Android navigation overhaul, deeper DooTask inbox integration, directory autocomplete for path pickers, Gemini 3.1 Pro support, and broad iPad/Mac/Web polish.",
+      "changes": [
+        "Native navigation: switch iOS and Android to the platform-native bottom tab bar and native header on home, chat, and inbox screens for an OS-consistent feel",
+        "Tabs: reorder bottom tabs to put inbox before sessions, rename \"Terminal\" to \"Session\", and replace brutalist placeholders with dedicated navigation icons",
+        "iOS polish: chevron-only back button, header avatar geometry/clipping fixes, centered title in native header, status bar controller, and iOS 26 fixes for scroll-edge fade, full-screen translucent chat overlay, and prompt modal presentation",
+        "DooTask inbox: merge DooTask recents into the main inbox with persistent cache and silent background refresh; session avatars now show for DooTask-related sessions; chat header adapts to dialog type; self HTML messages align correctly",
+        "Path picker: directory autocomplete via remote machine listing, extracted to a shared hook used by web and mobile; web autocomplete focus handling fixed",
+        "Sessions: paginate recent session history for faster loading",
+        "Models: add Gemini 3.1 Pro to the catalog, promote Gemini 3 Flash to GA, and drop the deprecated Gemini 3 Pro Preview; wizard handles new flash model variants; Codex updated to v0.130.0",
+        "Always-on context size: default the \"always show context size\" setting to on so usage is visible without opening session details",
+        "iPad / Mac: pad sidebar header for windowed-mode window controls, fix session header resize, top-tab insets, list divider rendering, and windowed keyboard overlap; sidebar logo dismisses to root, nav buttons use stack-friendly navigation",
+        "Web: fix bottom tab bundling and session header navigation",
+        "Misc: refresh React Native scroll-edge patch, clean up API endpoint detail styling, downgrade message validation failure log to warn"
+      ],
+      "rawMarkdown": "## Version 9 - 2026-05-15\n\n\nNative iOS/Android navigation overhaul, deeper DooTask inbox integration, directory autocomplete for path pickers, Gemini 3.1 Pro support, and broad iPad/Mac/Web polish.\n\n- Native navigation: switch iOS and Android to the platform-native bottom tab bar and native header on home, chat, and inbox screens for an OS-consistent feel\n- Tabs: reorder bottom tabs to put inbox before sessions, rename \"Terminal\" to \"Session\", and replace brutalist placeholders with dedicated navigation icons\n- iOS polish: chevron-only back button, header avatar geometry/clipping fixes, centered title in native header, status bar controller, and iOS 26 fixes for scroll-edge fade, full-screen translucent chat overlay, and prompt modal presentation\n- DooTask inbox: merge DooTask recents into the main inbox with persistent cache and silent background refresh; session avatars now show for DooTask-related sessions; chat header adapts to dialog type; self HTML messages align correctly\n- Path picker: directory autocomplete via remote machine listing, extracted to a shared hook used by web and mobile; web autocomplete focus handling fixed\n- Sessions: paginate recent session history for faster loading\n- Models: add Gemini 3.1 Pro to the catalog, promote Gemini 3 Flash to GA, and drop the deprecated Gemini 3 Pro Preview; wizard handles new flash model variants; Codex updated to v0.130.0\n- Always-on context size: default the \"always show context size\" setting to on so usage is visible without opening session details\n- iPad / Mac: pad sidebar header for windowed-mode window controls, fix session header resize, top-tab insets, list divider rendering, and windowed keyboard overlap; sidebar logo dismisses to root, nav buttons use stack-friendly navigation\n- Web: fix bottom tab bundling and session header navigation\n- Misc: refresh React Native scroll-edge patch, clean up API endpoint detail styling, downgrade message validation failure log to warn"
+    },
+    {
       "version": 8,
       "date": "2026-05-07",
       "summary": "OpenClaw renders rich AI content blocks, Claude Opus 4.7 and GPT-5.5 support, image upload quality, session title polish, Claude 4.x compatibility fixes, web desktop polish, and mobile text-selection rebuild.",
@@ -125,5 +144,5 @@
       "rawMarkdown": "## Version 1 - 2025-05-12\n\n\nWelcome to Happy - your secure, encrypted mobile companion for Claude Code. This inaugural release establishes the foundation for private, powerful AI interactions on the go.\n\n- Implemented end-to-end encrypted session management ensuring complete privacy\n- Integrated intelligent voice assistant with natural conversation capabilities\n- Added experimental file manager with syntax highlighting and tree navigation\n- Built seamless real-time synchronization across all your devices\n- Established native support for iOS, Android, and responsive web interfaces"
     }
   ],
-  "latestVersion": 8
+  "latestVersion": 9
 }
