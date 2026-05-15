@@ -19,6 +19,7 @@ import { sync } from '@/sync/sync';
 import { dootaskFetchUsers, dootaskFetchDialogs, dootaskOpenUserDialog } from '@/sync/dootask/api';
 import type { DooTaskProfile, DooTaskUser, DooTaskDialogListItem } from '@/sync/dootask/types';
 import { showToast } from './Toast';
+import { useMainTabBottomPadding } from '@/hooks/useMainTabBottomPadding';
 
 const styles = StyleSheet.create((theme) => ({
     container: {
@@ -132,6 +133,7 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
     const isTablet = useIsTablet();
     const realtimeStatus = useRealtimeStatus();
     const dootaskProfile = useDootaskProfile();
+    const tabBottomPadding = useMainTabBottomPadding();
 
     const [refreshing, setRefreshing] = React.useState(false);
     const [dootaskUsers, setDootaskUsers] = React.useState<DootaskMergedUser[]>([]);
@@ -179,7 +181,6 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
             }
 
             const users = extractDootaskUsers(userResult.value.data)
-                .filter((u) => u.userid !== dootaskProfile.userId)
                 .map((user, index) => {
                     const recent = recentMap.get(user.userid);
                     return {
@@ -275,7 +276,7 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
                 {statusBar}
                 <ScrollView
                     contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
-                    contentContainerStyle={{ flexGrow: 1 }}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: tabBottomPadding }}
                     refreshControl={refreshControl}
                 >
                     <UpdateBanner />
@@ -303,7 +304,8 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
                     flexGrow: 1,
                     maxWidth: layout.maxWidth,
                     alignSelf: 'center',
-                    width: '100%'
+                    width: '100%',
+                    paddingBottom: tabBottomPadding,
                 }}
                 refreshControl={refreshControl}
             >

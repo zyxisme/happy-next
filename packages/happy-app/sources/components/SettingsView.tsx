@@ -1,4 +1,4 @@
-import { View, ScrollView, Pressable, Platform, Linking, AppState } from 'react-native';
+import { View, Pressable, Platform, Linking, AppState } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Image } from 'expo-image';
 import * as React from 'react';
@@ -27,6 +27,7 @@ import { useProfile } from '@/sync/storage';
 import { getDisplayName, getAvatarUrl, getBio } from '@/sync/profile';
 import { Avatar } from '@/components/Avatar';
 import { t } from '@/text';
+import { useMainTabBottomPadding } from '@/hooks/useMainTabBottomPadding';
 
 export const SettingsView = React.memo(function SettingsView() {
     const { theme } = useUnistyles();
@@ -41,6 +42,7 @@ export const SettingsView = React.memo(function SettingsView() {
     const displayName = getDisplayName(profile);
     const avatarUrl = getAvatarUrl(profile);
     const bio = getBio(profile);
+    const tabBottomPadding = useMainTabBottomPadding();
 
     const { launchScanner, connectWithUrl, isLoading } = useUnifiedScanner();
 
@@ -177,7 +179,7 @@ export const SettingsView = React.memo(function SettingsView() {
 
     return (
 
-        <ItemList style={{ paddingTop: 0 }}>
+        <ItemList style={{ paddingTop: 0 }} containerStyle={{ paddingBottom: tabBottomPadding }}>
             {/* App Info Header */}
             <View style={{ maxWidth: layout.maxWidth, alignSelf: 'center', width: '100%' }}>
                 <View style={{ alignItems: 'center', paddingVertical: 24, backgroundColor: theme.colors.surface, marginTop: 16, borderRadius: 12, marginHorizontal: 16 }}>

@@ -14,6 +14,7 @@ import { dootaskFetchProjects } from '@/sync/dootask/api';
 import { parseFlowItem, FLOW_STATUS_COLORS } from '@/sync/dootask/types';
 import type { DooTaskItem, DooTaskProject } from '@/sync/dootask/types';
 import { useShallow } from 'zustand/react/shallow';
+import { useMainTabBottomPadding } from '@/hooks/useMainTabBottomPadding';
 
 /**
  * Format end_at date as countdown or short date (matches DooTask dashboard logic).
@@ -514,6 +515,7 @@ export const DooTaskListView = React.memo(() => {
     const profile = useDootaskProfile();
     const userCache = useDootaskUserCache();
     const taskFlavorsMap = useTaskFlavorsMap(profile?.serverUrl);
+    const tabBottomPadding = useMainTabBottomPadding();
     const [isPullRefreshing, setIsPullRefreshing] = React.useState(false);
     const isRefreshRunningRef = React.useRef(false);
     const hasQueuedRefreshRef = React.useRef(false);
@@ -638,7 +640,7 @@ export const DooTaskListView = React.memo(() => {
                     ListFooterComponent={
                         loading && !isPullRefreshing && tasks.length > 0 ? <ActivityIndicator style={{ padding: 16 }} /> : null
                     }
-                    contentContainerStyle={styles.list}
+                    contentContainerStyle={[styles.list, { paddingBottom: tabBottomPadding }]}
                 />
                 {error && error !== 'token_expired' ? (
                     <View style={[styles.errorBanner, { backgroundColor: theme.colors.deleteAction + '20' }]}>
@@ -678,7 +680,7 @@ const styles = StyleSheet.create((_theme) => ({
     filterRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
     chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4 },
     chipText: { ...Typography.default(), fontSize: 13 },
-    list: { paddingHorizontal: 16, paddingBottom: 20 },
+    list: { paddingHorizontal: 16 },
     card: {
         padding: 14,
         borderRadius: 10,
