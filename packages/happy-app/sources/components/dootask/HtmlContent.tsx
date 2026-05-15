@@ -11,9 +11,10 @@ export type HtmlContentProps = {
     maxImageWidth?: number;
     onImagePress?: (url: string) => void;
     onImagesFound?: (urls: string[]) => void;
+    isSelf?: boolean;
 };
 
-export const HtmlContent = React.memo(({ html, theme, selectable, maxImageWidth, onImagePress, onImagesFound }: HtmlContentProps) => {
+export const HtmlContent = React.memo(({ html, theme, selectable, maxImageWidth, onImagePress, onImagesFound, isSelf }: HtmlContentProps) => {
     const [height, setHeight] = React.useState(100);
     const containerRef = React.useRef<any>(null);
 
@@ -41,7 +42,7 @@ export const HtmlContent = React.memo(({ html, theme, selectable, maxImageWidth,
 
     if (Platform.OS === 'web') {
         return (
-            <View style={styles.htmlContainer}>
+            <View style={[styles.htmlContainer, isSelf && styles.selfHtmlContainer]}>
                 {/* @ts-ignore - Web only */}
                 <style dangerouslySetInnerHTML={{ __html: `
                     .dootask-html-content { color: ${theme.colors.text}; font-size: 14px; line-height: 1.6; word-break: break-word;${selectable ? '' : ' -webkit-user-select: none; user-select: none;'} }
@@ -77,8 +78,9 @@ export const HtmlContent = React.memo(({ html, theme, selectable, maxImageWidth,
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <style>
-body { margin: 0; padding: 0; color: ${theme.colors.text}; font-size: 14px; line-height: 1.6; background: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; word-break: break-word;${selectable ? '' : ' -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;'} }
+body { margin: 0; padding: 0; color: ${theme.colors.text}; font-size: 14px; line-height: 1.6; background: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; word-break: break-word;${isSelf ? ' text-align: right;' : ''}${selectable ? '' : ' -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;'} }
 p { margin: 0.3em 0; }
+pre, code, blockquote, ul, ol, table { text-align: left; }
 img { max-width: ${maxImageWidth ? `${maxImageWidth}px` : '100%'}; height: auto; border-radius: 4px; cursor: pointer; }
 a { color: #0A84FF; }
 pre, code { background: ${theme.colors.surfaceHighest || '#2a2a2a'}; border-radius: 4px; padding: 2px 4px; font-size: 13px; }
@@ -145,4 +147,5 @@ ${selectable ? '' : "document.addEventListener('contextmenu', function(e) { e.pr
 
 const styles = StyleSheet.create((_theme) => ({
     htmlContainer: { minHeight: 20, alignSelf: 'stretch' as const },
+    selfHtmlContainer: { alignItems: 'flex-end' as const },
 }));

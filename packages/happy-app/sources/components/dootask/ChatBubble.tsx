@@ -530,7 +530,7 @@ type ChatBubbleProps = {
 /** Check if HTML contains complex elements that need WebView rendering. */
 const COMPLEX_HTML_RE = /<(table|img|pre|code|ul|ol|li|h[1-6]|iframe|video|audio|blockquote|div\s+class|\.tox-checklist)/i;
 
-export function TextContent({ msg, theme, serverUrl, onImagePress }: { msg: DooTaskDialogMsg; theme: any; serverUrl: string; onImagePress?: (url: string) => void }) {
+export function TextContent({ msg, theme, serverUrl, onImagePress, isSelf }: { msg: DooTaskDialogMsg; theme: any; serverUrl: string; onImagePress?: (url: string) => void; isSelf?: boolean }) {
     const text = getMsgText(msg);
 
     // Markdown messages: render as native components (Text/View) for proper flex layout
@@ -543,7 +543,7 @@ export function TextContent({ msg, theme, serverUrl, onImagePress }: { msg: DooT
     // Only use WebView for complex HTML (tables, code blocks, images, lists, etc.)
     // Simple HTML (br, p, b, i, a, span) is stripped and rendered natively for instant display
     if (isHtml && COMPLEX_HTML_RE.test(text)) {
-        return <HtmlContent html={formatHtmlImages(resolveContentUrls(text, serverUrl))} theme={theme} maxImageWidth={220} onImagePress={onImagePress} />;
+        return <HtmlContent html={formatHtmlImages(resolveContentUrls(text, serverUrl))} theme={theme} maxImageWidth={220} onImagePress={onImagePress} isSelf={isSelf} />;
     }
     return (
         <Text style={[styles.msgText, { color: theme.colors.text }]}>
@@ -552,7 +552,7 @@ export function TextContent({ msg, theme, serverUrl, onImagePress }: { msg: DooT
     );
 }
 
-function ImageContent({ msg, serverUrl, theme, onImagePress }: { msg: DooTaskDialogMsg; serverUrl: string; theme: any; onImagePress?: (url: string) => void }) {
+function ImageContent({ msg, serverUrl, theme, onImagePress, isSelf }: { msg: DooTaskDialogMsg; serverUrl: string; theme: any; onImagePress?: (url: string) => void; isSelf?: boolean }) {
     const imageUrl = getMsgImageUrl(msg, serverUrl);
     // File-upload image: has path/url/thumb
     if (imageUrl) {
@@ -572,7 +572,7 @@ function ImageContent({ msg, serverUrl, theme, onImagePress }: { msg: DooTaskDia
     // Text-with-embedded-images: msg.msg.text contains <img> tags (DooTask classifies these as type='image')
     const text = getMsgText(msg);
     if (text) {
-        return <HtmlContent html={formatHtmlImages(resolveContentUrls(text, serverUrl))} theme={theme} maxImageWidth={220} onImagePress={onImagePress} />;
+        return <HtmlContent html={formatHtmlImages(resolveContentUrls(text, serverUrl))} theme={theme} maxImageWidth={220} onImagePress={onImagePress} isSelf={isSelf} />;
     }
     return null;
 }
@@ -650,11 +650,11 @@ function FileContent({ msg, serverUrl, theme, onImagePress, isSelf }: { msg: Doo
     );
 }
 
-function LongtextContent({ msg, theme, serverUrl, onImagePress }: { msg: DooTaskDialogMsg; theme: any; serverUrl: string; onImagePress?: (url: string) => void }) {
+function LongtextContent({ msg, theme, serverUrl, onImagePress, isSelf }: { msg: DooTaskDialogMsg; theme: any; serverUrl: string; onImagePress?: (url: string) => void; isSelf?: boolean }) {
     const fileUrl = msg.msg?.file?.url;
     return (
         <View>
-            <TextContent msg={msg} theme={theme} serverUrl={serverUrl} onImagePress={onImagePress} />
+            <TextContent msg={msg} theme={theme} serverUrl={serverUrl} onImagePress={onImagePress} isSelf={isSelf} />
             {fileUrl ? (
                 <Pressable onPress={() => WebBrowser.openBrowserAsync(resolveUrl(fileUrl, serverUrl))} style={{ marginTop: 4 }}>
                     <Text style={{ ...Typography.default('semiBold'), fontSize: 13, color: theme.colors.textLink }}>
@@ -912,17 +912,17 @@ export const ChatBubble = React.memo(({
                     </Text>
                 );
             } else {
-                content = <TextContent msg={msg} theme={theme} serverUrl={serverUrl} onImagePress={onImagePress} />;
+                content = <TextContent msg={msg} theme={theme} serverUrl={serverUrl} onImagePress={onImagePress} isSelf={isSelf} />;
             }
             break;
         case 'image':
-            content = <ImageContent msg={msg} serverUrl={serverUrl} theme={theme} onImagePress={onImagePress} />;
+            content = <ImageContent msg={msg} serverUrl={serverUrl} theme={theme} onImagePress={onImagePress} isSelf={isSelf} />;
             break;
         case 'file':
             content = <FileContent msg={msg} serverUrl={serverUrl} theme={theme} onImagePress={onImagePress} isSelf={isSelf} />;
             break;
         case 'longtext':
-            content = <LongtextContent msg={msg} theme={theme} serverUrl={serverUrl} onImagePress={onImagePress} />;
+            content = <LongtextContent msg={msg} theme={theme} serverUrl={serverUrl} onImagePress={onImagePress} isSelf={isSelf} />;
             break;
         case 'record':
             content = <RecordContent msg={msg} serverUrl={serverUrl} theme={theme} />;
