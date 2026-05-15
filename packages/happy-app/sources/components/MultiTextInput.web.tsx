@@ -39,8 +39,12 @@ interface MultiTextInputProps {
     lineHeight?: number;
     style?: StyleProp<ViewStyle>;
     onKeyPress?: OnKeyPressCallback;
+    onFocus?: () => void;
+    onBlur?: () => void;
     onSelectionChange?: (selection: { start: number; end: number }) => void;
     onStateChange?: (state: TextInputState) => void;
+    autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+    autoCorrect?: boolean;
 }
 
 export const MultiTextInput = React.forwardRef<MultiTextInputHandle, MultiTextInputProps>((props, ref) => {
@@ -207,8 +211,10 @@ export const MultiTextInput = React.forwardRef<MultiTextInputHandle, MultiTextIn
                 onSelect={handleSelect}
                 onKeyDown={handleKeyDown}
                 maxRows={maxRows}
-                autoCapitalize="sentences"
-                autoCorrect="on"
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+                autoCapitalize={props.autoCapitalize ?? 'sentences'}
+                autoCorrect={props.autoCorrect === false ? 'off' : 'on'}
                 autoComplete="off"
             />
         </View>
