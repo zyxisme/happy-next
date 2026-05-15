@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, ScrollView, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAcceptedFriends, useFriendRequests, useRequestedFriends, useFeedItems, useFeedLoaded, useFriendsLoaded, useRealtimeStatus, useDootaskProfile } from '@/sync/storage';
 import { UserCard } from '@/components/UserCard';
@@ -9,7 +9,7 @@ import { ItemGroup } from '@/components/ItemGroup';
 import { Item } from '@/components/Item';
 import { UpdateBanner } from './UpdateBanner';
 import { Typography } from '@/constants/Typography';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { layout } from '@/components/layout';
 import { useIsTablet } from '@/utils/responsive';
 import { Image } from 'expo-image';
@@ -95,6 +95,11 @@ type DootaskMergedUser = DooTaskUser & {
     lastAtMs?: number;
 };
 
+let dootaskInboxCache: {
+    key: string;
+    users: DootaskMergedUser[];
+} | null = null;
+
 function dootaskChatPath(dialogId: number, user: DootaskMergedUser, profile: DooTaskProfile): string {
     const params = new URLSearchParams();
     const title = user.nickname || user.email || `#${user.userid}`;
@@ -140,7 +145,11 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
             return;
         }
         const profileKey = `${dootaskProfile.serverUrl}|${dootaskProfile.userId}|${dootaskProfile.token}`;
-        setDootaskUsersLoading(true);
+        const cachedUsers = dootaskInboxCache?.key === profileKey ? dootaskInboxCache.users : null;
+        if (cachedUsers) {
+            setDootaskUsers(cachedUsers);
+        }
+        setDootaskUsersLoading(!cachedUsers);
         try {
             const [dialogResult, userResult] = await Promise.allSettled([
                 dootaskFetchDialogs(dootaskProfile.serverUrl, dootaskProfile.token, { page: 1, pagesize: 100 }),
@@ -188,17 +197,26 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
                 return a.__index - b.__index;
             });
 
-            setDootaskUsers(users.map(({ __index, ...rest }) => rest));
+            const mergedUsers = users.map(({ __index, ...rest }) => rest);
+            dootaskInboxCache = {
+                key: profileKey,
+                users: mergedUsers,
+            };
+            setDootaskUsers(mergedUsers);
         } catch {
-            setDootaskUsers([]);
+            if (!cachedUsers) {
+                setDootaskUsers([]);
+            }
         } finally {
             setDootaskUsersLoading(false);
         }
     }, [dootaskProfile]);
 
-    React.useEffect(() => {
-        loadDootaskUsers();
-    }, [loadDootaskUsers]);
+    useFocusEffect(
+        React.useCallback(() => {
+            loadDootaskUsers();
+        }, [loadDootaskUsers])
+    );
 
     const handleRefresh = React.useCallback(async () => {
         setRefreshing(true);
@@ -236,8 +254,8 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
         }
     }, [dootaskProfile, openingDootaskUserId, router]);
 
-    const isLoading = !feedLoaded || !friendsLoaded || (!!dootaskProfile && dootaskUsersLoading && dootaskUsers.length === 0);
-    const isEmpty = !isLoading && friendRequests.length === 0 && requestedFriends.length === 0 && friends.length === 0 && feedItems.length === 0 && dootaskUsers.length === 0;
+    const dootaskInitialLoadPending = !!dootaskProfile && dootaskUsersLoading && dootaskUsers.length === 0;
+    const isEmpty = feedLoaded && friendsLoaded && !dootaskInitialLoadPending && friendRequests.length === 0 && requestedFriends.length === 0 && friends.length === 0 && feedItems.length === 0 && dootaskUsers.length === 0;
 
     const refreshControl = (
         <RefreshControl
@@ -250,24 +268,6 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
     const statusBar = isTablet && realtimeStatus !== 'disconnected' ? (
         <VoiceAssistantStatusBar variant="full" />
     ) : null;
-
-    if (isLoading) {
-        return (
-            <View style={styles.container}>
-                {statusBar}
-                <ScrollView
-                    contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
-                    contentContainerStyle={{ flexGrow: 1 }}
-                    refreshControl={refreshControl}
-                >
-                    <UpdateBanner />
-                    <View style={styles.emptyContainer}>
-                        <ActivityIndicator size="large" color={theme.colors.textSecondary} />
-                    </View>
-                </ScrollView>
-            </View>
-        );
-    }
 
     if (isEmpty) {
         return (
