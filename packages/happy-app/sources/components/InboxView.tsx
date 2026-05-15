@@ -95,10 +95,21 @@ type DootaskMergedUser = DooTaskUser & {
     lastAtMs?: number;
 };
 
-async function openDootaskChat(profile: DooTaskProfile, dootaskUserId: number, router: ReturnType<typeof useRouter>) {
-    const res = await dootaskOpenUserDialog(profile.serverUrl, profile.token, dootaskUserId);
+function dootaskChatPath(dialogId: number, user: DootaskMergedUser, profile: DooTaskProfile): string {
+    const params = new URLSearchParams();
+    const title = user.nickname || user.email || `#${user.userid}`;
+    const avatar = resolveDootaskUrl(profile.serverUrl, user.userimg);
+    params.set('kind', 'user');
+    params.set('title', title);
+    params.set('userId', String(user.userid));
+    if (avatar) params.set('avatar', avatar);
+    return `/dootask/chat/${dialogId}?${params.toString()}`;
+}
+
+async function openDootaskChat(profile: DooTaskProfile, dootaskUser: DootaskMergedUser, router: ReturnType<typeof useRouter>) {
+    const res = await dootaskOpenUserDialog(profile.serverUrl, profile.token, dootaskUser.userid);
     if (res.ret === 1 && res.data?.id) {
-        router.push(`/dootask/chat/${res.data.id}`);
+        router.push(dootaskChatPath(res.data.id, dootaskUser, profile) as any);
         return true;
     }
     return false;
@@ -209,10 +220,10 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
         setOpeningDootaskUserId(dootaskUser.userid);
         try {
             if (dootaskUser.dialogId) {
-                router.push(`/dootask/chat/${dootaskUser.dialogId}`);
+                router.push(dootaskChatPath(dootaskUser.dialogId, dootaskUser, dootaskProfile) as any);
                 return true;
             }
-            const ok = await openDootaskChat(dootaskProfile, dootaskUser.userid, router);
+            const ok = await openDootaskChat(dootaskProfile, dootaskUser, router);
             if (!ok) {
                 fallback?.();
                 if (!fallback) showToast(t('dootask.errorLoadChat'));

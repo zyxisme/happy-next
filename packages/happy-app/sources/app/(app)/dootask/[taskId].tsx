@@ -443,16 +443,20 @@ export default function DooTaskDetail() {
 
     const handleOpenChat = React.useCallback(async () => {
         if (!profile || !task || chatLoading) return;
+        const qs = new URLSearchParams({
+            kind: 'task',
+            taskName: task.name,
+        }).toString();
         // Use dialog_id from task detail if available, otherwise fetch it
         if (task.dialog_id) {
-            router.push(`/dootask/chat/${task.dialog_id}?taskName=${encodeURIComponent(task.name)}`);
+            router.push(`/dootask/chat/${task.dialog_id}?${qs}`);
             return;
         }
         setChatLoading(true);
         try {
             const res = await dootaskFetchTaskDialog(profile.serverUrl, profile.token, task.id);
             if (res.ret === 1 && res.data?.dialog_id) {
-                router.push(`/dootask/chat/${res.data.dialog_id}?taskName=${encodeURIComponent(task.name)}`);
+                router.push(`/dootask/chat/${res.data.dialog_id}?${qs}`);
             } else {
                 Alert.alert(t('dootask.taskChat'), res.msg || t('dootask.errorLoadChat'));
             }

@@ -41,7 +41,15 @@ function nowTimestamp(): string {
 }
 
 export default React.memo(function DooTaskChat() {
-    const { dialogId, taskName } = useLocalSearchParams<{ dialogId: string; taskName?: string }>();
+    const { dialogId, taskName, kind, title, subtitle: routeSubtitle, avatar: routeAvatar, userId } = useLocalSearchParams<{
+        dialogId: string;
+        taskName?: string;
+        kind?: 'task' | 'user' | string;
+        title?: string;
+        subtitle?: string;
+        avatar?: string;
+        userId?: string;
+    }>();
     const { theme } = useUnistyles();
     const { width: screenWidth } = useWindowDimensions();
     const router = useRouter();
@@ -58,7 +66,7 @@ export default React.memo(function DooTaskChat() {
     const liveTaskName = storage(useShallow((s) =>
         s.dootaskTasks.find((t) => t.dialog_id === id)?.name
     ));
-    const subtitle = liveTaskName || taskName;
+    const routeKind = kind === 'task' || kind === 'user' ? kind : undefined;
 
     // Message state
     const [messages, setMessages] = React.useState<DooTaskDialogMsg[]>([]);
@@ -198,6 +206,10 @@ export default React.memo(function DooTaskChat() {
                     group_type: res.data.group_type,
                     avatar: res.data.avatar || null,
                     owner_id: res.data.owner_id || 0,
+                    userimg: res.data.userimg || null,
+                    email: res.data.email || null,
+                    bot: res.data.bot || 0,
+                    dialog_user: res.data.dialog_user || null,
                 });
             }
         }).catch(() => {});
@@ -551,18 +563,48 @@ export default React.memo(function DooTaskChat() {
         }
     }, [profile, id, dialogMembersLoading, dialogMembers.length]);
 
-    // Right side: DooTask icon / dialog avatar (tappable to open detail modal)
-    const resolvedDialogAvatar = React.useMemo(() => {
-        if (!dialogInfo?.avatar || !profile?.serverUrl) return null;
+    const resolveDootaskAssetUrl = React.useCallback((path?: string | null) => {
+        if (!path || !profile?.serverUrl) return null;
         const base = profile.serverUrl.replace(/\/+$/, '') + '/';
-        const resolved = dialogInfo.avatar.replace(/\{\{RemoteURL\}\}/g, base);
+        const resolved = path.replace(/\{\{RemoteURL\}\}/g, base);
         if (resolved.startsWith('http') || resolved.startsWith('//')) return resolved;
         return base + resolved.replace(/^\/+/, '');
-    }, [dialogInfo?.avatar, profile?.serverUrl]);
+    }, [profile?.serverUrl]);
 
-    const chatTitle = dialogMembers.length > 0
-        ? `${t('dootask.taskChat')} (${dialogMembers.length})`
-        : t('dootask.taskChat');
+    const isUserDialog = dialogInfo?.type === 'user' || (!dialogInfo && routeKind === 'user');
+    const isTaskDialog = (dialogInfo?.type === 'group' && dialogInfo.group_type === 'task') || (!dialogInfo && routeKind === 'task');
+
+    const headerTitleText = React.useMemo(() => {
+        if (isUserDialog) {
+            return dialogInfo?.name || title || t('dootask.chatTitle');
+        }
+        if (isTaskDialog) {
+            return dialogMembers.length > 0
+                ? `${t('dootask.taskChat')} (${dialogMembers.length})`
+                : t('dootask.taskChat');
+        }
+        if (dialogInfo?.name) {
+            return dialogMembers.length > 0
+                ? `${dialogInfo.name} (${dialogMembers.length})`
+                : dialogInfo.name;
+        }
+        return title || t('dootask.chatTitle');
+    }, [isUserDialog, isTaskDialog, dialogInfo?.name, title, dialogMembers.length]);
+
+    const headerSubtitleText = React.useMemo(() => {
+        if (isTaskDialog) {
+            return liveTaskName || taskName || routeSubtitle || dialogInfo?.name || undefined;
+        }
+        return routeSubtitle || undefined;
+    }, [isTaskDialog, liveTaskName, taskName, routeSubtitle, dialogInfo?.name]);
+
+    // Right side: user avatar / dialog avatar / DooTask icon (tappable to open detail modal)
+    const resolvedDialogAvatar = React.useMemo(() => {
+        if (isUserDialog) {
+            return resolveDootaskAssetUrl(dialogInfo?.userimg) || routeAvatar || null;
+        }
+        return resolveDootaskAssetUrl(dialogInfo?.avatar) || routeAvatar || null;
+    }, [isUserDialog, resolveDootaskAssetUrl, dialogInfo?.userimg, dialogInfo?.avatar, routeAvatar]);
 
     const headerTitleWidth = getNativeHeaderTitleWidth({
         screenWidth,
@@ -570,8 +612,8 @@ export default React.memo(function DooTaskChat() {
     });
 
     const headerTitle = React.useCallback(() => (
-        <ChatHeaderTitle title={chatTitle} subtitle={subtitle} width={headerTitleWidth} />
-    ), [chatTitle, headerTitleWidth, subtitle]);
+        <ChatHeaderTitle title={headerTitleText} subtitle={headerSubtitleText} width={headerTitleWidth} />
+    ), [headerTitleText, headerSubtitleText, headerTitleWidth]);
 
     const headerRight = React.useCallback(() => (
         <Pressable style={styles.headerIconButton} onPress={handleOpenDetail} hitSlop={15}>
@@ -678,7 +720,7 @@ export default React.memo(function DooTaskChat() {
             />
             <DialogDetailModal
                 ref={detailModalRef}
-                dialogName={subtitle || dialogInfo?.name || ''}
+                dialogName={headerSubtitleText || dialogInfo?.name || headerTitleText}
                 dialogId={id}
                 groupType={dialogInfo?.group_type || ''}
                 ownerId={dialogInfo?.owner_id || 0}

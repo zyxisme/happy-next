@@ -103,10 +103,18 @@ export type DisplayMessage = DooTaskDialogMsg | PendingMessage;
 export type DooTaskDialog = {
     id: number;
     name: string;
-    type: string;
+    type: 'user' | 'group' | string;
     group_type: string;
     avatar: string | null;
     owner_id: number;
+    userimg?: string | null;
+    email?: string | null;
+    bot?: number;
+    dialog_user?: {
+        userid: number;
+        dialog_id?: number;
+        [key: string]: unknown;
+    } | null;
 };
 
 export type DooTaskDialogListItem = DooTaskDialog & {
