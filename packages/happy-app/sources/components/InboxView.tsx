@@ -20,6 +20,7 @@ import { dootaskFetchUsers, dootaskFetchDialogs, dootaskOpenUserDialog } from '@
 import type { DooTaskProfile, DooTaskUser, DooTaskDialogListItem } from '@/sync/dootask/types';
 import { showToast } from './Toast';
 import { useMainTabBottomPadding } from '@/hooks/useMainTabBottomPadding';
+import { loadDooTaskInboxUsersCache, saveDooTaskInboxUsersCache } from '@/sync/persistence';
 
 const styles = StyleSheet.create((theme) => ({
     container: {
@@ -146,8 +147,10 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
             setDootaskUsersLoading(false);
             return;
         }
-        const profileKey = `${dootaskProfile.serverUrl}|${dootaskProfile.userId}|${dootaskProfile.token}`;
-        const cachedUsers = dootaskInboxCache?.key === profileKey ? dootaskInboxCache.users : null;
+        const profileKey = `${dootaskProfile.serverUrl}|${dootaskProfile.userId}`;
+        const cachedUsers = dootaskInboxCache?.key === profileKey
+            ? dootaskInboxCache.users
+            : loadDooTaskInboxUsersCache(profileKey);
         if (cachedUsers) {
             setDootaskUsers(cachedUsers);
         }
@@ -158,9 +161,11 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
                 dootaskFetchUsers(dootaskProfile.serverUrl, dootaskProfile.token, { page: 1, pagesize: 100 }),
             ]);
             const cur = dootaskProfile;
-            if (`${cur.serverUrl}|${cur.userId}|${cur.token}` !== profileKey) return;
+            if (`${cur.serverUrl}|${cur.userId}` !== profileKey) return;
             if (userResult.status !== 'fulfilled' || userResult.value.ret !== 1) {
-                setDootaskUsers([]);
+                if (!cachedUsers) {
+                    setDootaskUsers([]);
+                }
                 return;
             }
 
@@ -203,6 +208,7 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
                 key: profileKey,
                 users: mergedUsers,
             };
+            saveDooTaskInboxUsersCache(profileKey, mergedUsers);
             setDootaskUsers(mergedUsers);
         } catch {
             if (!cachedUsers) {

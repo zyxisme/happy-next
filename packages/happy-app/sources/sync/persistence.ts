@@ -5,6 +5,7 @@ import { Profile, profileDefaults, profileParse } from './profile';
 import type { PermissionMode } from '@/components/PermissionModeSelector';
 import type { SessionDraft } from './storageTypes';
 import { DooTaskProfile, DooTaskProfileSchema } from './dootask/types';
+import type { DooTaskUser } from './dootask/types';
 
 const mmkv = new MMKV();
 const NEW_SESSION_DRAFT_KEY = 'new-session-draft-v1';
@@ -344,6 +345,30 @@ export function saveDooTaskColumns(columns: Record<number, Array<{ id: number; n
 
 export function clearDooTaskColumns(): void {
     mmkv.delete('dootask-columns');
+}
+
+
+const DOOTASK_INBOX_USERS_CACHE_KEY = 'dootask-inbox-users-cache-v1';
+
+export type DooTaskInboxUserCacheItem = DooTaskUser & {
+    dialogId?: number;
+    lastAtMs?: number;
+};
+
+export function loadDooTaskInboxUsersCache(key: string): DooTaskInboxUserCacheItem[] | null {
+    const raw = mmkv.getString(DOOTASK_INBOX_USERS_CACHE_KEY);
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        if (!parsed || parsed.key !== key || !Array.isArray(parsed.users)) return null;
+        return parsed.users.filter((user: any) => user && typeof user.userid === 'number');
+    } catch {
+        return null;
+    }
+}
+
+export function saveDooTaskInboxUsersCache(key: string, users: DooTaskInboxUserCacheItem[]): void {
+    mmkv.set(DOOTASK_INBOX_USERS_CACHE_KEY, JSON.stringify({ key, users, fetchedAt: Date.now() }));
 }
 
 const DOOTASK_LOGIN_CACHE_KEY = 'dootask-login-cache';
