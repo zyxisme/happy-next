@@ -177,6 +177,26 @@ export async function dootaskFetchUsersBasic(serverUrl: string, token: string, u
     return response.json();
 }
 
+export async function dootaskFetchUsers(serverUrl: string, token: string, params: {
+    page?: number;
+    pagesize?: number;
+    keyword?: string;
+} = {}): Promise<DooTaskResponse> {
+    const url = validateServerUrl(serverUrl);
+    const qs = new URLSearchParams();
+    qs.set('page', String(params.page ?? 1));
+    qs.set('pagesize', String(params.pagesize ?? 100));
+    qs.set('keys[disable]', '0');
+    qs.set('keys[bot]', '0');
+    const keyword = params.keyword?.trim();
+    if (keyword) qs.set('keys[key]', keyword);
+    const response = await fetch(`${url}/api/users/search?${qs}`, {
+        method: 'GET',
+        headers: buildHeaders(token),
+    });
+    return response.json();
+}
+
 export async function dootaskFetchTaskContent(serverUrl: string, token: string, taskId: number): Promise<DooTaskResponse> {
     const url = validateServerUrl(serverUrl);
     const response = await fetch(`${url}/api/project/task/content`, {
@@ -245,9 +265,33 @@ export async function dootaskFetchDialogOne(serverUrl: string, token: string, di
     return response.json();
 }
 
+export async function dootaskFetchDialogs(serverUrl: string, token: string, params: {
+    page?: number;
+    pagesize?: number;
+} = {}): Promise<DooTaskResponse> {
+    const url = validateServerUrl(serverUrl);
+    const qs = new URLSearchParams();
+    qs.set('page', String(params.page ?? 1));
+    qs.set('pagesize', String(params.pagesize ?? 100));
+    const response = await fetch(`${url}/api/dialog/lists?${qs}`, {
+        method: 'GET',
+        headers: buildHeaders(token),
+    });
+    return response.json();
+}
+
 export async function dootaskFetchDialogUsers(serverUrl: string, token: string, dialogId: number): Promise<DooTaskResponse> {
     const url = validateServerUrl(serverUrl);
     const response = await fetch(`${url}/api/dialog/user?dialog_id=${dialogId}&getuser=1`, {
+        method: 'GET',
+        headers: buildHeaders(token),
+    });
+    return response.json();
+}
+
+export async function dootaskOpenUserDialog(serverUrl: string, token: string, userId: number): Promise<DooTaskResponse> {
+    const url = validateServerUrl(serverUrl);
+    const response = await fetch(`${url}/api/dialog/open/user?userid=${userId}`, {
         method: 'GET',
         headers: buildHeaders(token),
     });

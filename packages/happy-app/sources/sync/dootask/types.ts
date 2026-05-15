@@ -109,6 +109,18 @@ export type DooTaskDialog = {
     owner_id: number;
 };
 
+export type DooTaskDialogListItem = DooTaskDialog & {
+    last_at: string | null;
+    user_at?: string | null;
+    user_ms?: number;
+    bot?: number;
+    dialog_user?: {
+        userid: number;
+        dialog_id?: number;
+        [key: string]: unknown;
+    } | null;
+};
+
 export type DooTaskDialogUser = {
     userid: number;
     nickname: string;
@@ -117,6 +129,18 @@ export type DooTaskDialogUser = {
     department: string | null;
     bot: number;
     online: boolean;
+    disable_at: string | null;
+};
+
+export type DooTaskUser = {
+    userid: number;
+    email?: string | null;
+    nickname: string;
+    userimg: string | null;
+    profession: string | null;
+    department: string | null;
+    bot: number;
+    online?: boolean;
     disable_at: string | null;
 };
 

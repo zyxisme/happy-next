@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { View, Text, ScrollView, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAcceptedFriends, useFriendRequests, useRequestedFriends, useFeedItems, useFeedLoaded, useFriendsLoaded, useRealtimeStatus } from '@/sync/storage';
+import { useAcceptedFriends, useFriendRequests, useRequestedFriends, useFeedItems, useFeedLoaded, useFriendsLoaded, useRealtimeStatus, useDootaskProfile } from '@/sync/storage';
 import { UserCard } from '@/components/UserCard';
 import { t } from '@/text';
 import { trackFriendsProfileView } from '@/track';
 import { ItemGroup } from '@/components/ItemGroup';
+import { Item } from '@/components/Item';
 import { UpdateBanner } from './UpdateBanner';
 import { Typography } from '@/constants/Typography';
 import { useRouter } from 'expo-router';
@@ -15,6 +16,9 @@ import { Image } from 'expo-image';
 import { FeedItemCard } from './FeedItemCard';
 import { VoiceAssistantStatusBar } from './VoiceAssistantStatusBar';
 import { sync } from '@/sync/sync';
+import { dootaskFetchUsers, dootaskFetchDialogs, dootaskOpenUserDialog } from '@/sync/dootask/api';
+import type { DooTaskProfile, DooTaskUser, DooTaskDialogListItem } from '@/sync/dootask/types';
+import { showToast } from './Toast';
 
 const styles = StyleSheet.create((theme) => ({
     container: {
@@ -58,6 +62,48 @@ const styles = StyleSheet.create((theme) => ({
 interface InboxViewProps {
 }
 
+function resolveDootaskUrl(serverUrl: string, path?: string | null): string | null {
+    if (!path) return null;
+    const base = serverUrl.replace(/\/+$/, '') + '/';
+    const resolved = path.replace(/\{\{RemoteURL\}\}/g, base);
+    return resolved.startsWith('http') ? resolved : base + resolved.replace(/^\/+/, '');
+}
+
+function extractDootaskUsers(data: any): DooTaskUser[] {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.list)) return data.list;
+    return [];
+}
+
+function extractDootaskDialogs(data: any): DooTaskDialogListItem[] {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.list)) return data.list;
+    return [];
+}
+
+function parseDootaskTime(value?: string | null): number {
+    if (!value) return 0;
+    const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+    const parsed = Date.parse(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+type DootaskMergedUser = DooTaskUser & {
+    dialogId?: number;
+    lastAtMs?: number;
+};
+
+async function openDootaskChat(profile: DooTaskProfile, dootaskUserId: number, router: ReturnType<typeof useRouter>) {
+    const res = await dootaskOpenUserDialog(profile.serverUrl, profile.token, dootaskUserId);
+    if (res.ret === 1 && res.data?.id) {
+        router.push(`/dootask/chat/${res.data.id}`);
+        return true;
+    }
+    return false;
+}
+
 export const InboxView = React.memo(({}: InboxViewProps) => {
     const router = useRouter();
     const friends = useAcceptedFriends();
@@ -69,19 +115,118 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
     const { theme } = useUnistyles();
     const isTablet = useIsTablet();
     const realtimeStatus = useRealtimeStatus();
+    const dootaskProfile = useDootaskProfile();
 
     const [refreshing, setRefreshing] = React.useState(false);
+    const [dootaskUsers, setDootaskUsers] = React.useState<DootaskMergedUser[]>([]);
+    const [dootaskUsersLoading, setDootaskUsersLoading] = React.useState(false);
+    const [openingDootaskUserId, setOpeningDootaskUserId] = React.useState<number | null>(null);
+
+    const loadDootaskUsers = React.useCallback(async () => {
+        if (!dootaskProfile) {
+            setDootaskUsers([]);
+            setDootaskUsersLoading(false);
+            return;
+        }
+        const profileKey = `${dootaskProfile.serverUrl}|${dootaskProfile.userId}|${dootaskProfile.token}`;
+        setDootaskUsersLoading(true);
+        try {
+            const [dialogResult, userResult] = await Promise.allSettled([
+                dootaskFetchDialogs(dootaskProfile.serverUrl, dootaskProfile.token, { page: 1, pagesize: 100 }),
+                dootaskFetchUsers(dootaskProfile.serverUrl, dootaskProfile.token, { page: 1, pagesize: 100 }),
+            ]);
+            const cur = dootaskProfile;
+            if (`${cur.serverUrl}|${cur.userId}|${cur.token}` !== profileKey) return;
+            if (userResult.status !== 'fulfilled' || userResult.value.ret !== 1) {
+                setDootaskUsers([]);
+                return;
+            }
+
+            const recentMap = new Map<number, { dialogId: number; lastAtMs: number }>();
+            if (dialogResult.status === 'fulfilled' && dialogResult.value.ret === 1) {
+                const dialogs = extractDootaskDialogs(dialogResult.value.data);
+                for (const dialog of dialogs) {
+                    if (dialog.type !== 'user') continue;
+                    const dialogUserId = dialog.dialog_user?.userid;
+                    if (!dialogUserId || dialogUserId === dootaskProfile.userId) continue;
+                    const lastAtMs = parseDootaskTime(dialog.last_at ?? dialog.user_at ?? null);
+                    const dialogId = dialog.id;
+                    const current = recentMap.get(dialogUserId);
+                    if (!current || lastAtMs > current.lastAtMs) {
+                        recentMap.set(dialogUserId, { dialogId, lastAtMs });
+                    }
+                }
+            }
+
+            const users = extractDootaskUsers(userResult.value.data)
+                .filter((u) => u.userid !== dootaskProfile.userId)
+                .map((user, index) => {
+                    const recent = recentMap.get(user.userid);
+                    return {
+                        ...user,
+                        dialogId: recent?.dialogId,
+                        lastAtMs: recent?.lastAtMs,
+                        __index: index,
+                    } as DootaskMergedUser & { __index: number };
+                });
+
+            users.sort((a, b) => {
+                const aTime = a.lastAtMs ?? 0;
+                const bTime = b.lastAtMs ?? 0;
+                if (aTime !== bTime) return bTime - aTime;
+                return a.__index - b.__index;
+            });
+
+            setDootaskUsers(users.map(({ __index, ...rest }) => rest));
+        } catch {
+            setDootaskUsers([]);
+        } finally {
+            setDootaskUsersLoading(false);
+        }
+    }, [dootaskProfile]);
+
+    React.useEffect(() => {
+        loadDootaskUsers();
+    }, [loadDootaskUsers]);
+
     const handleRefresh = React.useCallback(async () => {
         setRefreshing(true);
         try {
-            await sync.refreshInbox();
+            await Promise.all([
+                sync.refreshInbox(),
+                loadDootaskUsers(),
+            ]);
         } finally {
             setRefreshing(false);
         }
-    }, []);
+    }, [loadDootaskUsers]);
 
-    const isLoading = !feedLoaded || !friendsLoaded;
-    const isEmpty = !isLoading && friendRequests.length === 0 && requestedFriends.length === 0 && friends.length === 0 && feedItems.length === 0;
+    const openDootaskForUser = React.useCallback(async (dootaskUser: DootaskMergedUser, fallback?: () => void) => {
+        if (!dootaskProfile || openingDootaskUserId !== null) {
+            fallback?.();
+            return;
+        }
+        setOpeningDootaskUserId(dootaskUser.userid);
+        try {
+            if (dootaskUser.dialogId) {
+                router.push(`/dootask/chat/${dootaskUser.dialogId}`);
+                return true;
+            }
+            const ok = await openDootaskChat(dootaskProfile, dootaskUser.userid, router);
+            if (!ok) {
+                fallback?.();
+                if (!fallback) showToast(t('dootask.errorLoadChat'));
+            }
+        } catch {
+            fallback?.();
+            if (!fallback) showToast(t('dootask.errorLoadChat'));
+        } finally {
+            setOpeningDootaskUserId(null);
+        }
+    }, [dootaskProfile, openingDootaskUserId, router]);
+
+    const isLoading = !feedLoaded || !friendsLoaded || (!!dootaskProfile && dootaskUsersLoading && dootaskUsers.length === 0);
+    const isEmpty = !isLoading && friendRequests.length === 0 && requestedFriends.length === 0 && friends.length === 0 && feedItems.length === 0 && dootaskUsers.length === 0;
 
     const refreshControl = (
         <RefreshControl
@@ -216,7 +361,51 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
                         </ItemGroup>
                     </>
                 )}
+
+                {dootaskUsers.length > 0 && dootaskProfile && (
+                    <ItemGroup title={t('dootask.title')}>
+                        {dootaskUsers.map((user) => (
+                            <DooTaskUserCard
+                                key={user.userid}
+                                user={user}
+                                profile={dootaskProfile}
+                                loading={openingDootaskUserId === user.userid}
+                                onPress={() => openDootaskForUser(user)}
+                            />
+                        ))}
+                    </ItemGroup>
+                )}
             </ScrollView>
         </View>
     );
 });
+
+function DooTaskUserCard({ user, profile, onPress, loading }: {
+    user: DootaskMergedUser;
+    profile: DooTaskProfile;
+    onPress: () => void;
+    loading?: boolean;
+}) {
+    const displayName = user.nickname || user.email || `#${user.userid}`;
+    const subtitle = user.profession || user.email || `#${user.userid}`;
+    const avatarUrl = resolveDootaskUrl(profile.serverUrl, user.userimg);
+
+    return (
+        <Item
+            title={displayName}
+            subtitle={subtitle}
+            subtitleLines={1}
+            leftElement={
+                <Image
+                    source={avatarUrl ? { uri: avatarUrl } : require('@/assets/images/icon-dootask.png')}
+                    contentFit="cover"
+                    style={{ width: 40, height: 40, borderRadius: 20 }}
+                />
+            }
+            iconContainerStyle={{ marginRight: 20 }}
+            onPress={onPress}
+            loading={loading}
+            showChevron
+        />
+    );
+}
