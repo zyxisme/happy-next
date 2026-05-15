@@ -2,10 +2,11 @@ const { withDangerousMod } = require('expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
-const MARKER = 'react-native-audio-api 0.12.x installs FFmpeg as vendored xcframeworks';
+const FFMPEG_MARKER = 'react-native-audio-api 0.12.x installs FFmpeg as vendored xcframeworks';
+const FMT_CXX17_MARKER = 'Build fmt as C++17 for Xcode 26 consteval compatibility';
 
-const RUBY_PATCH = `
-    # ${MARKER}
+const FFMPEG_RUBY_PATCH = `
+    # ${FFMPEG_MARKER}
     # under the RNAudioAPI pod target, but the app aggregate target does not
     # inherit all dynamic framework link settings. Add them explicitly so
     # FFmpeg symbols referenced by libRNAudioAPI.a resolve at app link time.
@@ -54,6 +55,20 @@ const RUBY_PATCH = `
     end
 `;
 
+const FMT_CXX17_RUBY_PATCH = `
+    # ${FMT_CXX17_MARKER}
+    # Xcode 26's clang can reject fmt's C++20 consteval format string path while
+    # compiling the React Native fmt pod. Build only fmt as C++17 so it stays on
+    # the non-consteval path without changing the rest of React Native.
+    installer.pods_project.targets.each do |target|
+      next unless target.name == 'fmt'
+
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+      end
+    end
+`;
+
 function withRNAudioAPIIosFFmpeg(config) {
     return withDangerousMod(config, ['ios', (config) => {
         const podfilePath = path.join(config.modRequest.platformProjectRoot, 'Podfile');
@@ -62,7 +77,12 @@ function withRNAudioAPIIosFFmpeg(config) {
         }
 
         let contents = fs.readFileSync(podfilePath, 'utf8');
-        if (contents.includes(MARKER)) {
+        const patches = [
+            [FFMPEG_MARKER, FFMPEG_RUBY_PATCH],
+            [FMT_CXX17_MARKER, FMT_CXX17_RUBY_PATCH],
+        ].filter(([marker]) => !contents.includes(marker));
+
+        if (patches.length === 0) {
             return config;
         }
 
@@ -71,7 +91,7 @@ function withRNAudioAPIIosFFmpeg(config) {
             throw new Error('Could not find react_native_post_install in ios/Podfile');
         }
 
-        contents = contents.replace(postInstallCall, `$1${RUBY_PATCH}`);
+        contents = contents.replace(postInstallCall, `$1${patches.map(([, patch]) => patch).join('')}`);
         fs.writeFileSync(podfilePath, contents);
 
         return config;
