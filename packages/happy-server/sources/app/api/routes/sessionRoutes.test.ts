@@ -36,13 +36,26 @@ const { state, dbMock, resetState, seedSession } = vi.hoisted(() => {
     const findMany = vi.fn(async (args: any) => {
         const accountId = args?.where?.accountId as string;
         const sinceGt = args?.where?.updatedAt?.gt as Date | undefined;
+        const olderOr = args?.where?.OR as any[] | undefined;
         let rows = state.sessions.filter((s) => s.accountId === accountId);
         if (sinceGt) {
             rows = rows.filter((s) => s.updatedAt.getTime() > sinceGt.getTime());
         }
+        if (olderOr) {
+            rows = rows.filter((s) => olderOr.some((clause) => {
+                const lt = clause?.updatedAt?.lt as Date | undefined;
+                if (lt && s.updatedAt.getTime() < lt.getTime()) return true;
+                const eq = clause?.updatedAt as Date | undefined;
+                const idLt = clause?.id?.lt as string | undefined;
+                return !!(eq && idLt && s.updatedAt.getTime() === eq.getTime() && s.id < idLt);
+            }));
+        }
         const orderByUpdatedAtAsc = args?.orderBy?.updatedAt === 'asc';
+        const orderByUpdatedAtDesc = Array.isArray(args?.orderBy) && args.orderBy[0]?.updatedAt === 'desc';
         if (orderByUpdatedAtAsc) {
             rows.sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime());
+        } else if (orderByUpdatedAtDesc) {
+            rows.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || b.id.localeCompare(a.id));
         } else {
             rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         }
@@ -160,6 +173,47 @@ describe("GET /v1/sessions", () => {
     it("rejects negative since", async () => {
         const res = await app.inject({ method: "GET", url: "/v1/sessions?since=-1" });
         expect(res.statusCode).toBe(400);
+    });
+
+
+
+    it("prioritizes since over older pagination when both are provided", async () => {
+        seedSession(mkSession({ id: "old", updatedAt: new Date(1000) }));
+        seedSession(mkSession({ id: "new", updatedAt: new Date(3000) }));
+
+        const res = await app.inject({ method: "GET", url: "/v1/sessions?since=2000&beforeUpdatedAt=4000" });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.json().sessions.map((session: any) => session.id)).toEqual(["new"]);
+    });
+
+    it("paginates older sessions without beforeId", async () => {
+        seedSession(mkSession({ id: "a", updatedAt: new Date(3000) }));
+        seedSession(mkSession({ id: "b", updatedAt: new Date(2000) }));
+        seedSession(mkSession({ id: "c", updatedAt: new Date(1000) }));
+
+        const res = await app.inject({ method: "GET", url: "/v1/sessions?beforeUpdatedAt=2500" });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.json().sessions.map((session: any) => session.id)).toEqual(["b", "c"]);
+    });
+
+    it("rejects limit above 500", async () => {
+        const res = await app.inject({ method: "GET", url: "/v1/sessions?beforeUpdatedAt=2500&limit=501" });
+        expect(res.statusCode).toBe(400);
+    });
+
+    it("paginates older sessions by updatedAt and id", async () => {
+        seedSession(mkSession({ id: "a", updatedAt: new Date(3000), createdAt: new Date(1000) }));
+        seedSession(mkSession({ id: "c", updatedAt: new Date(2000), createdAt: new Date(2000) }));
+        seedSession(mkSession({ id: "b", updatedAt: new Date(2000), createdAt: new Date(3000) }));
+        seedSession(mkSession({ id: "d", updatedAt: new Date(1000), createdAt: new Date(4000) }));
+
+        const res = await app.inject({ method: "GET", url: "/v1/sessions?beforeUpdatedAt=2000&beforeId=c&limit=2" });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body.sessions.map((s: any) => s.id)).toEqual(["b", "d"]);
     });
 
     it("computes isShared from share count or publicShare", async () => {

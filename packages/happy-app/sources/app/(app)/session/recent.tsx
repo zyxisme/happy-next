@@ -23,6 +23,7 @@ import { MMKV } from 'react-native-mmkv';
 const mmkv = new MMKV();
 const SELECTED_MACHINE_KEY = 'session-history-selected-machine';
 const SELECTED_AGENT_KEY = 'session-history-selected-agent';
+const OLDER_SESSIONS_PAGE_SIZE = 150;
 
 type AgentFilter = 'all' | 'claude' | 'gemini' | 'codex';
 
@@ -121,6 +122,11 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.textSecondary,
         textAlign: 'center',
         ...Typography.default(),
+    },
+    footerContainer: {
+        paddingVertical: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     rightSection: {
         flexDirection: 'row',
@@ -298,6 +304,12 @@ function SessionHistory() {
     });
     const [machineMenuVisible, setMachineMenuVisible] = React.useState(false);
     const [agentMenuVisible, setAgentMenuVisible] = React.useState(false);
+    const [paginationCursor, setPaginationCursor] = React.useState<{ updatedAt: number; id: string } | null>(null);
+    const [loadingMore, setLoadingMore] = React.useState(false);
+    const [hasMoreOlderSessions, setHasMoreOlderSessions] = React.useState(true);
+    const loadMoreInFlightRef = React.useRef(false);
+    const autoLoadPageCountRef = React.useRef(0);
+    const loadMoreCooldownUntilRef = React.useRef(0);
 
     const selectedMachine = React.useMemo(
         () => machines.find((m) => m.id === selectedMachineId) || null,
@@ -322,6 +334,18 @@ function SessionHistory() {
     React.useEffect(() => {
         mmkv.set(SELECTED_AGENT_KEY, selectedAgent);
     }, [selectedAgent]);
+
+    const initialPaginationCursor = React.useMemo(() => {
+        const oldestSession = allSessions[allSessions.length - 1];
+        if (!oldestSession) return null;
+        return { updatedAt: oldestSession.updatedAt, id: oldestSession.id };
+    }, [allSessions]);
+
+    const effectivePaginationCursor = paginationCursor ?? initialPaginationCursor;
+
+    React.useEffect(() => {
+        autoLoadPageCountRef.current = 0;
+    }, [selectedMachineId, selectedAgent, searchQuery]);
 
     const filteredSessions = React.useMemo(() => {
         let result = allSessions;
@@ -350,6 +374,47 @@ function SessionHistory() {
         return groupSessionsByDate(filteredSessions);
     }, [filteredSessions]);
     
+    const handleLoadMore = React.useCallback(async () => {
+        if (!effectivePaginationCursor || loadingMore || !hasMoreOlderSessions || loadMoreInFlightRef.current) return;
+        if (Date.now() < loadMoreCooldownUntilRef.current) return;
+        if (autoLoadPageCountRef.current >= 5) return;
+
+        loadMoreInFlightRef.current = true;
+        autoLoadPageCountRef.current += 1;
+        setLoadingMore(true);
+        try {
+            const page = await sync.fetchOlderSessionsPage({
+                beforeUpdatedAt: effectivePaginationCursor.updatedAt,
+                beforeId: effectivePaginationCursor.id,
+                limit: OLDER_SESSIONS_PAGE_SIZE,
+            });
+
+            const last = page[page.length - 1];
+            if (last) {
+                setPaginationCursor({ updatedAt: last.updatedAt, id: last.id });
+            }
+            if (page.length < OLDER_SESSIONS_PAGE_SIZE) {
+                setHasMoreOlderSessions(false);
+            }
+        } catch (error) {
+            console.error('Failed to load older sessions', error);
+            loadMoreCooldownUntilRef.current = Date.now() + 5000;
+        } finally {
+            setLoadingMore(false);
+            loadMoreInFlightRef.current = false;
+        }
+    }, [effectivePaginationCursor, loadingMore, hasMoreOlderSessions]);
+
+
+    const listFooter = React.useMemo(() => {
+        if (!loadingMore) return null;
+        return (
+            <View style={styles.footerContainer}>
+                <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+            </View>
+        );
+    }, [loadingMore, theme.colors.textSecondary]);
+
     const handleForkSession = React.useCallback(async (session: Session, mode: 'resume' | 'copy') => {
         if (resumingSessionId) return;
         const flavor = session.metadata?.flavor;
@@ -574,6 +639,9 @@ function SessionHistory() {
                         </Text>
                     </View>
                 }
+                ListFooterComponent={listFooter}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.4}
                 contentContainerStyle={{
                     paddingBottom: safeArea.bottom + 16,
                     paddingTop: 8,
@@ -593,6 +661,9 @@ function SessionHistory() {
             renderItem={renderItem}
             keyExtractor={keyExtractor}
             ListHeaderComponent={searchHeader}
+            ListFooterComponent={listFooter}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.4}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{
                 paddingBottom: safeArea.bottom + 16,

@@ -1052,6 +1052,7 @@ class Sync {
 
         const API_ENDPOINT = getServerUrl();
         const cursor = this.lastSessionsCursorMs;
+        const initialLimit = 150;
         const url = cursor > 0
             ? `${API_ENDPOINT}/v1/sessions?since=${cursor}`
             : `${API_ENDPOINT}/v1/sessions`;
@@ -1091,48 +1092,9 @@ class Sync {
             return;
         }
 
-        // Initialize all session encryptions first
-        const sessionKeys = new Map<string, Uint8Array | null>();
-        for (const session of sessions) {
-            if (session.dataEncryptionKey) {
-                let decrypted = await this.encryption.decryptEncryptionKey(session.dataEncryptionKey);
-                if (!decrypted) {
-                    console.error(`Failed to decrypt data encryption key for session ${session.id}`);
-                    continue;
-                }
-                sessionKeys.set(session.id, decrypted);
-                this.sessionDataKeys.set(session.id, decrypted);
-            } else {
-                sessionKeys.set(session.id, null);
-            }
-        }
-        await this.encryption.initializeSessions(sessionKeys);
-
-        // Decrypt sessions
-        let decryptedSessions: (Omit<Session, 'presence'> & { presence?: "online" | number })[] = [];
+        const decryptedSessions = await this.decryptSessionRows(sessions);
         let maxUpdatedAt = cursor;
-        for (const session of sessions) {
-            const sessionEncryption = this.encryption.getSessionEncryption(session.id);
-            if (!sessionEncryption) {
-                console.error(`Session encryption not found for ${session.id} - this should never happen`);
-                continue;
-            }
-
-            let metadata = await sessionEncryption.decryptMetadata(session.metadataVersion, session.metadata);
-            let agentState = await sessionEncryption.decryptAgentState(session.agentStateVersion, session.agentState);
-
-            const existingSession = storage.getState().sessions[session.id];
-
-            // Keep local thinking state during refresh to avoid online<->thinking flicker.
-            const processedSession = {
-                ...session,
-                thinking: existingSession?.thinking ?? false,
-                thinkingAt: existingSession?.thinkingAt ?? 0,
-                metadata,
-                agentState
-            };
-            decryptedSessions.push(processedSession);
-
+        for (const session of decryptedSessions) {
             if (session.updatedAt > maxUpdatedAt) {
                 maxUpdatedAt = session.updatedAt;
             }
@@ -1143,8 +1105,39 @@ class Sync {
         this.lastSessionsCursorMs = maxUpdatedAt;
 
         this.applySessions(decryptedSessions);
+
+        // /v1/sessions intentionally keeps its first page ordered by createdAt desc
+        // to avoid the list jitter introduced by updatedAt resorting (see 3af62d51).
+        // If that page is full, it may omit old-created-but-recently-updated rows
+        // that /session/recent's updatedAt-desc pagination would otherwise skip.
+        // Backfill the updatedAt window covered by the first page before normal
+        // older pagination starts.
+        if (cursor === 0 && sessions.length >= initialLimit && decryptedSessions.length > 0) {
+            await this.backfillInitialSessionUpdatedAtWindow(decryptedSessions, initialLimit);
+        }
+
         this.fetchOrchestratorActivityBatch();
         log.log(`📥 fetchSessions completed - processed ${decryptedSessions.length} sessions, cursor=${maxUpdatedAt}`);
+    }
+
+    private backfillInitialSessionUpdatedAtWindow = async (initialSessions: Session[], limit: number) => {
+        const updatedAts = initialSessions.map(session => session.updatedAt);
+        const maxUpdatedAt = Math.max(...updatedAts);
+        const oldestUpdatedAt = Math.min(...updatedAts);
+        let cursor: { updatedAt: number; id?: string } = { updatedAt: maxUpdatedAt + 1 };
+
+        for (let pageIndex = 0; pageIndex < 20; pageIndex++) {
+            const page = await this.fetchOlderSessionsPage({
+                beforeUpdatedAt: cursor.updatedAt,
+                beforeId: cursor.id,
+                limit,
+            });
+            if (page.length === 0) return;
+
+            const last = page[page.length - 1];
+            if (last.updatedAt < oldestUpdatedAt || page.length < limit) return;
+            cursor = { updatedAt: last.updatedAt, id: last.id };
+        }
     }
 
     private fetchSharedSessions = async () => {
@@ -1221,6 +1214,94 @@ class Sync {
 
     public refreshMachines = async () => {
         return this.fetchMachines();
+    }
+
+    private decryptSessionRows = async (sessions: Array<{
+        id: string;
+        seq: number;
+        metadata: string;
+        metadataVersion: number;
+        agentState: string | null;
+        agentStateVersion: number;
+        dataEncryptionKey: string | null;
+        active: boolean;
+        activeAt: number;
+        createdAt: number;
+        updatedAt: number;
+        lastMessage?: ApiMessage | null;
+        isShared?: boolean;
+    }>): Promise<Session[]> => {
+        const sessionKeys = new Map<string, Uint8Array | null>();
+        for (const session of sessions) {
+            if (session.dataEncryptionKey) {
+                const decrypted = await this.encryption.decryptEncryptionKey(session.dataEncryptionKey);
+                if (!decrypted) {
+                    console.error(`Failed to decrypt data encryption key for session ${session.id}`);
+                    continue;
+                }
+                sessionKeys.set(session.id, decrypted);
+                this.sessionDataKeys.set(session.id, decrypted);
+            } else {
+                sessionKeys.set(session.id, null);
+            }
+        }
+        await this.encryption.initializeSessions(sessionKeys);
+
+        const decryptedSessions: Session[] = [];
+        for (const session of sessions) {
+            const sessionEncryption = this.encryption.getSessionEncryption(session.id);
+            if (!sessionEncryption) {
+                console.error(`Session encryption not found for ${session.id} - this should never happen`);
+                continue;
+            }
+
+            const metadata = await sessionEncryption.decryptMetadata(session.metadataVersion, session.metadata);
+            const agentState = await sessionEncryption.decryptAgentState(session.agentStateVersion, session.agentState);
+            const existingSession = storage.getState().sessions[session.id];
+
+            decryptedSessions.push({
+                ...session,
+                thinking: existingSession?.thinking ?? false,
+                thinkingAt: existingSession?.thinkingAt ?? 0,
+                metadata,
+                agentState,
+                presence: session.active ? 'online' : session.activeAt,
+            });
+        }
+
+        return decryptedSessions;
+    }
+
+    public fetchOlderSessionsPage = async (params: { beforeUpdatedAt: number; beforeId?: string; limit?: number }): Promise<Session[]> => {
+        if (!this.credentials || !this.encryption) return [];
+
+        const API_ENDPOINT = getServerUrl();
+        const query = new URLSearchParams({
+            beforeUpdatedAt: String(params.beforeUpdatedAt),
+            limit: String(params.limit ?? 150),
+        });
+        if (params.beforeId) {
+            query.set('beforeId', params.beforeId);
+        }
+
+        const response = await fetch(`${API_ENDPOINT}/v1/sessions?${query.toString()}`, {
+            headers: {
+                'Authorization': `Bearer ${this.credentials.token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch older sessions: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+        const decryptedSessions = await this.decryptSessionRows(sessions);
+        if (decryptedSessions.length > 0) {
+            this.applySessions(decryptedSessions);
+        }
+        return decryptedSessions;
     }
 
     public refreshSessions = async () => {

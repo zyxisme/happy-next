@@ -16,23 +16,48 @@ export function sessionRoutes(app: Fastify) {
         preHandler: app.authenticate,
         schema: {
             querystring: z.object({
-                since: z.coerce.number().int().nonnegative().optional()
+                since: z.coerce.number().int().nonnegative().optional(),
+                beforeUpdatedAt: z.coerce.number().int().nonnegative().optional(),
+                beforeId: z.string().optional(),
+                limit: z.coerce.number().int().min(1).max(500).optional()
             }).optional()
         }
     }, async (request, reply) => {
         const userId = request.userId;
         const since = request.query?.since;
+        const beforeUpdatedAt = request.query?.beforeUpdatedAt;
+        const beforeId = request.query?.beforeId;
+        const requestedLimit = request.query?.limit;
         const incremental = typeof since === 'number';
+        const paginatingOlder = !incremental && typeof beforeUpdatedAt === 'number';
 
         // When incremental, order by updatedAt asc so the max(updatedAt) of
         // the response is the new cursor. Otherwise preserve legacy
-        // "createdAt desc" ordering for backward compatibility.
+        // "createdAt desc" ordering for backward compatibility. Older-page
+        // requests are sorted by updatedAt desc with id as a stable tie-breaker
+        // to match the recent sessions screen.
+        const where: Prisma.SessionWhereInput = incremental
+            ? { accountId: userId, updatedAt: { gt: new Date(since!) } }
+            : { accountId: userId };
+
+        if (paginatingOlder) {
+            where.OR = beforeId
+                ? [
+                    { updatedAt: { lt: new Date(beforeUpdatedAt!) } },
+                    { updatedAt: new Date(beforeUpdatedAt!), id: { lt: beforeId } }
+                ]
+                : [{ updatedAt: { lt: new Date(beforeUpdatedAt!) } }];
+        }
+
+        const take = incremental ? 500 : (requestedLimit ?? 150);
         const sessions = await db.session.findMany({
-            where: incremental
-                ? { accountId: userId, updatedAt: { gt: new Date(since!) } }
-                : { accountId: userId },
-            orderBy: incremental ? { updatedAt: 'asc' } : { createdAt: 'desc' },
-            take: incremental ? 500 : 150,
+            where,
+            orderBy: incremental
+                ? { updatedAt: 'asc' }
+                : paginatingOlder
+                    ? [{ updatedAt: 'desc' }, { id: 'desc' }]
+                    : { createdAt: 'desc' },
+            take,
             select: {
                 id: true,
                 seq: true,

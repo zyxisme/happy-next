@@ -127,6 +127,7 @@ model Session {
 
   @@unique([accountId, tag])
   @@index([accountId, updatedAt(sort: Desc)])
+  @@index([accountId, updatedAt(sort: Desc), id(sort: Desc)])
 }
 
 //
