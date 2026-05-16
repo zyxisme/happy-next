@@ -23,7 +23,7 @@ export type SyncSocketListener = (state: SyncSocketState) => void;
 // Main Class
 //
 
-class ApiSocket {
+export class ApiSocket {
 
     // State
     private socket: Socket | null = null;
@@ -35,6 +35,7 @@ class ApiSocket {
     private currentStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
     private rpcHandlers: Map<string, (params: any) => Promise<any> | any> = new Map();
     private registeredRpcMethods: Set<string> = new Set();
+    private hasConnectedBefore = false;
 
     //
     // Initialization
@@ -335,6 +336,11 @@ class ApiSocket {
                     this.socket?.emit('rpc-register', { method });
                     this.registeredRpcMethods.add(method);
                 }
+            }
+
+            if (!this.hasConnectedBefore) {
+                this.hasConnectedBefore = true;
+                return;
             }
 
             if (!this.socket?.recovered) {
