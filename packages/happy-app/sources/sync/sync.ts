@@ -4,6 +4,7 @@ import { AuthCredentials } from '@/auth/tokenStorage';
 import { Encryption } from '@/sync/encryption/encryption';
 import { decodeBase64, encodeBase64 } from '@/encryption/base64';
 import { storage, getSession } from './storage';
+import { SessionsBootstrapMachine } from './sessionsBootstrapMachine';
 import {
     ApiEphemeralUpdateSchema,
     ApiMessage,
@@ -204,9 +205,10 @@ class Sync {
     private recalculationLockCount = 0;
     private lastRecalculationTime = 0;
     private lastSessionsCursorMs = 0;
+    private sessionsBootstrapMachine = new SessionsBootstrapMachine();
 
     constructor() {
-        this.sessionsSync = new InvalidateSync(this.fetchSessions);
+        this.sessionsSync = new InvalidateSync(this.runSessionsSync);
         this.settingsSync = new InvalidateSync(this.syncSettings);
         this.sessionModeConfigSync = new InvalidateSync(this.syncSessionModeConfig);
         this.profileSync = new InvalidateSync(this.fetchProfile);
@@ -366,6 +368,7 @@ class Sync {
         // Invalidate sync
         log.log('🔄 #init: Invalidating all syncs');
         this.lastSessionsCursorMs = 0;
+        this.sessionsBootstrapMachine.reset();
         this.sessionsSync.invalidate();
         this.settingsSync.invalidate();
         this.sessionModeConfigSync.invalidate();
@@ -1047,15 +1050,40 @@ class Sync {
     // Private
     //
 
-    private fetchSessions = async () => {
+    private runSessionsSync = async () => {
+        const plan = this.sessionsBootstrapMachine.planNext();
+        if (plan === 'skip') {
+            // A bootstrap is already in flight; pending incremental is now
+            // armed and will run when bootstrap completes.
+            return;
+        }
+        if (plan === 'bootstrap') {
+            this.sessionsBootstrapMachine.beginBootstrap();
+            try {
+                await this.bootstrapSessions();
+            } catch (e) {
+                this.sessionsBootstrapMachine.failBootstrap();
+                throw e;
+            }
+            const followUp = this.sessionsBootstrapMachine.completeBootstrap();
+            if (followUp === 'incremental') {
+                await this.fetchSessionsIncremental();
+            }
+            return;
+        }
+        // plan === 'incremental'
+        await this.fetchSessionsIncremental();
+    }
+
+    private bootstrapSessions = async () => {
         if (!this.credentials) return;
 
         const API_ENDPOINT = getServerUrl();
-        const cursor = this.lastSessionsCursorMs;
         const initialLimit = 150;
-        const url = cursor > 0
-            ? `${API_ENDPOINT}/v1/sessions?since=${cursor}`
-            : `${API_ENDPOINT}/v1/sessions`;
+        // Bootstrap intentionally ignores lastSessionsCursorMs: it owns the
+        // "I am the first full sync" semantics. Retries after a failure
+        // re-run from scratch (storage merge is idempotent).
+        const url = `${API_ENDPOINT}/v1/sessions`;
         const response = await fetch(url, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
@@ -1085,10 +1113,82 @@ class Sync {
         }>;
 
         if (sessions.length === 0) {
-            // Keep orchestrator activity fresh even when no session rows changed —
-            // this batch is not keyed to the session list.
+            // Empty account — still keep orchestrator activity fresh.
             this.fetchOrchestratorActivityBatch();
-            log.log(`📥 fetchSessions: no changes since cursor=${cursor}`);
+            log.log(`📥 bootstrapSessions: empty account`);
+            return;
+        }
+
+        const decryptedSessions = await this.decryptSessionRows(sessions);
+        let maxUpdatedAt = 0;
+        for (const session of decryptedSessions) {
+            if (session.updatedAt > maxUpdatedAt) {
+                maxUpdatedAt = session.updatedAt;
+            }
+        }
+
+        this.lastSessionsCursorMs = maxUpdatedAt;
+        this.applySessions(decryptedSessions);
+
+        // /v1/sessions intentionally keeps its first page ordered by createdAt desc
+        // to avoid the list jitter introduced by updatedAt resorting (see 3af62d51).
+        // If that page is full, it may omit old-created-but-recently-updated rows
+        // that /session/recent's updatedAt-desc pagination would otherwise skip.
+        // Backfill the updatedAt window covered by the first page before normal
+        // older pagination starts.
+        if (sessions.length >= initialLimit && decryptedSessions.length > 0) {
+            await this.backfillInitialSessionUpdatedAtWindow(decryptedSessions, initialLimit);
+        }
+
+        this.fetchOrchestratorActivityBatch();
+        log.log(`📥 bootstrapSessions completed - processed ${decryptedSessions.length} sessions, cursor=${maxUpdatedAt}`);
+    }
+
+    private fetchSessionsIncremental = async () => {
+        if (!this.credentials) return;
+
+        const API_ENDPOINT = getServerUrl();
+        const cursor = this.lastSessionsCursorMs;
+        if (cursor <= 0) {
+            // Defensive: incremental should never run without a cursor.
+            // If it does (state machine bug), fall back to bootstrap path
+            // rather than issuing an unfiltered request.
+            log.log(`⚠️ fetchSessionsIncremental called with cursor=${cursor}; falling back to bootstrap`);
+            await this.bootstrapSessions();
+            return;
+        }
+        const url = `${API_ENDPOINT}/v1/sessions?since=${cursor}`;
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${this.credentials.token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch sessions: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const sessions = data.sessions as Array<{
+            id: string;
+            seq: number;
+            metadata: string;
+            metadataVersion: number;
+            agentState: string | null;
+            agentStateVersion: number;
+            dataEncryptionKey: string | null;
+            active: boolean;
+            activeAt: number;
+            createdAt: number;
+            updatedAt: number;
+            lastMessage: ApiMessage | null;
+            isShared?: boolean;
+        }>;
+
+        if (sessions.length === 0) {
+            this.fetchOrchestratorActivityBatch();
+            log.log(`📥 fetchSessionsIncremental: no changes since cursor=${cursor}`);
             return;
         }
 
@@ -1100,24 +1200,11 @@ class Sync {
             }
         }
 
-        // Advance cursor to max updatedAt observed. Note: applySessions merges,
-        // so sessions not in this response are preserved in local storage.
         this.lastSessionsCursorMs = maxUpdatedAt;
-
         this.applySessions(decryptedSessions);
 
-        // /v1/sessions intentionally keeps its first page ordered by createdAt desc
-        // to avoid the list jitter introduced by updatedAt resorting (see 3af62d51).
-        // If that page is full, it may omit old-created-but-recently-updated rows
-        // that /session/recent's updatedAt-desc pagination would otherwise skip.
-        // Backfill the updatedAt window covered by the first page before normal
-        // older pagination starts.
-        if (cursor === 0 && sessions.length >= initialLimit && decryptedSessions.length > 0) {
-            await this.backfillInitialSessionUpdatedAtWindow(decryptedSessions, initialLimit);
-        }
-
         this.fetchOrchestratorActivityBatch();
-        log.log(`📥 fetchSessions completed - processed ${decryptedSessions.length} sessions, cursor=${maxUpdatedAt}`);
+        log.log(`📥 fetchSessionsIncremental completed - processed ${decryptedSessions.length} sessions, cursor=${maxUpdatedAt}`);
     }
 
     private backfillInitialSessionUpdatedAtWindow = async (initialSessions: Session[], limit: number) => {
@@ -2657,7 +2744,6 @@ class Sync {
         // Subscribe to connection state changes
         apiSocket.onReconnected(() => {
             log.log('🔌 Socket reconnected');
-            this.lastSessionsCursorMs = 0; // force full resync after reconnect to catch any missed events
             this.sessionsSync.invalidate();
             this.machinesSync.invalidate();
             log.log('🔌 Socket reconnected: Invalidating artifacts sync');
@@ -3463,7 +3549,7 @@ class Sync {
         const encryption = this.encryption.getSessionEncryption(sessionId);
         if (!encryption) { // Should never happen
             console.error(`Session ${sessionId} not found`);
-            this.fetchSessions(); // Just fetch sessions again
+            this.sessionsSync.invalidate(); // Just fetch sessions again
             return;
         }
 
@@ -3552,7 +3638,7 @@ class Sync {
                             ...(thinkingUpdate === true ? { thinking: true } : {})
                         }]);
                     } else {
-                        this.fetchSessions();
+                        this.sessionsSync.invalidate();
                     }
 
                     const messagesToApply = preparedUpdates
