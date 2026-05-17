@@ -15,6 +15,12 @@ export async function install(): Promise<void> {
     const runtime = process.execPath;
     const entrypoint = join(projectPath(), 'dist', 'index.mjs');
 
+    // launchd starts LaunchAgents with a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin),
+    // so carry over the current shell's PATH so the daemon can find CLIs installed via
+    // Homebrew, npm-global, nvm, bun, etc. when invoking `command -v claude/codex/gemini`.
+    const userPath = (process.env.PATH || '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
     // Ensure directories exist
     if (!existsSync(PLIST_DIR)) {
         mkdirSync(PLIST_DIR, { recursive: true });
@@ -50,6 +56,12 @@ export async function install(): Promise<void> {
                 <string>daemon</string>
                 <string>start-sync</string>
             </array>
+
+            <key>EnvironmentVariables</key>
+            <dict>
+                <key>PATH</key>
+                <string>${userPath}</string>
+            </dict>
 
             <key>RunAtLoad</key>
             <true/>
