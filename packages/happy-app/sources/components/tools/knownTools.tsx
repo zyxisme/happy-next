@@ -1052,13 +1052,39 @@ export const knownTools = {
         minimal: true
     },
     'TaskOutput': {
-        title: (opts: { metadata: Metadata | null, tool: ToolCall }) => {
+        /* title: (opts: { metadata: Metadata | null, tool: ToolCall }) => {
             let title = "TaskOutput";
             if (opts.tool.input && opts.tool.input.task_id && typeof opts.tool.input.task_id === 'string') {
                 title += `: ${opts.tool.input.task_id}`;
             }
             return title;
-        },
+        }, */
+        icon: ICON_SKILL,
+        minimal: true
+    },
+    'TaskCreate': {
+        /* title: (opts: { metadata: Metadata | null, tool: ToolCall }) => {
+            let title = "TaskCreate";
+            if (opts.tool.input && opts.tool.input.subject && typeof opts.tool.input.subject === 'string') {
+                title += `: ${opts.tool.input.subject}`;
+            } else if (opts.tool.description && typeof opts.tool.description === 'string') {
+                title += `: ${opts.tool.description}`;
+            }
+            return title;
+        }, */
+        icon: ICON_SKILL,
+        minimal: true
+    },
+    'TaskUpdate': {
+        /* title: (opts: { metadata: Metadata | null, tool: ToolCall }) => {
+            let title = "TaskUpdate";
+            if (opts.tool.input && opts.tool.input.taskId && typeof opts.tool.input.taskId === 'string') {
+                title += `: ${opts.tool.input.taskId}`;
+            } else if (opts.tool.description && typeof opts.tool.description === 'string') {
+                title += `: ${opts.tool.description}`;
+            }
+            return title;
+        }, */
         icon: ICON_SKILL,
         minimal: true
     },
