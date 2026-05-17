@@ -460,6 +460,32 @@ function NewSessionWizard() {
         }
         return getRecentPathForMachine(selectedMachineId, recentMachinePaths);
     });
+
+    // Hydrate selectedMachineId after sync completes.
+    // On page refresh, machines is [] until isDataReady flips true; the useState
+    // initializer above runs before that and falls through to null, leaving the
+    // UI without a machine chip and the path chip unclickable. Re-run the same
+    // selection priority once machines actually arrive.
+    React.useEffect(() => {
+        if (selectedMachineId !== null || machines.length === 0) return;
+        let pick: string | null = null;
+        if (persistedDraft?.selectedMachineId && machines.some(m => m.id === persistedDraft.selectedMachineId)) {
+            pick = persistedDraft.selectedMachineId;
+        } else {
+            for (const recent of recentMachinePaths) {
+                if (machines.some(m => m.id === recent.machineId)) {
+                    pick = recent.machineId;
+                    break;
+                }
+            }
+            if (!pick) pick = machines[0].id;
+        }
+        setSelectedMachineId(pick);
+        if (!selectedPath) {
+            setSelectedPath(getRecentPathForMachine(pick, recentMachinePaths));
+        }
+    }, [machines, selectedMachineId, selectedPath, recentMachinePaths, persistedDraft]);
+
     const [sessionPrompt, setSessionPrompt] = React.useState(() => {
         return tempSessionData?.prompt || prompt || persistedDraft?.input || '';
     });
