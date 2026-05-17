@@ -1119,6 +1119,10 @@ const styles = StyleSheet.create((theme) => ({
         ...Typography.default(),
         fontSize: 15,
         lineHeight: 22,
+        wordBreak: 'break-all',
+        overflowWrap: 'break-word',
+        wordWrap: 'break-word',
+        whiteSpace: 'pre-wrap',
     },
     replyQuote: {
         borderLeftWidth: 3,
