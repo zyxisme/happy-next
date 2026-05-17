@@ -28,7 +28,7 @@ import { uploadChatImage } from './uploadChatImage';
 import { LocalImage } from '@/components/ImagePreview';
 import { applySettings, Settings, settingsDefaults, settingsParse, SUPPORTED_SCHEMA_VERSION } from './settings';
 import { Profile, profileParse } from './profile';
-import { loadPendingSettings, savePendingSettings, loadSessionLastViewedAt, saveSessionLastViewedAt } from './persistence';
+import { loadPendingSettings, savePendingSettings, loadSessionLastViewedAt, saveSessionLastViewedAt, loadSessionsCache, saveSessionsCache } from './persistence';
 import { initializeTracking, tracking } from '@/track';
 import { parseToken } from '@/utils/parseToken';
 import { getServerUrl } from './serverConfig';
@@ -206,6 +206,7 @@ class Sync {
     private lastRecalculationTime = 0;
     private lastSessionsCursorMs = 0;
     private sessionsBootstrapMachine = new SessionsBootstrapMachine();
+    private sessionsCacheSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
         this.sessionsSync = new InvalidateSync(this.runSessionsSync);
@@ -369,6 +370,17 @@ class Sync {
         log.log('🔄 #init: Invalidating all syncs');
         this.lastSessionsCursorMs = 0;
         this.sessionsBootstrapMachine.reset();
+
+        const cachedSessions = loadSessionsCache(this.serverID);
+        if (cachedSessions) {
+            storage.getState().applyCachedSessions(cachedSessions.sessions, cachedSessions.sharedSessions);
+            this.lastSessionsCursorMs = cachedSessions.lastSessionsCursorMs;
+            if (this.lastSessionsCursorMs > 0) {
+                this.sessionsBootstrapMachine.markReady();
+            }
+            log.log(`📥 #init: hydrated ${Object.keys(cachedSessions.sessions).length} sessions from cache, cursor=${this.lastSessionsCursorMs}`);
+        }
+
         this.sessionsSync.invalidate();
         this.settingsSync.invalidate();
         this.sessionModeConfigSync.invalidate();
@@ -391,6 +403,9 @@ class Sync {
         ]).then(() => {
             gitStatusSync.invalidateForSessions([...Object.keys(storage.getState().sessions), ...Object.keys(storage.getState().sharedSessions)]);
             storage.getState().applyReady();
+            this.reconcileSessions().catch((error) => {
+                console.warn('Failed to reconcile sessions after init:', error);
+            });
 
             // Restore DooTask profile from server if not available locally
             if (!storage.getState().dootaskProfile && this.credentials) {
@@ -1115,6 +1130,7 @@ class Sync {
         if (sessions.length === 0) {
             // Empty account — still keep orchestrator activity fresh.
             this.fetchOrchestratorActivityBatch();
+            this.scheduleSessionsCacheSave();
             log.log(`📥 bootstrapSessions: empty account`);
             return;
         }
@@ -1185,8 +1201,11 @@ class Sync {
             lastMessage: ApiMessage | null;
             isShared?: boolean;
         }>;
+        const deletedSessionIds = Array.isArray(data.deletedSessionIds)
+            ? data.deletedSessionIds as string[]
+            : [];
 
-        if (sessions.length === 0) {
+        if (sessions.length === 0 && deletedSessionIds.length === 0) {
             this.fetchOrchestratorActivityBatch();
             log.log(`📥 fetchSessionsIncremental: no changes since cursor=${cursor}`);
             return;
@@ -1199,12 +1218,22 @@ class Sync {
                 maxUpdatedAt = session.updatedAt;
             }
         }
+        if (typeof data.cursor === 'number' && data.cursor > maxUpdatedAt) {
+            maxUpdatedAt = data.cursor;
+        }
 
         this.lastSessionsCursorMs = maxUpdatedAt;
-        this.applySessions(decryptedSessions);
+        if (deletedSessionIds.length > 0) {
+            this.applyDeletedSessions(deletedSessionIds);
+        }
+        if (decryptedSessions.length > 0) {
+            this.applySessions(decryptedSessions);
+        } else {
+            this.scheduleSessionsCacheSave();
+        }
 
         this.fetchOrchestratorActivityBatch();
-        log.log(`📥 fetchSessionsIncremental completed - processed ${decryptedSessions.length} sessions, cursor=${maxUpdatedAt}`);
+        log.log(`📥 fetchSessionsIncremental completed - processed ${decryptedSessions.length} sessions, deleted ${deletedSessionIds.length}, cursor=${maxUpdatedAt}`);
     }
 
     private backfillInitialSessionUpdatedAtWindow = async (initialSessions: Session[], limit: number) => {
@@ -1296,6 +1325,7 @@ class Sync {
         }
 
         storage.getState().applySharedSessions(decryptedSessions);
+        this.scheduleSessionsCacheSave();
         log.log(`📥 fetchSharedSessions completed - processed ${decryptedSessions.length} shared sessions`);
     }
 
@@ -1393,7 +1423,12 @@ class Sync {
     }
 
     public refreshSessions = async () => {
-        return this.sessionsSync.invalidateAndAwait();
+        await this.sessionsSync.invalidateAndAwait();
+    }
+
+    public refreshSessionsWithReconcile = async () => {
+        await this.refreshSessions();
+        await this.reconcileSessions();
     }
 
     public refreshFriends = () => {
@@ -1413,6 +1448,79 @@ class Sync {
 
     public getCredentials() {
         return this.credentials;
+    }
+
+    public reconcileSessions = async () => {
+        if (!this.credentials || !this.encryption) return;
+
+        const state = storage.getState();
+        const known: Record<string, number> = {};
+        for (const session of Object.values(state.sessions)) {
+            known[session.id] = session.updatedAt;
+        }
+
+        const response = await fetch(`${getServerUrl()}/v1/sessions/diff`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.credentials.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                since: this.lastSessionsCursorMs > 0 ? this.lastSessionsCursorMs : undefined,
+                known
+            })
+        });
+
+        // Older self-hosted servers may not have the diff endpoint yet. Keep
+        // normal incremental sync working and simply skip the reconcile pass.
+        if (response.status === 404) {
+            log.log('📥 reconcileSessions skipped: server does not support /v1/sessions/diff');
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Failed to diff sessions: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const sessions = Array.isArray(data.sessions) ? data.sessions as Array<{
+            id: string;
+            seq: number;
+            metadata: string;
+            metadataVersion: number;
+            agentState: string | null;
+            agentStateVersion: number;
+            dataEncryptionKey: string | null;
+            active: boolean;
+            activeAt: number;
+            createdAt: number;
+            updatedAt: number;
+            lastMessage: ApiMessage | null;
+            isShared?: boolean;
+        }> : [];
+        const deletedSessionIds = Array.isArray(data.deletedSessionIds)
+            ? data.deletedSessionIds as string[]
+            : [];
+
+        let maxCursor = this.lastSessionsCursorMs;
+        if (typeof data.cursor === 'number' && data.cursor > maxCursor) {
+            maxCursor = data.cursor;
+        }
+        for (const row of sessions) {
+            if (row.updatedAt > maxCursor) maxCursor = row.updatedAt;
+        }
+
+        if (deletedSessionIds.length > 0) {
+            this.applyDeletedSessions(deletedSessionIds);
+        }
+        if (sessions.length > 0) {
+            const decryptedSessions = await this.decryptSessionRows(sessions);
+            this.applySessions(decryptedSessions);
+        }
+        this.lastSessionsCursorMs = maxCursor;
+        this.scheduleSessionsCacheSave();
+
+        log.log(`📥 reconcileSessions completed - updated ${sessions.length}, deleted ${deletedSessionIds.length}, cursor=${maxCursor}`);
     }
 
     /**
@@ -2821,27 +2929,7 @@ class Sync {
             log.log('🗑️ Delete session update received');
             const sessionId = updateData.body.sid;
 
-            // Remove session from storage
-            storage.getState().deleteSession(sessionId);
-
-            // Remove encryption keys from memory
-            this.encryption.removeSessionEncryption(sessionId);
-            this.sessionDataKeys.delete(sessionId);
-
-            // Remove from project manager
-            projectManager.removeSession(sessionId);
-
-            // Clear any cached git status
-            gitStatusSync.clearForSession(sessionId);
-
-            // Clear message sync state
-            this.messagesSync.delete(sessionId);
-            this.pendingMessagesSync.delete(sessionId);
-            this.sessionLastSeq.delete(sessionId);
-            this.sessionMessageLocks.delete(sessionId);
-            this.sessionMessageUpdateQueues.delete(sessionId);
-            this.sessionMessageQueueRunning.delete(sessionId);
-            this.resetSessionMessageDispatch(sessionId);
+            this.applyDeletedSessions([sessionId]);
 
             log.log(`🗑️ Session ${sessionId} deleted from local storage`);
         } else if (updateData.body.t === 'update-session') {
@@ -3895,7 +3983,44 @@ class Sync {
         const active = storage.getState().getActiveSessions();
         storage.getState().applySessions(sessions);
         const newActive = storage.getState().getActiveSessions();
+        this.scheduleSessionsCacheSave();
         this.applySessionDiff(active, newActive);
+    }
+
+    private applyDeletedSessions = (sessionIds: string[]) => {
+        if (sessionIds.length === 0) return;
+
+        storage.getState().deleteSessions(sessionIds);
+        for (const sessionId of sessionIds) {
+            this.encryption.removeSessionEncryption(sessionId);
+            this.sessionDataKeys.delete(sessionId);
+            projectManager.removeSession(sessionId);
+            gitStatusSync.clearForSession(sessionId);
+            this.messagesSync.delete(sessionId);
+            this.pendingMessagesSync.delete(sessionId);
+            this.sessionLastSeq.delete(sessionId);
+            this.sessionMessageLocks.delete(sessionId);
+            this.sessionMessageUpdateQueues.delete(sessionId);
+            this.sessionMessageQueueRunning.delete(sessionId);
+            this.resetSessionMessageDispatch(sessionId);
+        }
+        this.scheduleSessionsCacheSave();
+    }
+
+    private scheduleSessionsCacheSave = () => {
+        if (!this.serverID) return;
+        if (this.sessionsCacheSaveTimer) {
+            clearTimeout(this.sessionsCacheSaveTimer);
+        }
+        this.sessionsCacheSaveTimer = setTimeout(() => {
+            this.sessionsCacheSaveTimer = null;
+            const state = storage.getState();
+            saveSessionsCache(this.serverID, {
+                lastSessionsCursorMs: this.lastSessionsCursorMs,
+                sessions: state.sessions,
+                sharedSessions: state.sharedSessions,
+            });
+        }, 500);
     }
 
     private applySessionDiff = (active: Session[], newActive: Session[]) => {

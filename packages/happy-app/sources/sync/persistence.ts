@@ -3,12 +3,13 @@ import { Settings, settingsDefaults, settingsParse, SettingsSchema } from './set
 import { LocalSettings, localSettingsDefaults, localSettingsParse } from './localSettings';
 import { Profile, profileDefaults, profileParse } from './profile';
 import type { PermissionMode } from '@/components/PermissionModeSelector';
-import type { SessionDraft } from './storageTypes';
+import type { Session, SessionDraft } from './storageTypes';
 import { DooTaskProfile, DooTaskProfileSchema } from './dootask/types';
 import type { DooTaskUser } from './dootask/types';
 
 const mmkv = new MMKV();
 const NEW_SESSION_DRAFT_KEY = 'new-session-draft-v1';
+const SESSIONS_CACHE_VERSION = 1;
 
 export type NewSessionAgentType = 'claude' | 'codex' | 'gemini';
 export type NewSessionSessionType = 'simple' | 'worktree';
@@ -424,6 +425,78 @@ export function loadSharedByMeCache(userId: string): any[] {
 
 export function saveSharedByMeCache(userId: string, data: any[]): void {
     mmkv.set(`shared-by-me-${userId}`, JSON.stringify(data));
+}
+
+export type SessionsCachePayload = {
+    version: 1;
+    savedAt: number;
+    lastSessionsCursorMs: number;
+    sessions: Record<string, Session>;
+    sharedSessions: Record<string, Session>;
+};
+
+function sessionsCacheKey(accountKey: string): string {
+    return `sessions-cache-v${SESSIONS_CACHE_VERSION}:${accountKey}`;
+}
+
+function stripVolatileSessionFields(session: Session): Session {
+    return {
+        ...session,
+        thinking: false,
+        thinkingAt: 0,
+        messageSyncing: false,
+        presence: session.active ? 'online' : session.activeAt,
+        draft: session.draft ?? null,
+        upgrading: false,
+    };
+}
+
+export function loadSessionsCache(accountKey: string): SessionsCachePayload | null {
+    const raw = mmkv.getString(sessionsCacheKey(accountKey));
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        if (
+            parsed?.version !== SESSIONS_CACHE_VERSION ||
+            typeof parsed.savedAt !== 'number' ||
+            typeof parsed.lastSessionsCursorMs !== 'number' ||
+            typeof parsed.sessions !== 'object' ||
+            parsed.sessions === null ||
+            typeof parsed.sharedSessions !== 'object' ||
+            parsed.sharedSessions === null
+        ) {
+            return null;
+        }
+        return parsed as SessionsCachePayload;
+    } catch (e) {
+        console.error('Failed to parse sessions cache', e);
+        mmkv.delete(sessionsCacheKey(accountKey));
+        return null;
+    }
+}
+
+export function saveSessionsCache(accountKey: string, data: {
+    lastSessionsCursorMs: number;
+    sessions: Record<string, Session>;
+    sharedSessions: Record<string, Session>;
+}): void {
+    const sessions = Object.fromEntries(
+        Object.entries(data.sessions).map(([id, session]) => [id, stripVolatileSessionFields(session)])
+    );
+    const sharedSessions = Object.fromEntries(
+        Object.entries(data.sharedSessions).map(([id, session]) => [id, stripVolatileSessionFields(session)])
+    );
+    mmkv.set(sessionsCacheKey(accountKey), JSON.stringify({
+        version: SESSIONS_CACHE_VERSION,
+        savedAt: Date.now(),
+        lastSessionsCursorMs: data.lastSessionsCursorMs,
+        sessions,
+        sharedSessions,
+    } satisfies SessionsCachePayload));
+}
+
+export function clearSessionsCache(accountKey: string): void {
+    mmkv.delete(sessionsCacheKey(accountKey));
 }
 
 export function clearPersistence() {

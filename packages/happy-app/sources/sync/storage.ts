@@ -186,6 +186,7 @@ interface StorageState {
     setOrchestratorActivity: (controllerSessionId: string, activity: Record<string, string[]>, totalRunCount?: number) => void;
     setOrchestratorActivityBatch: (activity: Record<string, Record<string, string[]>>, totalRunCounts?: Record<string, number>) => void;
     getActiveSessions: () => Session[];
+    applyCachedSessions: (sessions: Record<string, Session>, sharedSessions: Record<string, Session>) => void;
     updateSessionDraft: (sessionId: string, draft: SessionDraft | null) => void;
     updateSessionActivity: (sessionId: string, active: boolean) => void;
     setSessionUpgrading: (sessionId: string, upgrading: boolean) => void;
@@ -198,6 +199,7 @@ interface StorageState {
     updateArtifact: (artifact: DecryptedArtifact) => void;
     deleteArtifact: (artifactId: string) => void;
     deleteSession: (sessionId: string) => void;
+    deleteSessions: (sessionIds: string[]) => void;
     // Project management methods
     getProjects: () => import('./projectManager').Project[];
     getProject: (projectId: string) => import('./projectManager').Project | null;
@@ -479,6 +481,55 @@ export const storage = create<StorageState>()((set, get) => {
             const state = get();
             return Object.values(state.sessions).filter(s => s.active);
         },
+        applyCachedSessions: (sessions, sharedSessions) => set((state) => {
+            const normalizedSessions = Object.fromEntries(
+                Object.entries(sessions).map(([id, session]) => [
+                    id,
+                    {
+                        ...session,
+                        presence: resolveSessionOnlineState(session),
+                        thinking: false,
+                        thinkingAt: 0,
+                        messageSyncing: false,
+                    }
+                ])
+            );
+            const normalizedSharedSessions = Object.fromEntries(
+                Object.entries(sharedSessions).map(([id, session]) => [
+                    id,
+                    {
+                        ...session,
+                        presence: resolveSessionOnlineState(session),
+                        thinking: false,
+                        thinkingAt: 0,
+                        messageSyncing: false,
+                    }
+                ])
+            );
+
+            const machineMetadataMap = new Map<string, any>();
+            Object.values(state.machines).forEach(machine => {
+                if (machine.metadata) {
+                    machineMetadataMap.set(machine.id, machine.metadata);
+                }
+            });
+            projectManager.updateSessions(
+                [...Object.values(normalizedSessions), ...Object.values(normalizedSharedSessions)],
+                machineMetadataMap
+            );
+
+            return {
+                ...state,
+                sessions: normalizedSessions as Record<string, Session>,
+                sharedSessions: normalizedSharedSessions as Record<string, Session>,
+                sharedSessionsLoaded: Object.keys(normalizedSharedSessions).length > 0 || state.sharedSessionsLoaded,
+                sessionListViewData: buildSessionListViewData(
+                    normalizedSessions as Record<string, Session>,
+                    normalizedSharedSessions as Record<string, Session>
+                ),
+                isDataReady: true,
+            };
+        }),
         applySessions: (sessions: (Omit<Session, 'presence'> & { presence?: "online" | number })[]) => set((state) => {
             // Load drafts if sessions are empty (initial load)
             const savedDrafts = Object.keys(state.sessions).length === 0 ? sessionDrafts : {};
@@ -1639,33 +1690,55 @@ export const storage = create<StorageState>()((set, get) => {
                 artifacts: remainingArtifacts
             };
         }),
-        deleteSession: (sessionId: string) => set((state) => {
+        deleteSession: (sessionId: string) => get().deleteSessions([sessionId]),
+        deleteSessions: (sessionIds: string[]) => set((state) => {
+            if (sessionIds.length === 0) return state;
+            const deleteSet = new Set(sessionIds);
+
             // Remove session from sessions
-            const { [sessionId]: deletedSession, ...remainingSessions } = state.sessions;
+            const remainingSessions = Object.fromEntries(
+                Object.entries(state.sessions).filter(([id]) => !deleteSet.has(id))
+            );
+            const remainingSharedSessions = Object.fromEntries(
+                Object.entries(state.sharedSessions).filter(([id]) => !deleteSet.has(id))
+            );
             
             // Remove session messages if they exist
-            const { [sessionId]: deletedMessages, ...remainingSessionMessages } = state.sessionMessages;
+            const remainingSessionMessages = Object.fromEntries(
+                Object.entries(state.sessionMessages).filter(([id]) => !deleteSet.has(id))
+            );
 
             // Remove pending queue if it exists
-            const { [sessionId]: deletedPendingMessages, ...remainingPendingMessages } = state.sessionPendingMessages;
+            const remainingPendingMessages = Object.fromEntries(
+                Object.entries(state.sessionPendingMessages).filter(([id]) => !deleteSet.has(id))
+            );
             
             // Remove session git status if it exists
-            const { [sessionId]: deletedGitStatus, ...remainingGitStatus } = state.sessionGitStatus;
+            const remainingGitStatus = Object.fromEntries(
+                Object.entries(state.sessionGitStatus).filter(([id]) => !deleteSet.has(id))
+            );
             
             // Clear drafts and permission modes from persistent storage
             const drafts = loadSessionDrafts();
-            delete drafts[sessionId];
+            for (const sessionId of deleteSet) {
+                delete drafts[sessionId];
+                projectManager.removeSession(sessionId);
+            }
             saveSessionDrafts(drafts);
             
             // Rebuild sessionListViewData without the deleted session
-            const sessionListViewData = buildSessionListViewData(remainingSessions, state.sharedSessions);
+            const sessionListViewData = buildSessionListViewData(
+                remainingSessions as Record<string, Session>,
+                remainingSharedSessions as Record<string, Session>
+            );
             
             return {
                 ...state,
-                sessions: remainingSessions,
-                sessionMessages: remainingSessionMessages,
-                sessionPendingMessages: remainingPendingMessages,
-                sessionGitStatus: remainingGitStatus,
+                sessions: remainingSessions as Record<string, Session>,
+                sharedSessions: remainingSharedSessions as Record<string, Session>,
+                sessionMessages: remainingSessionMessages as Record<string, SessionMessages>,
+                sessionPendingMessages: remainingPendingMessages as Record<string, PendingMessage[]>,
+                sessionGitStatus: remainingGitStatus as Record<string, GitStatus | null>,
                 sessionListViewData
             };
         }),

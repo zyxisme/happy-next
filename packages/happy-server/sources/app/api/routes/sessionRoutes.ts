@@ -9,6 +9,56 @@ import { allocateUserSeq } from "@/storage/seq";
 import { sessionDelete } from "@/app/session/sessionDelete";
 import { invokeUserRpc } from "@/app/api/socket/rpcRegistry";
 
+type SessionListRow = {
+    id: string;
+    seq: number;
+    createdAt: Date;
+    updatedAt: Date;
+    metadata: string;
+    metadataVersion: number;
+    agentState: string | null;
+    agentStateVersion: number;
+    dataEncryptionKey: Uint8Array | null;
+    active: boolean;
+    lastActiveAt: Date;
+    _count: { shares: number };
+    publicShare: { id: string } | null;
+};
+
+function serializeSessionRow(v: SessionListRow) {
+    return {
+        id: v.id,
+        seq: v.seq,
+        createdAt: v.createdAt.getTime(),
+        updatedAt: v.updatedAt.getTime(),
+        active: v.active,
+        activeAt: v.lastActiveAt.getTime(),
+        metadata: v.metadata,
+        metadataVersion: v.metadataVersion,
+        agentState: v.agentState,
+        agentStateVersion: v.agentStateVersion,
+        dataEncryptionKey: v.dataEncryptionKey ? Buffer.from(v.dataEncryptionKey).toString('base64') : null,
+        lastMessage: null,
+        isShared: (v._count.shares > 0) || (v.publicShare !== null)
+    };
+}
+
+const sessionListSelect = {
+    id: true,
+    seq: true,
+    createdAt: true,
+    updatedAt: true,
+    metadata: true,
+    metadataVersion: true,
+    agentState: true,
+    agentStateVersion: true,
+    dataEncryptionKey: true,
+    active: true,
+    lastActiveAt: true,
+    _count: { select: { shares: true } },
+    publicShare: { select: { id: true } },
+} satisfies Prisma.SessionSelect;
+
 export function sessionRoutes(app: Fastify) {
 
     // Sessions API
@@ -50,47 +100,148 @@ export function sessionRoutes(app: Fastify) {
         }
 
         const take = incremental ? 500 : (requestedLimit ?? 150);
-        const sessions = await db.session.findMany({
-            where,
-            orderBy: incremental
-                ? { updatedAt: 'asc' }
-                : paginatingOlder
-                    ? [{ updatedAt: 'desc' }, { id: 'desc' }]
-                    : { createdAt: 'desc' },
-            take,
-            select: {
-                id: true,
-                seq: true,
-                createdAt: true,
-                updatedAt: true,
-                metadata: true,
-                metadataVersion: true,
-                agentState: true,
-                agentStateVersion: true,
-                dataEncryptionKey: true,
-                active: true,
-                lastActiveAt: true,
-                _count: { select: { shares: true } },
-                publicShare: { select: { id: true } },
-            }
-        });
+        const [sessions, deletedSessions] = await Promise.all([
+            db.session.findMany({
+                where,
+                orderBy: incremental
+                    ? { updatedAt: 'asc' }
+                    : paginatingOlder
+                        ? [{ updatedAt: 'desc' }, { id: 'desc' }]
+                        : { createdAt: 'desc' },
+                take,
+                select: sessionListSelect
+            }),
+            incremental
+                ? db.sessionDeletion.findMany({
+                    where: {
+                        accountId: userId,
+                        deletedAt: { gt: new Date(since!) }
+                    },
+                    orderBy: { deletedAt: 'asc' },
+                    take: 500,
+                    select: {
+                        sessionId: true,
+                        deletedAt: true
+                    }
+                })
+                : Promise.resolve([])
+        ]);
+
+        let cursor = since ?? 0;
+        for (const session of sessions) {
+            cursor = Math.max(cursor, session.updatedAt.getTime());
+        }
+        for (const deleted of deletedSessions) {
+            cursor = Math.max(cursor, deleted.deletedAt.getTime());
+        }
+        if (incremental && sessions.length >= 500) {
+            cursor = Math.min(cursor, sessions[sessions.length - 1].updatedAt.getTime());
+        }
+        if (incremental && deletedSessions.length >= 500) {
+            cursor = Math.min(cursor, deletedSessions[deletedSessions.length - 1].deletedAt.getTime());
+        }
 
         return reply.send({
-            sessions: sessions.map((v) => ({
-                id: v.id,
-                seq: v.seq,
-                createdAt: v.createdAt.getTime(),
-                updatedAt: v.updatedAt.getTime(),
-                active: v.active,
-                activeAt: v.lastActiveAt.getTime(),
-                metadata: v.metadata,
-                metadataVersion: v.metadataVersion,
-                agentState: v.agentState,
-                agentStateVersion: v.agentStateVersion,
-                dataEncryptionKey: v.dataEncryptionKey ? Buffer.from(v.dataEncryptionKey).toString('base64') : null,
-                lastMessage: null,
-                isShared: (v._count.shares > 0) || (v.publicShare !== null)
-            }))
+            sessions: sessions.map(serializeSessionRow),
+            deletedSessionIds: deletedSessions.map((v) => v.sessionId),
+            cursor
+        });
+    });
+
+    app.post('/v1/sessions/diff', {
+        preHandler: app.authenticate,
+        schema: {
+            body: z.object({
+                since: z.number().int().nonnegative().optional(),
+                known: z.record(z.string(), z.number().int().nonnegative()).default({})
+            })
+        }
+    }, async (request, reply) => {
+        const userId = request.userId;
+        const since = request.body.since;
+        const known = request.body.known ?? {};
+        const knownIds = Object.keys(known);
+
+        if (knownIds.length > 2000) {
+            return reply.code(413).send({ error: 'Too many known sessions', limit: 2000 });
+        }
+
+        const [knownRows, changedRows, deletedRows] = await Promise.all([
+            knownIds.length > 0
+                ? db.session.findMany({
+                    where: {
+                        accountId: userId,
+                        id: { in: knownIds }
+                    },
+                    select: sessionListSelect
+                })
+                : Promise.resolve([]),
+            typeof since === 'number'
+                ? db.session.findMany({
+                    where: {
+                        accountId: userId,
+                        updatedAt: { gt: new Date(since) }
+                    },
+                    orderBy: { updatedAt: 'asc' },
+                    take: 500,
+                    select: sessionListSelect
+                })
+                : Promise.resolve([]),
+            typeof since === 'number'
+                ? db.sessionDeletion.findMany({
+                    where: {
+                        accountId: userId,
+                        deletedAt: { gt: new Date(since) }
+                    },
+                    orderBy: { deletedAt: 'asc' },
+                    take: 500,
+                    select: {
+                        sessionId: true,
+                        deletedAt: true
+                    }
+                })
+                : Promise.resolve([])
+        ]);
+
+        const existingKnownIds = new Set(knownRows.map(row => row.id));
+        const deletedSessionIds = new Set<string>();
+        for (const id of knownIds) {
+            if (!existingKnownIds.has(id)) {
+                deletedSessionIds.add(id);
+            }
+        }
+        for (const row of deletedRows) {
+            deletedSessionIds.add(row.sessionId);
+        }
+
+        const sessionRows = new Map<string, SessionListRow>();
+        for (const row of changedRows) {
+            sessionRows.set(row.id, row);
+        }
+        for (const row of knownRows) {
+            if (row.updatedAt.getTime() !== known[row.id]) {
+                sessionRows.set(row.id, row);
+            }
+        }
+
+        let cursor = since ?? 0;
+        for (const row of changedRows) {
+            cursor = Math.max(cursor, row.updatedAt.getTime());
+        }
+        for (const row of deletedRows) {
+            cursor = Math.max(cursor, row.deletedAt.getTime());
+        }
+        if (changedRows.length >= 500) {
+            cursor = Math.min(cursor, changedRows[changedRows.length - 1].updatedAt.getTime());
+        }
+        if (deletedRows.length >= 500) {
+            cursor = Math.min(cursor, deletedRows[deletedRows.length - 1].deletedAt.getTime());
+        }
+
+        return reply.send({
+            sessions: Array.from(sessionRows.values()).map(serializeSessionRow),
+            deletedSessionIds: Array.from(deletedSessionIds),
+            cursor
         });
     });
 

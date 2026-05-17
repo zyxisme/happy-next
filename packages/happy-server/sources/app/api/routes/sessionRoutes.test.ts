@@ -20,13 +20,21 @@ type SessionRow = {
     publicShareId: string | null;
 };
 
+type SessionDeletionRow = {
+    accountId: string;
+    sessionId: string;
+    deletedAt: Date;
+};
+
 const { state, dbMock, resetState, seedSession } = vi.hoisted(() => {
     const state = {
-        sessions: [] as SessionRow[]
+        sessions: [] as SessionRow[],
+        deletions: [] as SessionDeletionRow[]
     };
 
     const resetState = () => {
         state.sessions = [];
+        state.deletions = [];
     };
 
     const seedSession = (row: SessionRow) => {
@@ -37,7 +45,12 @@ const { state, dbMock, resetState, seedSession } = vi.hoisted(() => {
         const accountId = args?.where?.accountId as string;
         const sinceGt = args?.where?.updatedAt?.gt as Date | undefined;
         const olderOr = args?.where?.OR as any[] | undefined;
+        const idIn = args?.where?.id?.in as string[] | undefined;
         let rows = state.sessions.filter((s) => s.accountId === accountId);
+        if (idIn) {
+            const idSet = new Set(idIn);
+            rows = rows.filter((s) => idSet.has(s.id));
+        }
         if (sinceGt) {
             rows = rows.filter((s) => s.updatedAt.getTime() > sinceGt.getTime());
         }
@@ -78,8 +91,21 @@ const { state, dbMock, resetState, seedSession } = vi.hoisted(() => {
         }));
     });
 
+    const findManyDeletions = vi.fn(async (args: any) => {
+        const accountId = args?.where?.accountId as string;
+        const sinceGt = args?.where?.deletedAt?.gt as Date | undefined;
+        let rows = state.deletions.filter((d) => d.accountId === accountId);
+        if (sinceGt) {
+            rows = rows.filter((d) => d.deletedAt.getTime() > sinceGt.getTime());
+        }
+        rows.sort((a, b) => a.deletedAt.getTime() - b.deletedAt.getTime());
+        const take = args?.take ?? rows.length;
+        return rows.slice(0, take);
+    });
+
     const dbMock = {
-        session: { findMany }
+        session: { findMany },
+        sessionDeletion: { findMany: findManyDeletions }
     };
 
     return { state, dbMock, resetState, seedSession };
@@ -170,6 +196,23 @@ describe("GET /v1/sessions", () => {
         expect(res.json().sessions).toEqual([]);
     });
 
+    it("returns deletion tombstones when since is provided", async () => {
+        seedSession(mkSession({ id: "a", updatedAt: new Date(1000) }));
+        state.deletions.push(
+            { accountId: "user-1", sessionId: "deleted-old", deletedAt: new Date(1200) },
+            { accountId: "user-1", sessionId: "deleted-new", deletedAt: new Date(2200) },
+            { accountId: "other", sessionId: "deleted-other", deletedAt: new Date(3000) }
+        );
+
+        const res = await app.inject({ method: "GET", url: "/v1/sessions?since=1500" });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body.sessions).toEqual([]);
+        expect(body.deletedSessionIds).toEqual(["deleted-new"]);
+        expect(body.cursor).toBe(2200);
+    });
+
     it("rejects negative since", async () => {
         const res = await app.inject({ method: "GET", url: "/v1/sessions?since=-1" });
         expect(res.statusCode).toBe(400);
@@ -226,5 +269,43 @@ describe("GET /v1/sessions", () => {
         const body = res.json();
         const byId = Object.fromEntries(body.sessions.map((s: any) => [s.id, s.isShared]));
         expect(byId).toEqual({ a: true, b: true, c: false });
+    });
+
+    it("diff returns changed, missing, and tombstoned sessions", async () => {
+        seedSession(mkSession({ id: "same", updatedAt: new Date(1000) }));
+        seedSession(mkSession({ id: "changed", updatedAt: new Date(2500), metadata: "new" }));
+        seedSession(mkSession({ id: "new-after-since", updatedAt: new Date(3000) }));
+        state.deletions.push({ accountId: "user-1", sessionId: "deleted-after-since", deletedAt: new Date(3500) });
+
+        const res = await app.inject({
+            method: "POST",
+            url: "/v1/sessions/diff",
+            payload: {
+                since: 2000,
+                known: {
+                    same: 1000,
+                    changed: 2000,
+                    missing: 1500
+                }
+            }
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body.sessions.map((s: any) => s.id).sort()).toEqual(["changed", "new-after-since"]);
+        expect(body.deletedSessionIds.sort()).toEqual(["deleted-after-since", "missing"]);
+        expect(body.cursor).toBe(3500);
+    });
+
+    it("diff rejects too many known sessions", async () => {
+        const known = Object.fromEntries(Array.from({ length: 2001 }, (_, i) => [`s${i}`, 1]));
+
+        const res = await app.inject({
+            method: "POST",
+            url: "/v1/sessions/diff",
+            payload: { known }
+        });
+
+        expect(res.statusCode).toBe(413);
     });
 });

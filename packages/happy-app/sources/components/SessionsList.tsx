@@ -292,7 +292,7 @@ export function SessionsList() {
     const handleRefresh = React.useCallback(async () => {
         setRefreshing(true);
         try {
-            await sync.refreshSessions();
+            await sync.refreshSessionsWithReconcile();
         } finally {
             setRefreshing(false);
         }

@@ -73,7 +73,26 @@ export async function sessionDelete(ctx: Context, sessionId: string): Promise<bo
             deletedCount: deletedAccessKeys.count
         }, `Deleted ${deletedAccessKeys.count} access keys`);
 
-        // 4. Delete the session itself
+        // 4. Record a tombstone so clients that were offline during the
+        // websocket delete-session event can remove stale local cache entries
+        // through incremental /v1/sessions?since=... sync.
+        await tx.sessionDeletion.upsert({
+            where: {
+                accountId_sessionId: {
+                    accountId: ctx.uid,
+                    sessionId
+                }
+            },
+            update: {
+                deletedAt: new Date()
+            },
+            create: {
+                accountId: ctx.uid,
+                sessionId
+            }
+        });
+
+        // 5. Delete the session itself
         await tx.session.delete({
             where: { id: sessionId }
         });

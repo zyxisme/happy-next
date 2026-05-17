@@ -67,6 +67,15 @@ export class SessionsBootstrapMachine {
     }
 
     /**
+     * Hydrated from a durable local cache. Treat the list as bootstrapped so
+     * the next network sync can use the saved updatedAt cursor.
+     */
+    markReady(): void {
+        this.state = 'ready';
+        this.pendingIncrementalAfterBootstrap = false;
+    }
+
+    /**
      * Account switch, logout, or restore — clear everything.
      */
     reset(): void {

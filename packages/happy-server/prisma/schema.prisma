@@ -44,6 +44,7 @@ model Account {
   badgeCount Int @default(0)
 
   Session             Session[]
+  SessionDeletion     SessionDeletion[]
   OrchestratorRun     OrchestratorRun[]
   AccountPushToken    AccountPushToken[]
   TerminalAuthRequest TerminalAuthRequest[]
@@ -128,6 +129,17 @@ model Session {
   @@unique([accountId, tag])
   @@index([accountId, updatedAt(sort: Desc)])
   @@index([accountId, updatedAt(sort: Desc), id(sort: Desc)])
+}
+
+model SessionDeletion {
+  id        String   @id @default(cuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  sessionId String
+  deletedAt DateTime @default(now())
+
+  @@unique([accountId, sessionId])
+  @@index([accountId, deletedAt(sort: Asc)])
 }
 
 //
