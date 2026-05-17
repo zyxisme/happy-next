@@ -587,6 +587,7 @@ export const es: TranslationStructure = {
         startNewSessionInFolder: 'Nueva sesión aquí',
         noMachineSelected: 'Por favor, selecciona una máquina para iniciar la sesión',
         noPathSelected: 'Por favor, selecciona un directorio para iniciar la sesión',
+        selectAgent: 'Seleccionar tipo de sesión',
         sessionType: {
             title: 'Tipo de sesión',
             simple: 'Simple',

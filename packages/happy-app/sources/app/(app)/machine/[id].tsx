@@ -6,6 +6,7 @@ import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { Typography } from '@/constants/Typography';
 import { useSessions, useMachine, storage } from '@/sync/storage';
+import type { PermissionMode } from '@/components/PermissionModeSelector';
 import { Ionicons, AntDesign } from '@expo/vector-icons';
 import type { Session } from '@/sync/storageTypes';
 import { machineBash, machineStopDaemon, machineUpdateMetadata } from '@/sync/ops';
@@ -21,6 +22,7 @@ import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { machineSpawnNewSession } from '@/sync/ops';
 import { resolveAbsolutePath } from '@/utils/pathUtils';
 import { useDirectoryCompletions } from '@/utils/pathCompletion';
+import { useCLIDetection } from '@/hooks/useCLIDetection';
 import { MultiTextInput, type MultiTextInputHandle } from '@/components/MultiTextInput';
 import { SessionTypeSelector } from '@/components/SessionTypeSelector';
 import { createWorktree } from '@/utils/createWorktree';
@@ -35,6 +37,24 @@ import { useShallow } from 'zustand/react/shallow';
 import { FolderPickerSheet } from '@/components/FolderPickerSheet';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
+import { MODEL_MODE_DEFAULT } from 'happy-wire';
+
+type AgentType = 'claude' | 'codex' | 'gemini';
+
+const AGENT_LABELS: Record<AgentType, string> = {
+    claude: 'Claude',
+    codex: 'Codex',
+    gemini: 'Gemini',
+};
+
+function resolveSessionModeForAgent(agent: AgentType) {
+    const lastUsed = storage.getState().sessionModeConfig.lastUsedByAgent[agent];
+    return {
+        permissionMode: (lastUsed?.permissionMode ?? 'default') as PermissionMode,
+        modelMode: lastUsed?.modelMode ?? MODEL_MODE_DEFAULT,
+        fastMode: lastUsed?.fastMode ?? false,
+    };
+}
 
 const styles = StyleSheet.create((theme) => ({
     pathInputContainer: {
@@ -101,6 +121,8 @@ export default function MachineDetailScreen() {
     const folderSelectHandlerRef = useRef<(path: string) => void>(() => {});
     const { width: screenWidth } = useWindowDimensions();
     const registeredRepos = storage(useShallow((state) => state.registeredRepos[machineId!] || [])) as RegisteredRepo[];
+    const cliAvailability = useCLIDetection(machineId ?? null);
+    const [agentMenu, setAgentMenu] = useState<{ visible: boolean; items: ActionMenuItem[] }>({ visible: false, items: [] });
 
     // Load registered repos from server KV store on mount
     useEffect(() => {
@@ -154,6 +176,15 @@ export default function MachineDetailScreen() {
     const isShowingCompletions = isPathInputFocused
         && customPath.trim().length > 0
         && directoryCompletions.length > 0;
+
+    const availableAgents = useMemo<AgentType[]>(() => {
+        if (cliAvailability.timestamp === 0) return ['claude'];
+        const agents: AgentType[] = [];
+        if (cliAvailability.claude === true) agents.push('claude');
+        if (cliAvailability.codex === true) agents.push('codex');
+        if (cliAvailability.gemini === true) agents.push('gemini');
+        return agents.length > 0 ? agents : ['claude'];
+    }, [cliAvailability.timestamp, cliAvailability.claude, cliAvailability.codex, cliAvailability.gemini]);
 
     const pathsToShow = useMemo<string[]>(() => {
         if (isShowingCompletions) return directoryCompletions;
@@ -256,7 +287,7 @@ export default function MachineDetailScreen() {
         }
     };
 
-    const handleStartSession = async (approvedNewDirectoryCreation: boolean = false): Promise<void> => {
+    const handleStartSession = useCallback(async (agent?: AgentType, approvedNewDirectoryCreation: boolean = false): Promise<void> => {
         if (!machine || !machineId) return;
         try {
             const pathToUse = (customPath.trim() || '~');
@@ -330,10 +361,13 @@ export default function MachineDetailScreen() {
                 }
             }
 
+            const sessionMode = resolveSessionModeForAgent(agent ?? 'claude');
+
             const result = await machineSpawnNewSession({
                 machineId: machineId!,
                 directory: actualPath,
                 approvedNewDirectoryCreation,
+                agent,
                 // Pass worktree metadata so CLI includes it in initial metadata (avoids race condition)
                 ...(sessionType === 'worktree' && worktreeBranchName ? {
                     worktreeBasePath: absolutePath,
@@ -344,12 +378,26 @@ export default function MachineDetailScreen() {
             });
             switch (result.type) {
                 case 'success':
+                    storage.getState().updateSessionPermissionMode(result.sessionId, sessionMode.permissionMode);
+                    storage.getState().setSessionFastMode(result.sessionId, sessionMode.fastMode);
+                    if (sessionMode.modelMode && sessionMode.modelMode !== MODEL_MODE_DEFAULT) {
+                        storage.getState().updateSessionModelMode(result.sessionId, sessionMode.modelMode);
+                    }
+                    sync.queueSessionModeConfigUpdate({
+                        sessionId: result.sessionId,
+                        agentType: agent ?? 'claude',
+                        permissionMode: sessionMode.permissionMode,
+                        modelMode: sessionMode.modelMode || MODEL_MODE_DEFAULT,
+                        fastMode: sessionMode.fastMode,
+                        includeSessionEntry: true,
+                        includeLastUsed: true,
+                    });
                     navigateToSession(result.sessionId);
                     break;
                 case 'requestToApproveDirectoryCreation': {
                     const approved = await Modal.confirm('Create Directory?', `The directory '${result.directory}' does not exist. Would you like to create it?`, { cancelText: t('common.cancel'), confirmText: t('common.create') });
                     if (approved) {
-                        await handleStartSession(true);
+                        await handleStartSession(agent, true);
                     }
                     break;
                 }
@@ -366,7 +414,25 @@ export default function MachineDetailScreen() {
         } finally {
             setIsSpawning(false);
         }
-    };
+    }, [machine, machineId, customPath, sessionType, selectedRepos, navigateToSession]);
+
+    const handleStartSessionPress = useCallback(() => {
+        if (availableAgents.length <= 1) {
+            void handleStartSession(availableAgents[0]);
+            return;
+        }
+
+        setAgentMenu({
+            visible: true,
+            items: availableAgents.map((agent) => ({
+                label: AGENT_LABELS[agent],
+                onPress: () => {
+                    setAgentMenu({ visible: false, items: [] });
+                    void handleStartSession(agent);
+                },
+            })),
+        });
+    }, [availableAgents, handleStartSession]);
 
     const pastUsedRelativePath = useCallback((session: Session) => {
         if (!session.metadata) return 'unknown path';
@@ -657,7 +723,7 @@ export default function MachineDetailScreen() {
                                         />
                                     </View>
                                     <Pressable
-                                        onPress={() => handleStartSession()}
+                                        onPress={handleStartSessionPress}
                                         disabled={spawnButtonDisabled}
                                         style={[
                                             styles.inlineSendButton,
@@ -873,6 +939,14 @@ export default function MachineDetailScreen() {
                         />
                 </ItemGroup>
             </ItemList>
+
+            {/* Agent picker for session launch */}
+            <ActionMenuModal
+                visible={agentMenu.visible}
+                title={t('newSession.selectAgent')}
+                items={agentMenu.items}
+                onClose={() => setAgentMenu({ visible: false, items: [] })}
+            />
 
             {/* Branch picker for Add Directory flow */}
             <ActionMenuModal

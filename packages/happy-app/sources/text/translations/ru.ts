@@ -552,6 +552,7 @@ export const ru: TranslationStructure = {
         startNewSessionInFolder: 'Новая сессия здесь',
         noMachineSelected: 'Пожалуйста, выберите машину для запуска сессии',
         noPathSelected: 'Пожалуйста, выберите директорию для запуска сессии',
+        selectAgent: 'Выберите тип сессии',
         sessionType: {
             title: 'Тип сессии',
             simple: 'Простая',

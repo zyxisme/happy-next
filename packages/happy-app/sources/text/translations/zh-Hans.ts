@@ -589,6 +589,7 @@ export const zhHans: TranslationStructure = {
         notConnectedToServer: '未连接到服务器。请检查您的网络连接。',
         noMachineSelected: '请选择一台设备以启动会话',
         noPathSelected: '请选择一个目录以启动会话',
+        selectAgent: '选择会话类型',
         sessionType: {
             title: '会话类型',
             simple: '简单',

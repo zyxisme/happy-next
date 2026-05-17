@@ -619,6 +619,7 @@ export const ja: TranslationStructure = {
         notConnectedToServer: 'サーバーに接続されていません。インターネット接続を確認してください。',
         noMachineSelected: 'セッションを開始するマシンを選択してください',
         noPathSelected: 'セッションを開始するディレクトリを選択してください',
+        selectAgent: 'セッションタイプを選択',
         sessionType: {
             title: 'セッションタイプ',
             simple: 'シンプル',
