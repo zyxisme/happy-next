@@ -1359,7 +1359,7 @@ class Sync {
         return decryptedSessions;
     }
 
-    public fetchOlderSessionsPage = async (params: { beforeUpdatedAt: number; beforeId?: string; limit?: number }): Promise<Session[]> => {
+    public fetchOlderSessionsPage = async (params: { beforeUpdatedAt: number; beforeId?: string; limit?: number; persistToStore?: boolean }): Promise<Session[]> => {
         if (!this.credentials || !this.encryption) return [];
 
         const API_ENDPOINT = getServerUrl();
@@ -1385,7 +1385,8 @@ class Sync {
         const data = await response.json();
         const sessions = Array.isArray(data.sessions) ? data.sessions : [];
         const decryptedSessions = await this.decryptSessionRows(sessions);
-        if (decryptedSessions.length > 0) {
+        const persist = params.persistToStore ?? true;
+        if (decryptedSessions.length > 0 && persist) {
             this.applySessions(decryptedSessions);
         }
         return decryptedSessions;

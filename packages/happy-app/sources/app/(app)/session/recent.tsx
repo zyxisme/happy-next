@@ -2,7 +2,7 @@ import React from 'react';
 import { View, FlatList, Pressable, ActivityIndicator, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { Text } from '@/components/StyledText';
-import { useAllSessions, useAllMachines } from '@/sync/storage';
+import { useAllSessions, useAllMachines, storage } from '@/sync/storage';
 import { Session } from '@/sync/storageTypes';
 import { Avatar } from '@/components/Avatar';
 import { generateCopyTitle, getSessionName, getSessionSubtitle, getSessionAvatarId, useSessionStatus, copySessionMetadata, copySessionModeSettings } from '@/utils/sessionUtils';
@@ -307,6 +307,7 @@ function SessionHistory() {
     const [paginationCursor, setPaginationCursor] = React.useState<{ updatedAt: number; id: string } | null>(null);
     const [loadingMore, setLoadingMore] = React.useState(false);
     const [hasMoreOlderSessions, setHasMoreOlderSessions] = React.useState(true);
+    const [localOlderSessions, setLocalOlderSessions] = React.useState<Session[]>([]);
     const loadMoreInFlightRef = React.useRef(false);
     const autoLoadPageCountRef = React.useRef(0);
     const loadMoreCooldownUntilRef = React.useRef(0);
@@ -335,11 +336,19 @@ function SessionHistory() {
         mmkv.set(SELECTED_AGENT_KEY, selectedAgent);
     }, [selectedAgent]);
 
+    const mergedSessions = React.useMemo(() => {
+        if (localOlderSessions.length === 0) return allSessions;
+        const globalIds = new Set(allSessions.map(s => s.id));
+        const localOnly = localOlderSessions.filter(s => !globalIds.has(s.id));
+        if (localOnly.length === 0) return allSessions;
+        return [...allSessions, ...localOnly].sort((a, b) => b.updatedAt - a.updatedAt);
+    }, [allSessions, localOlderSessions]);
+
     const initialPaginationCursor = React.useMemo(() => {
-        const oldestSession = allSessions[allSessions.length - 1];
+        const oldestSession = mergedSessions[mergedSessions.length - 1];
         if (!oldestSession) return null;
         return { updatedAt: oldestSession.updatedAt, id: oldestSession.id };
-    }, [allSessions]);
+    }, [mergedSessions]);
 
     const effectivePaginationCursor = paginationCursor ?? initialPaginationCursor;
 
@@ -348,7 +357,7 @@ function SessionHistory() {
     }, [selectedMachineId, selectedAgent, searchQuery]);
 
     const filteredSessions = React.useMemo(() => {
-        let result = allSessions;
+        let result = mergedSessions;
 
         if (selectedMachineId) {
             result = result.filter(s => s.metadata?.machineId === selectedMachineId);
@@ -368,7 +377,7 @@ function SessionHistory() {
         }
 
         return result;
-    }, [allSessions, selectedMachineId, selectedAgent, searchQuery]);
+    }, [mergedSessions, selectedMachineId, selectedAgent, searchQuery]);
 
     const groupedItems = React.useMemo(() => {
         return groupSessionsByDate(filteredSessions);
@@ -387,7 +396,16 @@ function SessionHistory() {
                 beforeUpdatedAt: effectivePaginationCursor.updatedAt,
                 beforeId: effectivePaginationCursor.id,
                 limit: OLDER_SESSIONS_PAGE_SIZE,
+                persistToStore: false,
             });
+
+            if (page.length > 0) {
+                setLocalOlderSessions(prev => {
+                    const existing = new Set(prev.map(s => s.id));
+                    const additions = page.filter(s => !existing.has(s.id));
+                    return additions.length === 0 ? prev : [...prev, ...additions];
+                });
+            }
 
             const last = page[page.length - 1];
             if (last) {
@@ -514,6 +532,14 @@ function SessionHistory() {
         }
     }, [navigateToSession, resumingSessionId]);
 
+    const handleNavigateToSession = React.useCallback((session: Session) => {
+        const state = storage.getState();
+        if (!state.sessions[session.id] && !state.sharedSessions[session.id]) {
+            state.applySessions([session]);
+        }
+        navigateToSession(session.id);
+    }, [navigateToSession]);
+
     const renderItem = React.useCallback(({ item, index }: { item: SessionHistoryItem, index: number }) => {
         if (item.type === 'date-header') {
             return (
@@ -541,14 +567,14 @@ function SessionHistory() {
                     isLast={isLast}
                     isSingle={isSingle}
                     isResuming={resumingSessionId === item.session.id}
-                    onPress={() => navigateToSession(item.session!.id)}
+                    onPress={() => handleNavigateToSession(item.session!)}
                     onFork={handleForkSession}
                 />
             );
         }
 
         return null;
-    }, [groupedItems, navigateToSession, handleForkSession, resumingSessionId]);
+    }, [groupedItems, handleNavigateToSession, handleForkSession, resumingSessionId]);
     
     const keyExtractor = React.useCallback((item: SessionHistoryItem, index: number) => {
         if (item.type === 'date-header') {
