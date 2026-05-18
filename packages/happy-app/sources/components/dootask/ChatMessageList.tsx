@@ -192,7 +192,7 @@ export const ChatMessageList = React.memo(({
                 <ChatBubble
                     msg={bubbleMsg}
                     currentUserId={currentUserId}
-                    senderName={userNames[item.userid]}
+                    senderName={item.userid === AI_ASSISTANT_USERID ? t('dootask.aiAssistant') : userNames[item.userid]}
                     avatarUrl={resolveAvatarUrl(userAvatars[item.userid], serverUrl)}
                     disabledAt={userDisabledAt[item.userid]}
                     showAvatar={showAvatar}

@@ -1061,7 +1061,7 @@ export const ChatBubble = React.memo(({
                     {showAvatar && (
                         <View style={styles.headerRow}>
                             {senderName ? (
-                                <Text style={[styles.senderName, { color: avatarBg }]}>
+                                <Text style={[styles.senderName, { color: avatarBg }]} numberOfLines={1}>
                                     {senderName}
                                 </Text>
                             ) : null}
@@ -1120,14 +1120,20 @@ const styles = StyleSheet.create((theme) => ({
         alignItems: 'baseline',
         gap: theme.margins.sm,
         marginBottom: 2,
+        minHeight: 20,
     },
     senderName: {
         ...Typography.default('semiBold'),
         fontSize: 15,
+        lineHeight: 20,
+        flexShrink: 1,
+        minWidth: 0,
     },
     headerTime: {
         ...Typography.default(),
         fontSize: 12,
+        lineHeight: 18,
+        flexShrink: 0,
     },
 
     // --- Self messages (right-aligned background band) ---
