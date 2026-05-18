@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 10 - 2026-05-18
+
+Sessions cold-start reliability overhaul, local session list cache, agent picker on the machine page, ChatBubble text-overflow fix, iOS build fix, and Happy CLI v0.3.4 with PATH injection for system daemons.
+
+- Sessions cold-start: gate first-load through a state machine that waits for sync to settle before listing, eliminating empty-list flashes and duplicate fetches on app launch
+- Sessions cold-start: hydrate machine picker on the new-session screen only after sync completes, so the last-used machine reliably preselects
+- Sessions cold-start: fire reconnect listeners on the socket's first successful connect, not just on subsequent reconnects, so initial sync is no longer missed
+- Sessions list: cache the session list locally and reconcile server state via deletion tombstones, so opening the app shows yesterday's sessions instantly while the server catches up
+- Machine page: pick the agent type (Claude / Codex / Gemini) when spawning a session — choices are limited to whichever CLIs the daemon reports as available, and the new session inherits that agent's last-used permission / model / fast mode
+- ChatBubble: tighter text wrapping and overflow handling so long URLs, code, and CJK runs no longer push the bubble past the message column
+- Settings: hide the header action button when no actions apply, removing an empty tap target
+- iOS build: compile fmt as C++17 to unblock Xcode 26 native builds
+- Happy CLI v0.3.4: inject the user's PATH into macOS LaunchAgent plists and Linux systemd unit files so the daemon can find `node` and `npx` after install; surface real `systemctl` errors instead of swallowing them
+- Performance: keep older recent-page sessions out of the global session store, lowering memory pressure on long browsing sessions
+
 ## Version 9 - 2026-05-15
 
 Native iOS/Android navigation overhaul, deeper DooTask inbox integration, directory autocomplete for path pickers, Gemini 3.1 Pro support, and broad iPad/Mac/Web polish.
