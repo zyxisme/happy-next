@@ -30,6 +30,48 @@ export const CommandSuggestion = React.memo(({ command, description }: CommandSu
     );
 });
 
+interface SkillSuggestionProps {
+    name: string;
+    description?: string;
+    scope: 'REPO' | 'USER' | 'ADMIN' | 'SYSTEM';
+    displayName?: string;
+}
+
+export const SkillSuggestion = React.memo(({ name, description, scope, displayName }: SkillSuggestionProps) => {
+    const scopeLabel = scope === 'REPO' ? t('agentInput.suggestion.skillScopeRepo')
+        : scope === 'USER' ? t('agentInput.suggestion.skillScopePersonal')
+        : t('agentInput.suggestion.skillScopeSystem');
+
+    return (
+        <View style={styles.suggestionContainer}>
+            <View style={styles.iconContainer}>
+                <Ionicons
+                    name="cube-outline"
+                    size={18}
+                    color={styles.iconColor.color}
+                />
+            </View>
+            <Text
+                style={[styles.commandText, { marginRight: description ? 12 : 0 }]}
+                numberOfLines={1}
+            >
+                {displayName || name}
+            </Text>
+            {description && (
+                <Text
+                    style={styles.descriptionText}
+                    numberOfLines={1}
+                >
+                    {description}
+                </Text>
+            )}
+            <Text style={styles.labelText}>
+                {scopeLabel}
+            </Text>
+        </View>
+    );
+});
+
 interface FileMentionProps {
     fileName: string;
     filePath: string;

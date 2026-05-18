@@ -66,9 +66,15 @@ function findActiveWordStart(
             if (char === '@') {
                 foundPrefix = true;
                 prefixIndex = startIndex;
-                // Return immediately for @ at word boundary
+                // If there's a space between this prefix and cursor, it belongs to a prior word
+                if (spaceIndex >= 0) {
+                    return spaceIndex + 1;
+                }
                 return startIndex;
             } else {
+                if (spaceIndex >= 0) {
+                    return spaceIndex + 1;
+                }
                 return startIndex;
             }
         }
