@@ -7,6 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 export type HtmlContentProps = {
     html: string;
     theme: any;
+    cacheKey?: string | number;
     selectable?: boolean;
     maxImageWidth?: number;
     onImagePress?: (url: string) => void;
@@ -14,9 +15,27 @@ export type HtmlContentProps = {
     isSelf?: boolean;
 };
 
-export const HtmlContent = React.memo(({ html, theme, selectable, maxImageWidth, onImagePress, onImagesFound, isSelf }: HtmlContentProps) => {
-    const [height, setHeight] = React.useState(100);
+const DEFAULT_HEIGHT = 100;
+const HEIGHT_PADDING = 16;
+const htmlHeightCache = new Map<string, number>();
+
+function getCachedHeight(cacheKey: HtmlContentProps['cacheKey']): number {
+    if (cacheKey === undefined || cacheKey === null) return DEFAULT_HEIGHT;
+    return htmlHeightCache.get(String(cacheKey)) ?? DEFAULT_HEIGHT;
+}
+
+function setCachedHeight(cacheKey: HtmlContentProps['cacheKey'], height: number) {
+    if (cacheKey === undefined || cacheKey === null) return;
+    htmlHeightCache.set(String(cacheKey), height);
+}
+
+export const HtmlContent = React.memo(({ html, theme, cacheKey, selectable, maxImageWidth, onImagePress, onImagesFound, isSelf }: HtmlContentProps) => {
+    const [height, setHeight] = React.useState(() => getCachedHeight(cacheKey));
     const containerRef = React.useRef<any>(null);
+
+    React.useEffect(() => {
+        setHeight(getCachedHeight(cacheKey));
+    }, [cacheKey]);
 
     // Web: attach click delegation and extract images from DOM
     React.useEffect(() => {
@@ -132,7 +151,14 @@ ${selectable ? '' : "document.addEventListener('contextmenu', function(e) { e.pr
                     try {
                         const data = JSON.parse(event.nativeEvent.data);
                         if (data.type === 'height' && data.height > 0) {
-                            setHeight(data.height + 16);
+                            const nextHeight = Math.ceil(data.height + HEIGHT_PADDING);
+                            setHeight((previousHeight) => {
+                                if (Math.abs(previousHeight - nextHeight) <= 2) {
+                                    return previousHeight;
+                                }
+                                setCachedHeight(cacheKey, nextHeight);
+                                return nextHeight;
+                            });
                         } else if (data.type === 'imagePress' && data.url && onImagePress) {
                             onImagePress(data.url);
                         } else if (data.type === 'images' && data.urls && onImagesFound) {

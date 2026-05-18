@@ -135,6 +135,35 @@ function resolveUrl(raw: string, serverUrl: string): string {
 
 const HEADER_SIZES = [24, 20, 18, 16, 15, 14]; // h1–h6
 const MONO_FONT = Platform.select({ ios: 'Menlo', default: 'monospace' });
+const SOFT_BREAK = '\u200B';
+const LONG_UNBROKEN_TOKEN_RE = /\S{24,}/g;
+const BREAK_AFTER_CHAR_RE = /[/:?&=#%._;,@~+\-]/;
+
+/**
+ * Native Text does not honor the web-only word-break/overflow-wrap styles.
+ * Insert zero-width break opportunities into long unbroken tokens (URLs, hashes,
+ * CJK/ASCII runs) so mobile can wrap them without changing the visible text.
+ */
+function makeBreakableText(text: string): string {
+    if (Platform.OS === 'web') return text;
+    return text.replace(LONG_UNBROKEN_TOKEN_RE, (token) => {
+        let result = '';
+        let runLength = 0;
+        for (const char of Array.from(token)) {
+            result += char;
+            if (char === SOFT_BREAK) {
+                runLength = 0;
+                continue;
+            }
+            runLength += 1;
+            if (BREAK_AFTER_CHAR_RE.test(char) || runLength >= 12) {
+                result += SOFT_BREAK;
+                runLength = 0;
+            }
+        }
+        return result;
+    });
+}
 
 /** Parse inline markdown (bold, italic, code, links, strikethrough) into Text elements */
 function renderInline(text: string, theme: any, keyPrefix: string = ''): React.ReactNode {
@@ -148,11 +177,11 @@ function renderInline(text: string, theme: any, keyPrefix: string = ''): React.R
     while (remaining) {
         const match = remaining.match(re);
         if (!match || match.index === undefined) {
-            if (remaining) parts.push(remaining);
+            if (remaining) parts.push(makeBreakableText(remaining));
             break;
         }
         if (match.index > 0) {
-            parts.push(remaining.substring(0, match.index));
+            parts.push(makeBreakableText(remaining.substring(0, match.index)));
         }
         const key = `${keyPrefix}-${idx++}`;
         if (match[2]) {
@@ -162,14 +191,14 @@ function renderInline(text: string, theme: any, keyPrefix: string = ''): React.R
         } else if (match[4]) {
             parts.push(<Text key={key} style={{ fontStyle: 'italic' }}>{renderInline(match[4], theme, key)}</Text>);
         } else if (match[5]) {
-            parts.push(<Text key={key} style={{ fontFamily: MONO_FONT, backgroundColor: theme.colors.surfaceHighest || '#2a2a2a', fontSize: 13 }}>{match[5]}</Text>);
+            parts.push(<Text key={key} style={{ fontFamily: MONO_FONT, backgroundColor: theme.colors.surfaceHighest || '#2a2a2a', fontSize: 13 }}>{makeBreakableText(match[5])}</Text>);
         } else if (match[6] !== undefined && match[7]) {
             // ![alt](url) — inline image reference, show as link text
-            parts.push(<Text key={key} style={{ color: '#0A84FF' }}>{match[6] || 'image'}</Text>);
+            parts.push(<Text key={key} style={{ color: '#0A84FF' }}>{makeBreakableText(match[6] || 'image')}</Text>);
         } else if (match[8] && match[9]) {
-            parts.push(<Text key={key} style={{ color: '#0A84FF' }}>{match[8]}</Text>);
+            parts.push(<Text key={key} style={{ color: '#0A84FF' }}>{makeBreakableText(match[8])}</Text>);
         } else if (match[10]) {
-            parts.push(<Text key={key} style={{ textDecorationLine: 'line-through' as const }}>{match[10]}</Text>);
+            parts.push(<Text key={key} style={{ textDecorationLine: 'line-through' as const }}>{makeBreakableText(match[10])}</Text>);
         }
         remaining = remaining.substring(match.index + match[0].length);
     }
@@ -307,10 +336,9 @@ function MarkdownContent({ text, theme, serverUrl, onImagePress }: {
     }
 
     if (elements.length === 0) {
-        return <Text style={[styles.msgText, { color: theme.colors.text }]}>{text}</Text>;
+        return <Text style={[styles.msgText, { color: theme.colors.text }]}>{makeBreakableText(text)}</Text>;
     }
-    if (elements.length === 1) return <>{elements}</>;
-    return <View>{elements}</View>;
+    return <View style={styles.markdownContainer}>{elements}</View>;
 }
 
 // Column-first table rendering with synchronized row heights (same as MarkdownView)
@@ -543,11 +571,11 @@ export function TextContent({ msg, theme, serverUrl, onImagePress, isSelf }: { m
     // Only use WebView for complex HTML (tables, code blocks, images, lists, etc.)
     // Simple HTML (br, p, b, i, a, span) is stripped and rendered natively for instant display
     if (isHtml && COMPLEX_HTML_RE.test(text)) {
-        return <HtmlContent html={formatHtmlImages(resolveContentUrls(text, serverUrl))} theme={theme} maxImageWidth={220} onImagePress={onImagePress} isSelf={isSelf} />;
+        return <HtmlContent html={formatHtmlImages(resolveContentUrls(text, serverUrl))} theme={theme} cacheKey={msg.id} maxImageWidth={220} onImagePress={onImagePress} isSelf={isSelf} />;
     }
     return (
         <Text style={[styles.msgText, { color: theme.colors.text }]}>
-            {isHtml ? stripHtml(text) : text}
+            {makeBreakableText(isHtml ? stripHtml(text) : text)}
         </Text>
     );
 }
@@ -572,7 +600,7 @@ function ImageContent({ msg, serverUrl, theme, onImagePress, isSelf }: { msg: Do
     // Text-with-embedded-images: msg.msg.text contains <img> tags (DooTask classifies these as type='image')
     const text = getMsgText(msg);
     if (text) {
-        return <HtmlContent html={formatHtmlImages(resolveContentUrls(text, serverUrl))} theme={theme} maxImageWidth={220} onImagePress={onImagePress} isSelf={isSelf} />;
+        return <HtmlContent html={formatHtmlImages(resolveContentUrls(text, serverUrl))} theme={theme} cacheKey={msg.id} maxImageWidth={220} onImagePress={onImagePress} isSelf={isSelf} />;
     }
     return null;
 }
@@ -1083,6 +1111,9 @@ const styles = StyleSheet.create((theme) => ({
     },
     otherContent: {
         flex: 1,
+        flexShrink: 1,
+        minWidth: 0,
+        maxWidth: '100%',
     },
     headerRow: {
         flexDirection: 'row',
@@ -1107,6 +1138,8 @@ const styles = StyleSheet.create((theme) => ({
     },
     selfContent: {
         alignItems: 'flex-end',
+        width: '100%',
+        minWidth: 0,
     },
     selfTime: {
         ...Typography.default(),
@@ -1119,10 +1152,17 @@ const styles = StyleSheet.create((theme) => ({
         ...Typography.default(),
         fontSize: 15,
         lineHeight: 22,
+        maxWidth: '100%',
+        flexShrink: 1,
         wordBreak: 'break-all',
         overflowWrap: 'break-word',
         wordWrap: 'break-word',
         whiteSpace: 'pre-wrap',
+    },
+    markdownContainer: {
+        width: '100%',
+        maxWidth: '100%',
+        flexShrink: 1,
     },
     replyQuote: {
         borderLeftWidth: 3,
