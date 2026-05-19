@@ -49,6 +49,7 @@ import { MODEL_MODE_DEFAULT, isModelModeForAgent } from 'happy-wire';
 import { FolderPickerSheet } from '@/components/FolderPickerSheet';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { handleImagePasteEvent } from '@/utils/imagePaste';
+import { getDooTaskProjectId, getRecentDooTaskProjectConfig } from '@/utils/dootaskSessionDefaults';
 
 // Simple temporary state for passing selections back from picker screens
 let onMachineSelected: (machineId: string) => void = () => { };
@@ -316,6 +317,14 @@ function NewSessionWizard() {
     const profileMap = useProfileMap(allProfiles);
     const machines = useAllMachines();
     const sessions = useSessions();
+    const dooTaskProjectId = React.useMemo(() => getDooTaskProjectId(tempSessionData), [tempSessionData]);
+    const dooTaskProjectRecentConfig = React.useMemo(() => {
+        return getRecentDooTaskProjectConfig(
+            dooTaskProjectId,
+            sessions,
+            new Set(machines.map(machine => machine.id)),
+        );
+    }, [dooTaskProjectId, sessions, machines]);
 
     // Wizard state
     const [selectedProfileId, setSelectedProfileId] = React.useState<string | null>(() => {
@@ -396,8 +405,17 @@ function NewSessionWizard() {
 
     // Session details state
     const [selectedMachineId, setSelectedMachineId] = React.useState<string | null>(() => {
+        if (tempSessionData?.machineId && machines.find(m => m.id === tempSessionData.machineId)) {
+            return tempSessionData.machineId;
+        }
+        if (tempSessionData?.externalContext?.source === 'dootask') {
+            return dooTaskProjectRecentConfig?.machineId ?? null;
+        }
+        if (dooTaskProjectRecentConfig?.machineId) {
+            return dooTaskProjectRecentConfig.machineId;
+        }
         // First try the persisted draft (saved immediately on selection)
-        if (persistedDraft?.selectedMachineId && machines.find(m => m.id === persistedDraft.selectedMachineId)) {
+        if (!tempSessionData && persistedDraft?.selectedMachineId && machines.find(m => m.id === persistedDraft.selectedMachineId)) {
             return persistedDraft.selectedMachineId;
         }
         if (machines.length > 0) {
@@ -454,12 +472,22 @@ function NewSessionWizard() {
     //
 
     const [selectedPath, setSelectedPath] = React.useState<string>(() => {
+        if (tempSessionData?.path) {
+            return tempSessionData.path;
+        }
+        if (tempSessionData?.externalContext?.source === 'dootask') {
+            return dooTaskProjectRecentConfig?.path ?? '';
+        }
+        if (dooTaskProjectRecentConfig?.path) {
+            return dooTaskProjectRecentConfig.path;
+        }
         // First try the persisted draft (saved immediately on selection)
-        if (persistedDraft?.selectedPath) {
+        if (!tempSessionData && persistedDraft?.selectedPath) {
             return persistedDraft.selectedPath;
         }
         return getRecentPathForMachine(selectedMachineId, recentMachinePaths);
     });
+    const didApplyDooTaskProjectDefaultsRef = React.useRef(Boolean(dooTaskProjectRecentConfig));
 
     // Hydrate selectedMachineId after sync completes.
     // On page refresh, machines is [] until isDataReady flips true; the useState
@@ -485,6 +513,19 @@ function NewSessionWizard() {
             setSelectedPath(getRecentPathForMachine(pick, recentMachinePaths));
         }
     }, [machines, selectedMachineId, selectedPath, recentMachinePaths, persistedDraft]);
+
+    React.useEffect(() => {
+        if (!tempSessionData || tempSessionData.externalContext?.source !== 'dootask') return;
+        if (tempSessionData.machineId || tempSessionData.path) return;
+        if (!dooTaskProjectRecentConfig || didApplyDooTaskProjectDefaultsRef.current) return;
+        if (selectedMachineId == null) {
+            setSelectedMachineId(dooTaskProjectRecentConfig.machineId);
+        }
+        if (!selectedPath) {
+            setSelectedPath(dooTaskProjectRecentConfig.path);
+        }
+        didApplyDooTaskProjectDefaultsRef.current = true;
+    }, [tempSessionData, dooTaskProjectRecentConfig, selectedMachineId, selectedPath]);
 
     const [sessionPrompt, setSessionPrompt] = React.useState(() => {
         return tempSessionData?.prompt || prompt || persistedDraft?.input || '';
