@@ -139,6 +139,14 @@ const SOFT_BREAK = '\u200B';
 const LONG_UNBROKEN_TOKEN_RE = /\S{24,}/g;
 const BREAK_AFTER_CHAR_RE = /[/:?&=#%._;,@~+\-]/;
 
+function getMarkdownIndentDepth(indent: string): number {
+    let columns = 0;
+    for (const char of indent) {
+        columns += char === '\t' ? 4 : 1;
+    }
+    return Math.floor(columns / 2);
+}
+
 /**
  * Native Text does not honor the web-only word-break/overflow-wrap styles.
  * Insert zero-width break opportunities into long unbroken tokens (URLs, hashes,
@@ -165,14 +173,14 @@ function makeBreakableText(text: string): string {
     });
 }
 
-/** Parse inline markdown (bold, italic, code, links, strikethrough) into Text elements */
+/** Parse inline markdown (bold, italic, code, links, strikethrough, underline) into Text elements */
 function renderInline(text: string, theme: any, keyPrefix: string = ''): React.ReactNode {
     const parts: React.ReactNode[] = [];
     let remaining = text;
     let idx = 0;
 
     // Order matters: bold-italic before bold before italic, image before link
-    const re = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|(?<!\*)\*([^*\n]+?)\*(?!\*)|`([^`]+?)`|!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)|~~(.+?)~~)/;
+    const re = /(`([^`]+?)`|<u>(.+?)<\/u>|\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|~~(.+?)~~|(?<!\*)\*([^*\n]+?)\*(?!\*)|!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\))/;
 
     while (remaining) {
         const match = remaining.match(re);
@@ -185,20 +193,22 @@ function renderInline(text: string, theme: any, keyPrefix: string = ''): React.R
         }
         const key = `${keyPrefix}-${idx++}`;
         if (match[2]) {
-            parts.push(<Text key={key} style={{ fontWeight: '700', fontStyle: 'italic' }}>{renderInline(match[2], theme, key)}</Text>);
+            parts.push(<Text key={key} style={{ fontFamily: MONO_FONT, backgroundColor: theme.colors.surfaceHighest || '#2a2a2a', fontSize: 13 }}>{makeBreakableText(match[2])}</Text>);
         } else if (match[3]) {
-            parts.push(<Text key={key} style={{ fontWeight: '700' }}>{renderInline(match[3], theme, key)}</Text>);
+            parts.push(<Text key={key} style={{ textDecorationLine: 'underline' as const }}>{renderInline(match[3], theme, key)}</Text>);
         } else if (match[4]) {
-            parts.push(<Text key={key} style={{ fontStyle: 'italic' }}>{renderInline(match[4], theme, key)}</Text>);
+            parts.push(<Text key={key} style={{ fontWeight: '700', fontStyle: 'italic' }}>{renderInline(match[4], theme, key)}</Text>);
         } else if (match[5]) {
-            parts.push(<Text key={key} style={{ fontFamily: MONO_FONT, backgroundColor: theme.colors.surfaceHighest || '#2a2a2a', fontSize: 13 }}>{makeBreakableText(match[5])}</Text>);
-        } else if (match[6] !== undefined && match[7]) {
+            parts.push(<Text key={key} style={{ fontWeight: '700' }}>{renderInline(match[5], theme, key)}</Text>);
+        } else if (match[6]) {
+            parts.push(<Text key={key} style={{ textDecorationLine: 'line-through' as const }}>{renderInline(match[6], theme, key)}</Text>);
+        } else if (match[7]) {
+            parts.push(<Text key={key} style={{ fontStyle: 'italic' }}>{renderInline(match[7], theme, key)}</Text>);
+        } else if (match[8] !== undefined && match[9]) {
             // ![alt](url) — inline image reference, show as link text
-            parts.push(<Text key={key} style={{ color: '#0A84FF' }}>{makeBreakableText(match[6] || 'image')}</Text>);
-        } else if (match[8] && match[9]) {
-            parts.push(<Text key={key} style={{ color: '#0A84FF' }}>{makeBreakableText(match[8])}</Text>);
-        } else if (match[10]) {
-            parts.push(<Text key={key} style={{ textDecorationLine: 'line-through' as const }}>{makeBreakableText(match[10])}</Text>);
+            parts.push(<Text key={key} style={{ color: theme.colors.textLink || '#0A84FF' }}>{makeBreakableText(match[8] || 'image')}</Text>);
+        } else if (match[10] && match[11]) {
+            parts.push(<Text key={key} style={{ color: theme.colors.textLink || '#0A84FF' }}>{makeBreakableText(match[10])}</Text>);
         }
         remaining = remaining.substring(match.index + match[0].length);
     }
@@ -275,27 +285,49 @@ function MarkdownContent({ text, theme, serverUrl, onImagePress }: {
             }
 
             // Blockquote
-            const bq = line.match(/^>\s+(.+)$/);
+            const bq = line.match(/^\s*(>+)\s?(.*)$/);
             if (bq) {
+                const depth = bq[1].length;
+                const content = bq[2];
+                const quotedList = content.match(/^[-*+]\s+(.+)$/);
                 elements.push(
-                    <View key={ki++} style={{ borderLeftWidth: 3, borderLeftColor: theme.colors.divider || '#333', paddingLeft: 8, marginVertical: 2 }}>
-                        <Text style={[styles.msgText, { color: theme.colors.textSecondary }]}>{renderInline(bq[1], theme, `q${ki}`)}</Text>
+                    <View key={ki++} style={{
+                        borderLeftWidth: 3,
+                        borderLeftColor: theme.colors.divider || '#333',
+                        paddingLeft: 8,
+                        marginLeft: Math.min(depth - 1, 5) * 18,
+                        marginVertical: 2,
+                    }}>
+                        <Text style={[styles.msgText, { color: theme.colors.textSecondary }]}>
+                            {quotedList ? '\u2022 ' : null}
+                            {renderInline(quotedList ? quotedList[1] : content, theme, `q${ki}`)}
+                        </Text>
                     </View>,
                 );
                 continue;
             }
 
             // Unordered list
-            const ul = line.match(/^[-*+]\s+(.+)$/);
+            const ul = line.match(/^(\s*)[-*+]\s+(.+)$/);
             if (ul) {
-                elements.push(<Text key={ki++} style={[styles.msgText, { color: theme.colors.text }]}>{'  \u2022 '}{renderInline(ul[1], theme, `u${ki}`)}</Text>);
+                const depth = getMarkdownIndentDepth(ul[1]);
+                elements.push(
+                    <Text key={ki++} style={[styles.msgText, { color: theme.colors.text, paddingLeft: Math.min(depth, 6) * 18 }]}>
+                        {'\u2022 '}{renderInline(ul[2], theme, `u${ki}`)}
+                    </Text>
+                );
                 continue;
             }
 
             // Ordered list
-            const ol = line.match(/^(\d+)\.\s+(.+)$/);
+            const ol = line.match(/^(\s*)(\d+)\.\s+(.+)$/);
             if (ol) {
-                elements.push(<Text key={ki++} style={[styles.msgText, { color: theme.colors.text }]}>{`  ${ol[1]}. `}{renderInline(ol[2], theme, `o${ki}`)}</Text>);
+                const depth = getMarkdownIndentDepth(ol[1]);
+                elements.push(
+                    <Text key={ki++} style={[styles.msgText, { color: theme.colors.text, paddingLeft: Math.min(depth, 6) * 18 }]}>
+                        {`${ol[2]}. `}{renderInline(ol[3], theme, `o${ki}`)}
+                    </Text>
+                );
                 continue;
             }
 
