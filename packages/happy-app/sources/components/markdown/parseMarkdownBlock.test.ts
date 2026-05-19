@@ -2,6 +2,68 @@ import { describe, expect, it } from 'vitest';
 import { parseMarkdownBlock } from './parseMarkdownBlock';
 
 describe('parseMarkdownBlock', () => {
+    it('preserves indentation depth for nested bullet and numbered lists', () => {
+        const markdown = [
+            '- parent',
+            '  - child',
+            '    - grandchild',
+            '',
+            '1. first',
+            '  2. second',
+        ].join('\n');
+
+        const blocks = parseMarkdownBlock(markdown);
+
+        expect(blocks).toHaveLength(2);
+
+        const bulletList = blocks[0];
+        expect(bulletList.type).toBe('list');
+        if (bulletList.type !== 'list') throw new Error('Expected list block');
+        expect(bulletList.items.map(item => item.depth)).toEqual([0, 1, 2]);
+        expect(bulletList.items.map(item => item.spans[0]?.text)).toEqual(['parent', 'child', 'grandchild']);
+
+        const numberedList = blocks[1];
+        expect(numberedList.type).toBe('numbered-list');
+        if (numberedList.type !== 'numbered-list') throw new Error('Expected numbered-list block');
+        expect(numberedList.items.map(item => item.depth)).toEqual([0, 1]);
+        expect(numberedList.items.map(item => item.number)).toEqual([1, 2]);
+        expect(numberedList.items.map(item => item.spans[0]?.text)).toEqual(['first', 'second']);
+    });
+
+    it('preserves depth for nested blockquotes', () => {
+        const markdown = [
+            '> 一级引用',
+            '>> 二级引用',
+            '>>> 三级引用',
+        ].join('\n');
+
+        const blocks = parseMarkdownBlock(markdown);
+
+        expect(blocks).toHaveLength(1);
+        const quote = blocks[0];
+        expect(quote.type).toBe('blockquote');
+        if (quote.type !== 'blockquote') throw new Error('Expected blockquote block');
+        expect(quote.content.map(item => item.depth)).toEqual([1, 2, 3]);
+        expect(quote.content.map(item => item.spans[0]?.text)).toEqual(['一级引用', '二级引用', '三级引用']);
+    });
+
+    it('preserves bullet lists inside blockquotes', () => {
+        const markdown = [
+            '> 引用里的说明',
+            '> - 引用里的列表项 A',
+            '> - 引用里的列表项 B',
+        ].join('\n');
+
+        const blocks = parseMarkdownBlock(markdown);
+
+        expect(blocks).toHaveLength(1);
+        const quote = blocks[0];
+        expect(quote.type).toBe('blockquote');
+        if (quote.type !== 'blockquote') throw new Error('Expected blockquote block');
+        expect(quote.content.map(item => item.list ?? null)).toEqual([null, 'bullet', 'bullet']);
+        expect(quote.content.map(item => item.spans[0]?.text)).toEqual(['引用里的说明', '引用里的列表项 A', '引用里的列表项 B']);
+    });
+
     it('keeps an empty first header cell renderable in markdown tables', () => {
         const markdown = [
             '| | 场景 A | 场景 B |',

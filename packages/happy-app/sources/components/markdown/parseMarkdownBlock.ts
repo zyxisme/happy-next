@@ -79,6 +79,24 @@ function parseTable(lines: string[], startIndex: number): { table: MarkdownBlock
     return { table, nextIndex: index };
 }
 
+
+function getListIndentDepth(indent: string): number {
+    let columns = 0;
+    for (const char of indent) {
+        columns += char === '\t' ? 4 : 1;
+    }
+    return Math.floor(columns / 2);
+}
+
+function parseBlockquoteLine(line: string): { depth: number, content: string } | null {
+    const match = line.match(/^\s*(>+)\s?(.*)$/);
+    if (!match) return null;
+    return {
+        depth: match[1].length,
+        content: match[2],
+    };
+}
+
 function shouldOpenAnonymousNestedFence(lines: string[], fenceIndex: number): boolean {
     for (let i = fenceIndex + 1; i < lines.length - 1; i++) {
         if (lines[i].trim().startsWith('```')) {
@@ -217,61 +235,89 @@ export function parseMarkdownBlock(markdown: string) {
         }
 
         // Blockquote
-        if (trimmed.startsWith('> ') || trimmed === '>') {
-            let allLines = [trimmed === '>' ? '' : trimmed.slice(2)];
+        const blockquoteLine = parseBlockquoteLine(line);
+        if (blockquoteLine) {
+            let allLines = [blockquoteLine];
             while (index < lines.length) {
-                const nextTrimmed = lines[index].trim();
-                if (nextTrimmed.startsWith('> ') || nextTrimmed === '>') {
-                    allLines.push(nextTrimmed === '>' ? '' : nextTrimmed.slice(2));
+                const nextBlockquoteLine = parseBlockquoteLine(lines[index]);
+                if (nextBlockquoteLine) {
+                    allLines.push(nextBlockquoteLine);
                     index++;
                 } else {
                     break;
                 }
             }
-            const paragraphs: MarkdownSpan[][] = [];
-            let currentParagraph: string[] = [];
+            const paragraphs: { depth: number, spans: MarkdownSpan[], list?: 'bullet' }[] = [];
+            let currentParagraph: { depth: number, lines: string[] } | null = null;
+            const flushCurrentParagraph = () => {
+                if (currentParagraph && currentParagraph.lines.length > 0) {
+                    paragraphs.push({ depth: currentParagraph.depth, spans: parseMarkdownSpans(currentParagraph.lines.join(' '), false) });
+                    currentParagraph = null;
+                }
+            };
             for (const l of allLines) {
-                if (l === '') {
-                    if (currentParagraph.length > 0) {
-                        paragraphs.push(parseMarkdownSpans(currentParagraph.join(' '), false));
-                        currentParagraph = [];
-                    }
+                if (l.content === '') {
+                    flushCurrentParagraph();
+                } else if (l.content.match(/^[-*+]\s+/)) {
+                    flushCurrentParagraph();
+                    paragraphs.push({ depth: l.depth, list: 'bullet', spans: parseMarkdownSpans(l.content.replace(/^[-*+]\s+/, ''), false) });
+                } else if (!currentParagraph || currentParagraph.depth !== l.depth) {
+                    flushCurrentParagraph();
+                    currentParagraph = { depth: l.depth, lines: [l.content] };
                 } else {
-                    currentParagraph.push(l);
+                    currentParagraph.lines.push(l.content);
                 }
             }
-            if (currentParagraph.length > 0) {
-                paragraphs.push(parseMarkdownSpans(currentParagraph.join(' '), false));
-            }
+            flushCurrentParagraph();
             if (paragraphs.length > 0) {
                 blocks.push({ type: 'blockquote', content: paragraphs });
             }
             continue;
         }
 
-        // If it is a numbered list
-        const numberedListMatch = trimmed.match(/^(\d+)\.\s/);
+        // If it is a numbered list. Keep leading indentation so nested
+        // markdown list levels render with their original visual hierarchy.
+        const numberedListMatch = line.match(/^(\s*)(\d+)\.\s/);
         if (numberedListMatch) {
-            let allLines = [{ number: parseInt(numberedListMatch[1]), content: trimmed.slice(numberedListMatch[0].length) }];
+            let allLines = [{
+                depth: getListIndentDepth(numberedListMatch[1]),
+                number: parseInt(numberedListMatch[2]),
+                content: line.slice(numberedListMatch[0].length).trim(),
+            }];
             while (index < lines.length) {
-                const nextLine = lines[index].trim();
-                const nextMatch = nextLine.match(/^(\d+)\.\s/);
+                const nextLine = lines[index];
+                const nextMatch = nextLine.match(/^(\s*)(\d+)\.\s/);
                 if (!nextMatch) break;
-                allLines.push({ number: parseInt(nextMatch[1]), content: nextLine.slice(nextMatch[0].length) });
+                allLines.push({
+                    depth: getListIndentDepth(nextMatch[1]),
+                    number: parseInt(nextMatch[2]),
+                    content: nextLine.slice(nextMatch[0].length).trim(),
+                });
                 index++;
             }
-            blocks.push({ type: 'numbered-list', items: allLines.map((l) => ({ number: l.number, spans: parseMarkdownSpans(l.content, false) })) });
+            blocks.push({ type: 'numbered-list', items: allLines.map((l) => ({ number: l.number, depth: l.depth, spans: parseMarkdownSpans(l.content, false) })) });
             continue;
         }
 
-        // If it is a list
-        if (trimmed.startsWith('- ')) {
-            let allLines = [trimmed.slice(2)];
-            while (index < lines.length && lines[index].trim().startsWith('- ')) {
-                allLines.push(lines[index].trim().slice(2));
+        // If it is a list. Keep leading indentation so nested markdown list
+        // levels render with their original visual hierarchy.
+        const listMatch = line.match(/^(\s*)-\s/);
+        if (listMatch) {
+            let allLines = [{
+                depth: getListIndentDepth(listMatch[1]),
+                content: line.slice(listMatch[0].length).trim(),
+            }];
+            while (index < lines.length) {
+                const nextLine = lines[index];
+                const nextMatch = nextLine.match(/^(\s*)-\s/);
+                if (!nextMatch) break;
+                allLines.push({
+                    depth: getListIndentDepth(nextMatch[1]),
+                    content: nextLine.slice(nextMatch[0].length).trim(),
+                });
                 index++;
             }
-            blocks.push({ type: 'list', items: allLines.map((l) => parseMarkdownSpans(l, false)) });
+            blocks.push({ type: 'list', items: allLines.map((l) => ({ depth: l.depth, spans: parseMarkdownSpans(l.content, false) })) });
             continue;
         }
 

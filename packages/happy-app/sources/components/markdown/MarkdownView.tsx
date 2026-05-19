@@ -177,26 +177,31 @@ function RenderHeaderBlock(props: { level: 1 | 2 | 3 | 4 | 5 | 6, spans: Markdow
     return <Text selectable={props.selectable} style={headerStyle}><RenderSpans spans={props.spans} baseStyle={headerStyle} isHeader={true} /></Text>;
 }
 
-function RenderListBlock(props: { items: MarkdownSpan[][], first: boolean, last: boolean, selectable: boolean }) {
+function RenderListBlock(props: { items: { depth: number, spans: MarkdownSpan[] }[], first: boolean, last: boolean, selectable: boolean }) {
     const listStyle = [style.text, style.list];
     return (
         <View style={{ flexDirection: 'column', marginBottom: 8, gap: 1 }}>
             {props.items.map((item, index) => (
-                <Text selectable={props.selectable} style={listStyle} key={index}>- <RenderSpans spans={item} baseStyle={listStyle} /></Text>
+                <Text selectable={props.selectable} style={[listStyle, getListItemStyle(item.depth)]} key={index}>- <RenderSpans spans={item.spans} baseStyle={listStyle} /></Text>
             ))}
         </View>
     );
 }
 
-function RenderNumberedListBlock(props: { items: { number: number, spans: MarkdownSpan[] }[], first: boolean, last: boolean, selectable: boolean }) {
+function RenderNumberedListBlock(props: { items: { number: number, depth: number, spans: MarkdownSpan[] }[], first: boolean, last: boolean, selectable: boolean }) {
     const listStyle = [style.text, style.list];
     return (
         <View style={{ flexDirection: 'column', marginBottom: 8, gap: 1 }}>
             {props.items.map((item, index) => (
-                <Text selectable={props.selectable} style={listStyle} key={index}>{item.number.toString()}. <RenderSpans spans={item.spans} baseStyle={listStyle} /></Text>
+                <Text selectable={props.selectable} style={[listStyle, getListItemStyle(item.depth)]} key={index}>{item.number.toString()}. <RenderSpans spans={item.spans} baseStyle={listStyle} /></Text>
             ))}
         </View>
     );
+}
+
+function getListItemStyle(depth: number) {
+    if (depth <= 0) return null;
+    return { paddingLeft: Math.min(depth, 6) * 18 };
 }
 
 function RenderCodeBlock(props: { content: string, language: string | null, first: boolean, last: boolean, selectable: boolean }) {
@@ -383,28 +388,53 @@ function RenderOptionsBlock(props: {
     );
 }
 
-function RenderBlockquoteBlock(props: { content: MarkdownSpan[][], first: boolean, last: boolean, selectable: boolean }) {
+function RenderBlockquoteBlock(props: { content: { depth: number, spans: MarkdownSpan[], list?: 'bullet' }[], first: boolean, last: boolean, selectable: boolean }) {
     return (
         <View style={[style.blockquote, props.first && style.first, props.last && style.last]}>
-            {props.content.map((spans, index) => (
-                <Text selectable={props.selectable} style={style.blockquoteText} key={index}>
-                    <RenderSpans spans={spans} baseStyle={style.blockquoteText} />
+            {props.content.map((paragraph, index) => (
+                <Text selectable={props.selectable} style={[style.blockquoteText, getBlockquoteItemStyle(paragraph.depth)]} key={index}>
+                    {paragraph.list === 'bullet' ? '- ' : null}
+                    <RenderSpans spans={paragraph.spans} baseStyle={style.blockquoteText} />
                 </Text>
             ))}
         </View>
     );
 }
 
+function getBlockquoteItemStyle(depth: number) {
+    if (depth <= 1) return null;
+    return {
+        borderLeftWidth: 3,
+        borderLeftColor: 'rgba(142, 142, 147, 0.45)',
+        paddingLeft: 12,
+        marginLeft: Math.min(depth - 1, 5) * 18,
+    };
+}
+
 function RenderSpans(props: { spans: MarkdownSpan[], baseStyle?: any, isHeader?: boolean, disableCodeLineHeight?: boolean }) {
     const linkContext = React.useContext(MarkdownLinkContext);
     return (<>
         {props.spans.map((span, index) => {
+            const isCode = span.styles.includes('code');
+            const isBoldItalic = span.styles.includes('bold') && span.styles.includes('italic');
             const spanStyles = span.styles.map((s) => {
+                if (isBoldItalic && (s === 'bold' || s === 'italic')) {
+                    return null;
+                }
                 if ((props.isHeader || props.disableCodeLineHeight) && s === 'code') {
                     return style.codeHeader;
                 }
+                if (isCode && s === 'bold') {
+                    return style.codeBold;
+                }
+                if (isCode && s === 'italic') {
+                    return style.codeItalic;
+                }
                 return (style as any)[s];
             });
+            if (isBoldItalic) {
+                spanStyles.push(isCode ? style.codeBoldItalic : style.boldItalic);
+            }
             if (span.url) {
                 const link = resolveMarkdownLink({
                     rawUrl: span.url,
@@ -417,13 +447,13 @@ function RenderSpans(props: { spans: MarkdownSpan[], baseStyle?: any, isHeader?:
                         key={index}
                         href={link.href as any}
                         target={link.target}
-                        style={[style.link, spanStyles]}
+                        style={style.linkWrapper}
                     >
-                        {span.text}
+                        <Text style={[style.link, spanStyles]}>{span.text}</Text>
                     </Link>
                 );
             } else {
-                return <Text key={index} selectable style={[props.baseStyle, spanStyles]}>{span.text}</Text>
+                return <Text key={index} selectable style={spanStyles}>{span.text}</Text>
             }
         })}
     </>)
@@ -579,7 +609,17 @@ const style = StyleSheet.create((theme) => ({
         fontStyle: 'italic',
     },
     bold: {
-        fontWeight: 'bold',
+        ...(Platform.OS === 'web' ? { fontWeight: '700' as const } : Typography.default('semiBold')),
+    },
+    boldItalic: {
+        ...(Platform.OS === 'web' ? { fontWeight: '700' as const } : Typography.default('semiBold')),
+        fontStyle: 'italic',
+    },
+    strikethrough: {
+        textDecorationLine: 'line-through',
+    },
+    underline: {
+        textDecorationLine: 'underline',
     },
     semibold: {
         fontWeight: '600',
@@ -597,10 +637,24 @@ const style = StyleSheet.create((theme) => ({
         backgroundColor: theme.colors.surfaceHighest,
         color: theme.colors.text,
     },
+    codeBold: {
+        ...Typography.mono('semiBold'),
+    },
+    codeItalic: {
+        ...Typography.mono('italic'),
+        fontStyle: 'italic',
+    },
+    codeBoldItalic: {
+        ...Typography.mono('semiBold'),
+        fontStyle: 'italic',
+    },
     link: {
         ...Typography.default(),
         color: theme.colors.textLink,
         fontWeight: '400',
+    },
+    linkWrapper: {
+        textDecorationLine: 'none',
     },
 
     // Headers
@@ -610,24 +664,24 @@ const style = StyleSheet.create((theme) => ({
         color: theme.colors.text,
     },
     header1: {
-        fontSize: 16,
-        lineHeight: 24,  // Reduced from 36 to 24
-        fontWeight: '900',
-        marginTop: 16,
-        marginBottom: 8
+        fontSize: 24,
+        lineHeight: 32,
+        fontWeight: '800',
+        marginTop: 20,
+        marginBottom: 10
     },
     header2: {
         fontSize: 20,
-        lineHeight: 24,  // Reduced from 36 to 32
-        fontWeight: '600',
+        lineHeight: 28,
+        fontWeight: '700',
         marginTop: 16,
         marginBottom: 8
     },
     header3: {
-        fontSize: 16,
-        lineHeight: 28,  // Reduced from 32 to 28
-        fontWeight: '600',
-        marginTop: 16,
+        fontSize: 18,
+        lineHeight: 26,
+        fontWeight: '700',
+        marginTop: 14,
         marginBottom: 8,
     },
     header4: {

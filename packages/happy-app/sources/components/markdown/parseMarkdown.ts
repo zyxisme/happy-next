@@ -14,10 +14,10 @@ export type MarkdownBlock = {
     content: MarkdownSpan[]
 } | {
     type: 'list',
-    items: MarkdownSpan[][]
+    items: { depth: number, spans: MarkdownSpan[] }[]
 } | {
     type: 'numbered-list',
-    items: { number: number, spans: MarkdownSpan[] }[]
+    items: { number: number, depth: number, spans: MarkdownSpan[] }[]
 } | {
     type: 'code-block',
     language: string | null,
@@ -36,11 +36,11 @@ export type MarkdownBlock = {
     rows: MarkdownSpan[][][]
 } | {
     type: 'blockquote',
-    content: MarkdownSpan[][]
+    content: { depth: number, spans: MarkdownSpan[], list?: 'bullet' }[]
 }
 
 export type MarkdownSpan = {
-    styles: ('italic' | 'bold' | 'semibold' | 'code')[],
+    styles: ('italic' | 'bold' | 'semibold' | 'code' | 'strikethrough' | 'underline')[],
     text: string,
     url: string | null
 }
