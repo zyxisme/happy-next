@@ -3,6 +3,7 @@ import { darkTheme, lightTheme } from './theme';
 import { loadThemePreference } from './sync/persistence';
 import { Appearance } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
+import { setAppColorScheme } from './utils/setAppColorScheme';
 
 //
 // Theme
@@ -29,7 +30,7 @@ const themePreference = loadThemePreference();
 // preference. This matters for native controls (for example the native bottom
 // tab bar) that still consult the app trait / uiMode even when their React
 // props are updated.
-Appearance.setColorScheme(themePreference === 'adaptive' ? null : themePreference);
+setAppColorScheme(themePreference === 'adaptive' ? null : themePreference);
 
 // Determine initial theme and adaptive settings
 const getInitialTheme = (): 'light' | 'dark' => {

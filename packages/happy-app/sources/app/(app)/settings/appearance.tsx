@@ -11,6 +11,7 @@ import { Appearance } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 import { darkTheme, lightTheme } from '@/theme';
 import { t, getLanguageNativeName, SUPPORTED_LANGUAGES } from '@/text';
+import { setAppColorScheme } from '@/utils/setAppColorScheme';
 
 // Define known avatar styles for this version of the app
 type KnownAvatarStyle = 'pixelated' | 'gradient' | 'brutalist';
@@ -73,7 +74,7 @@ export default function AppearanceSettingsScreen() {
                         // Apply the theme change immediately
                         if (nextTheme === 'adaptive') {
                             // Let native UI follow the system scheme again.
-                            Appearance.setColorScheme(null);
+                            setAppColorScheme(null);
                             // Enable adaptive themes and set to system theme
                             UnistylesRuntime.setAdaptiveThemes(true);
                             const systemTheme = Appearance.getColorScheme();
@@ -84,7 +85,7 @@ export default function AppearanceSettingsScreen() {
                             // Force native UI (UITabBar / Material navigation,
                             // alerts, pickers, etc.) to match the app theme
                             // instead of the phone's current light/dark mode.
-                            Appearance.setColorScheme(nextTheme);
+                            setAppColorScheme(nextTheme);
                             // Disable adaptive themes and set explicit theme
                             UnistylesRuntime.setAdaptiveThemes(false);
                             UnistylesRuntime.setTheme(nextTheme);
