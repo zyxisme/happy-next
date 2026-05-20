@@ -25,6 +25,18 @@ interface AskUserQuestionInput {
     questions: Question[];
 }
 
+interface AskUserQuestionResult {
+    answers?: Record<string, string>;
+}
+
+const getAnswerForQuestion = (answers: Record<string, string> | undefined, question: Question): string | undefined => {
+    if (!answers) {
+        return undefined;
+    }
+
+    return answers[question.question] || answers[question.header];
+};
+
 // Styles MUST be defined outside the component to prevent infinite re-renders
 // with react-native-unistyles. The theme is passed as a function parameter.
 const styles = StyleSheet.create((theme) => ({
@@ -308,8 +320,11 @@ export const AskUserQuestionView = React.memo<ToolViewProps>(({ tool, sessionId 
 
     // Show submitted state
     if (isSubmitted || tool.state === 'completed') {
-        // Persisted answers from permission (survives re-mount)
-        const persistedAnswers = tool.permission?.answers;
+        // Persisted answers from permission (survives re-mount) or completed tool result.
+        // Some historical/completed AskUserQuestion payloads store answers only in
+        // `result.answers`, not in `permission.answers`, so read both sources.
+        const result = tool.result as AskUserQuestionResult | undefined;
+        const persistedAnswers = tool.permission?.answers || result?.answers;
 
         return (
             <ToolSectionView>
@@ -334,7 +349,7 @@ export const AskUserQuestionView = React.memo<ToolViewProps>(({ tool, sessionId 
                                 displayLabel = predefinedLabels.join(', ');
                             }
                         } else {
-                            displayLabel = persistedAnswers?.[q.question] || '-';
+                            displayLabel = getAnswerForQuestion(persistedAnswers, q) || '-';
                         }
                         return (
                             <View key={qIndex} style={styles.submittedItem}>
