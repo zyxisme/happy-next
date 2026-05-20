@@ -456,7 +456,9 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
                     tabBarActiveTintColor={theme.colors.text}
                     tabBarInactiveTintColor={theme.colors.textSecondary}
                     activeIndicatorColor={theme.colors.transparent}
-                    tabBarStyle={Platform.OS === 'android' ? { backgroundColor: theme.colors.surface } : undefined}
+                    tabBarStyle={{ backgroundColor: theme.colors.surface }}
+                    translucent={false}
+                    scrollEdgeAppearance="opaque"
                     labeled={Platform.OS === 'android' ? true : undefined}
                     tabLabelStyle={Platform.OS === 'android' ? { fontSize: 11 } : undefined}
                     hapticFeedbackEnabled

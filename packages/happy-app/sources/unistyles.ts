@@ -25,6 +25,12 @@ const breakpoints = {
 // Load theme preference from storage
 const themePreference = loadThemePreference();
 
+// Keep React Native's app-wide color scheme in sync with the in-app
+// preference. This matters for native controls (for example the native bottom
+// tab bar) that still consult the app trait / uiMode even when their React
+// props are updated.
+Appearance.setColorScheme(themePreference === 'adaptive' ? null : themePreference);
+
 // Determine initial theme and adaptive settings
 const getInitialTheme = (): 'light' | 'dark' => {
     if (themePreference === 'adaptive') {

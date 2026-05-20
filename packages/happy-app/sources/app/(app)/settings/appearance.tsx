@@ -72,6 +72,8 @@ export default function AppearanceSettingsScreen() {
                         
                         // Apply the theme change immediately
                         if (nextTheme === 'adaptive') {
+                            // Let native UI follow the system scheme again.
+                            Appearance.setColorScheme(null);
                             // Enable adaptive themes and set to system theme
                             UnistylesRuntime.setAdaptiveThemes(true);
                             const systemTheme = Appearance.getColorScheme();
@@ -79,6 +81,10 @@ export default function AppearanceSettingsScreen() {
                             UnistylesRuntime.setRootViewBackgroundColor(color);
                             SystemUI.setBackgroundColorAsync(color);
                         } else {
+                            // Force native UI (UITabBar / Material navigation,
+                            // alerts, pickers, etc.) to match the app theme
+                            // instead of the phone's current light/dark mode.
+                            Appearance.setColorScheme(nextTheme);
                             // Disable adaptive themes and set explicit theme
                             UnistylesRuntime.setAdaptiveThemes(false);
                             UnistylesRuntime.setTheme(nextTheme);
