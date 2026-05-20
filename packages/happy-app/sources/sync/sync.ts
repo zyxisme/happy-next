@@ -440,6 +440,30 @@ class Sync {
     }
 
 
+    private invalidateVisibleSessionData = (sessionId: string) => {
+        let ex = this.messagesSync.get(sessionId);
+        if (!ex) {
+            ex = new InvalidateSync(() => this.fetchMessagesV3(sessionId));
+            this.messagesSync.set(sessionId, ex);
+        }
+        ex.invalidate();
+        this.invalidatePendingMessagesSync(sessionId);
+    }
+
+    private ensureSessionEncryptionReady = async (sessionId: string): Promise<boolean> => {
+        if (this.encryption?.getSessionEncryption(sessionId)) {
+            return true;
+        }
+
+        // Restored disk cache contains decrypted session metadata but not the
+        // encrypted data keys needed to rebuild in-memory session encryption.
+        // Force a fresh bootstrap so direct deep-links can recover that state.
+        this.lastSessionsCursorMs = 0;
+        this.sessionsBootstrapMachine.reset();
+        await this.sessionsSync.invalidateAndAwait();
+        return !!this.encryption?.getSessionEncryption(sessionId);
+    }
+
     onSessionVisible = (sessionId: string, userInitiated: boolean = false) => {
         // When user navigates into a session, clear the cursor so
         // fetchMessagesV3 runs a fresh bootstrap (latest 100 messages)
@@ -448,18 +472,31 @@ class Sync {
             this.sessionLastSeq.delete(sessionId);
         }
 
-        let ex = this.messagesSync.get(sessionId);
-        if (!ex) {
-            ex = new InvalidateSync(() => this.fetchMessagesV3(sessionId));
-            this.messagesSync.set(sessionId, ex);
+        if (this.encryption?.getSessionEncryption(sessionId)) {
+            this.invalidateVisibleSessionData(sessionId);
+            if (userInitiated) {
+                gitStatusSync.invalidate(sessionId);
+            }
+        } else {
+            void this.ensureSessionEncryptionReady(sessionId)
+                .then((ready) => {
+                    if (ready) {
+                        this.invalidateVisibleSessionData(sessionId);
+                        if (userInitiated) {
+                            gitStatusSync.invalidate(sessionId);
+                        }
+                    } else {
+                        console.warn(`Session encryption still unavailable after sessions sync for ${sessionId}`);
+                    }
+                })
+                .catch((error) => {
+                    console.warn(`Failed to prepare session encryption for ${sessionId}:`, error);
+                });
         }
-        ex.invalidate();
-        this.invalidatePendingMessagesSync(sessionId);
 
         // Invalidate git status only on user-initiated navigation (not on every
         // websocket message batch) to avoid flooding the shell with git commands.
         if (userInitiated) {
-            gitStatusSync.invalidate(sessionId);
             this.sessionModeConfigSync.invalidate();
             this.fetchOrchestratorActivity(sessionId);
         }
