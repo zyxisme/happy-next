@@ -109,17 +109,17 @@ export const CommandView = React.memo<CommandViewProps>(({
                 {hasNewProps ? (
                     <>
                         {/* Standard Output */}
-                        {stdout && stdout.trim() && (
+                        {!!stdout?.trim() && (
                             <Text selectable={selectable} style={styles.stdout}>{stdout}</Text>
                         )}
 
                         {/* Standard Error */}
-                        {stderr && stderr.trim() && (
+                        {!!stderr?.trim() && (
                             <Text selectable={selectable} style={styles.stderr}>{stderr}</Text>
                         )}
 
                         {/* Error Message */}
-                        {error && (
+                        {!!error && (
                             <Text selectable={selectable} style={styles.error}>{error}</Text>
                         )}
 
@@ -130,7 +130,7 @@ export const CommandView = React.memo<CommandViewProps>(({
                     </>
                 ) : (
                     /* Legacy output format */
-                    output && (
+                    !!output && (
                         <Text selectable={selectable} style={styles.commandText}>{'\n---\n' + output}</Text>
                     )
                 )}

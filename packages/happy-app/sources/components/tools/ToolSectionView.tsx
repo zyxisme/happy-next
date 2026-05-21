@@ -11,7 +11,7 @@ interface ToolSectionViewProps {
 export const ToolSectionView = React.memo<ToolSectionViewProps>(({ title, children, fullWidth }) => {
     return (
         <View style={[styles.section, fullWidth && styles.fullWidthSection]}>
-            {title && <Text style={styles.sectionTitle}>{title}</Text>}
+            {!!title && <Text style={styles.sectionTitle}>{title}</Text>}
             <View style={fullWidth ? styles.fullWidthContent : undefined}>
                 {children}
             </View>

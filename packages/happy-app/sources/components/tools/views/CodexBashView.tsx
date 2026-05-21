@@ -61,7 +61,7 @@ export const CodexBashView = React.memo<CodexBashViewProps>(({ tool, metadata })
                         {icon}
                         <Text style={styles.operationText}>{t('tools.desc.readingFile', { file: resolvedPath })}</Text>
                     </View>
-                    {commandStr && (
+                    {!!commandStr && (
                         <Text style={styles.commandText}>{commandStr}</Text>
                     )}
                 </View>
@@ -78,7 +78,7 @@ export const CodexBashView = React.memo<CodexBashViewProps>(({ tool, metadata })
                         {icon}
                         <Text style={styles.operationText}>{t('tools.desc.writingFile', { file: resolvedPath })}</Text>
                     </View>
-                    {commandStr && (
+                    {!!commandStr && (
                         <Text style={styles.commandText}>{commandStr}</Text>
                     )}
                 </View>

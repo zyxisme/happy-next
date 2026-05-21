@@ -59,12 +59,12 @@ export const GeminiExecuteView = React.memo<ToolViewProps>(({ tool }) => {
             <ToolSectionView fullWidth>
                 <CodeView code={command} />
             </ToolSectionView>
-            {(description || cwd) && (
+            {!!(description || cwd) && (
                 <View style={styles.infoContainer}>
-                    {cwd && (
+                    {!!cwd && (
                         <Text style={styles.cwdText}>📁 {cwd}</Text>
                     )}
-                    {description && (
+                    {!!description && (
                         <Text style={styles.descriptionText}>{description}</Text>
                     )}
                 </View>
@@ -89,4 +89,3 @@ const styles = StyleSheet.create((theme) => ({
         fontStyle: 'italic',
     },
 }));
-
