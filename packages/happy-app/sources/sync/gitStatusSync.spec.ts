@@ -34,9 +34,16 @@ vi.mock('./gitStatusSessionSelection', () => ({
         candidates[0] ?? null,
 }));
 
+vi.mock('./sync', () => ({
+    sync: {
+        getSessionDataKey: vi.fn(() => new Uint8Array([1])),
+    },
+}));
+
 import { GitStatusSync } from './gitStatusSync';
 import { getSession, storage } from './storage';
 import { sessionBash } from './ops';
+import { sync as globalSync } from './sync';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -89,11 +96,11 @@ function mockSessionBashSuccess() {
 // ---------------------------------------------------------------------------
 
 describe('GitStatusSync', () => {
-    let sync: GitStatusSync;
+    let gitSync: GitStatusSync;
 
     beforeEach(() => {
         vi.useFakeTimers();
-        sync = new GitStatusSync();
+        gitSync = new GitStatusSync();
         vi.mocked(getSession).mockReset();
         vi.mocked(sessionBash).mockReset();
     });
@@ -113,14 +120,14 @@ describe('GitStatusSync', () => {
             mockSessionBashSuccess();
 
             // First invalidation triggers immediate fetch.
-            sync.invalidate(sid);
+            gitSync.invalidate(sid);
             await vi.advanceTimersByTimeAsync(0);
             expect(sessionBash).toHaveBeenCalledTimes(1);
 
             // Multiple invalidations within cooldown should schedule only one deferred timer.
-            sync.invalidate(sid);
-            sync.invalidate(sid);
-            sync.invalidate(sid);
+            gitSync.invalidate(sid);
+            gitSync.invalidate(sid);
+            gitSync.invalidate(sid);
             // No new fetch yet — still in cooldown.
             expect(sessionBash).toHaveBeenCalledTimes(1);
 
@@ -135,18 +142,29 @@ describe('GitStatusSync', () => {
             mockSessionBashSuccess();
 
             // Trigger + complete the first fetch.
-            sync.invalidate(sid);
+            gitSync.invalidate(sid);
             await vi.advanceTimersByTimeAsync(0);
             expect(sessionBash).toHaveBeenCalledTimes(1);
 
             // Invalidate during cooldown → deferred.
-            sync.invalidate(sid);
+            gitSync.invalidate(sid);
             expect(sessionBash).toHaveBeenCalledTimes(1);
 
             // Advance past cooldown.
             await vi.advanceTimersByTimeAsync(3_100);
             expect(sessionBash).toHaveBeenCalledTimes(2);
         });
+    });
+
+    it('skips git fetch when session encryption data key is unavailable', async () => {
+        const sid = 'session-encryption-missing';
+        mockSessionFound(sid);
+        vi.mocked(globalSync.getSessionDataKey).mockReturnValueOnce(null);
+
+        gitSync.invalidate(sid);
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(sessionBash).not.toHaveBeenCalled();
     });
 
     // -----------------------------------------------------------------------
@@ -166,7 +184,7 @@ describe('GitStatusSync', () => {
                 stderr: 'connection reset',
             });
 
-            sync.invalidate(sid);
+            gitSync.invalidate(sid);
             await vi.advanceTimersByTimeAsync(0);
 
             // 1st retry: 2.5s backoff
@@ -203,18 +221,18 @@ describe('GitStatusSync', () => {
             mockSessionBashSuccess();
 
             // Register both sessions and trigger an initial fetch.
-            sync.getSync(sid1);
-            sync.getSync(sid2);
-            sync.invalidate(sid1);
+            gitSync.getSync(sid1);
+            gitSync.getSync(sid2);
+            gitSync.invalidate(sid1);
             await vi.advanceTimersByTimeAsync(0);
             expect(sessionBash).toHaveBeenCalledTimes(1);
 
             // Schedule a deferred invalidation (within cooldown).
-            sync.invalidate(sid2);
+            gitSync.invalidate(sid2);
             expect(sessionBash).toHaveBeenCalledTimes(1);
 
             // Stop one session — deferred timer must survive.
-            sync.stop(sid1);
+            gitSync.stop(sid1);
 
             // After cooldown, the deferred fetch should still fire.
             await vi.advanceTimersByTimeAsync(3_100);
@@ -227,15 +245,15 @@ describe('GitStatusSync', () => {
             mockSessionBashSuccess();
 
             // Initial fetch.
-            sync.invalidate(sid);
+            gitSync.invalidate(sid);
             await vi.advanceTimersByTimeAsync(0);
             expect(sessionBash).toHaveBeenCalledTimes(1);
 
             // Schedule a deferred invalidation.
-            sync.invalidate(sid);
+            gitSync.invalidate(sid);
 
             // Stop the only session — deferred timer should be cleared.
-            sync.stop(sid);
+            gitSync.stop(sid);
 
             // After cooldown, no fetch should fire.
             await vi.advanceTimersByTimeAsync(3_100);

@@ -15,6 +15,7 @@ import { getWorkspaceRepos, WorkspaceRepo } from '@/utils/workspaceRepos';
 import { shellEscape } from '@/utils/shellEscape';
 import { decideNotGitRefreshOutcome } from './gitStatusRefreshPolicy';
 import { selectPreferredGitStatusSession } from './gitStatusSessionSelection';
+import { sync } from './sync';
 
 export class GitStatusSync {
     // Map project keys to sync instances
@@ -422,6 +423,10 @@ export class GitStatusSync {
                 const metadata = targetSession.metadata;
                 if (!metadata?.path) {
                     this.unlinkSession(targetSessionId);
+                    return;
+                }
+
+                if (!sync.getSessionDataKey(targetSessionId)) {
                     return;
                 }
 
