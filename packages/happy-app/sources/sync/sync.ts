@@ -178,6 +178,7 @@ class Sync {
     private deliveryErrorTimers = new Map<string, ReturnType<typeof setTimeout>>();
     /** Per-session lock to serialize fetchMessagesV3 and websocket message application */
     private sessionMessageLocks = new Map<string, AsyncLock>();
+    private encryptedSessionDataKeys = new Map<string, string | null>();
     private machineDataKeys = new Map<string, Uint8Array>(); // Store machine data encryption keys internally
     private artifactDataKeys = new Map<string, Uint8Array>(); // Store artifact data encryption keys internally
     private settingsSync: InvalidateSync;
@@ -374,6 +375,7 @@ class Sync {
         const cachedSessions = loadSessionsCache(this.serverID);
         if (cachedSessions) {
             storage.getState().applyCachedSessions(cachedSessions.sessions, cachedSessions.sharedSessions);
+            await this.restoreSessionEncryptionFromCache(cachedSessions.sessionDataKeys);
             this.lastSessionsCursorMs = cachedSessions.lastSessionsCursorMs;
             if (this.lastSessionsCursorMs > 0) {
                 this.sessionsBootstrapMachine.markReady();
@@ -437,6 +439,31 @@ class Sync {
         }).catch((error) => {
             console.error('Failed to load initial data:', error);
         });
+    }
+
+    private restoreSessionEncryptionFromCache = async (encryptedKeys: Record<string, string | null>) => {
+        if (!this.encryption) return;
+
+        this.encryptedSessionDataKeys = new Map(Object.entries(encryptedKeys));
+        const sessionKeys = new Map<string, Uint8Array | null>();
+        for (const [sessionId, encryptedKey] of Object.entries(encryptedKeys)) {
+            if (!encryptedKey) {
+                sessionKeys.set(sessionId, null);
+                continue;
+            }
+
+            try {
+                const decrypted = await this.encryption.decryptEncryptionKey(encryptedKey);
+                if (decrypted) {
+                    this.sessionDataKeys.set(sessionId, decrypted);
+                    sessionKeys.set(sessionId, decrypted);
+                }
+            } catch (error) {
+                console.warn(`Failed to restore cached session data key for ${sessionId}:`, error);
+            }
+        }
+
+        await this.encryption.initializeSessions(sessionKeys);
     }
 
 
@@ -1308,6 +1335,7 @@ class Sync {
                     if (decrypted) {
                         sessionKeys.set(ss.sessionId, decrypted);
                         this.sessionDataKeys.set(ss.sessionId, decrypted);
+                        this.encryptedSessionDataKeys.set(ss.sessionId, ss.encryptedDataKey);
                     } else {
                         console.error(`Failed to decrypt data key for shared session ${ss.sessionId}`);
                     }
@@ -1395,8 +1423,10 @@ class Sync {
                 }
                 sessionKeys.set(session.id, decrypted);
                 this.sessionDataKeys.set(session.id, decrypted);
+                this.encryptedSessionDataKeys.set(session.id, session.dataEncryptionKey);
             } else {
                 sessionKeys.set(session.id, null);
+                this.encryptedSessionDataKeys.set(session.id, null);
             }
         }
         await this.encryption.initializeSessions(sessionKeys);
@@ -4031,6 +4061,7 @@ class Sync {
         for (const sessionId of sessionIds) {
             this.encryption.removeSessionEncryption(sessionId);
             this.sessionDataKeys.delete(sessionId);
+            this.encryptedSessionDataKeys.delete(sessionId);
             projectManager.removeSession(sessionId);
             gitStatusSync.clearForSession(sessionId);
             this.messagesSync.delete(sessionId);
@@ -4056,6 +4087,7 @@ class Sync {
                 lastSessionsCursorMs: this.lastSessionsCursorMs,
                 sessions: state.sessions,
                 sharedSessions: state.sharedSessions,
+                sessionDataKeys: Object.fromEntries(this.encryptedSessionDataKeys),
             });
         }, 500);
     }

@@ -9,7 +9,7 @@ import type { DooTaskUser } from './dootask/types';
 
 const mmkv = new MMKV();
 const NEW_SESSION_DRAFT_KEY = 'new-session-draft-v1';
-const SESSIONS_CACHE_VERSION = 1;
+const SESSIONS_CACHE_VERSION = 2;
 
 export type NewSessionAgentType = 'claude' | 'codex' | 'gemini';
 export type NewSessionSessionType = 'simple' | 'worktree';
@@ -428,11 +428,12 @@ export function saveSharedByMeCache(userId: string, data: any[]): void {
 }
 
 export type SessionsCachePayload = {
-    version: 1;
+    version: 2;
     savedAt: number;
     lastSessionsCursorMs: number;
     sessions: Record<string, Session>;
     sharedSessions: Record<string, Session>;
+    sessionDataKeys: Record<string, string | null>;
 };
 
 function sessionsCacheKey(accountKey: string): string {
@@ -463,7 +464,9 @@ export function loadSessionsCache(accountKey: string): SessionsCachePayload | nu
             typeof parsed.sessions !== 'object' ||
             parsed.sessions === null ||
             typeof parsed.sharedSessions !== 'object' ||
-            parsed.sharedSessions === null
+            parsed.sharedSessions === null ||
+            typeof parsed.sessionDataKeys !== 'object' ||
+            parsed.sessionDataKeys === null
         ) {
             return null;
         }
@@ -479,6 +482,7 @@ export function saveSessionsCache(accountKey: string, data: {
     lastSessionsCursorMs: number;
     sessions: Record<string, Session>;
     sharedSessions: Record<string, Session>;
+    sessionDataKeys: Record<string, string | null>;
 }): void {
     const sessions = Object.fromEntries(
         Object.entries(data.sessions).map(([id, session]) => [id, stripVolatileSessionFields(session)])
@@ -492,6 +496,7 @@ export function saveSessionsCache(accountKey: string, data: {
         lastSessionsCursorMs: data.lastSessionsCursorMs,
         sessions,
         sharedSessions,
+        sessionDataKeys: data.sessionDataKeys,
     } satisfies SessionsCachePayload));
 }
 
