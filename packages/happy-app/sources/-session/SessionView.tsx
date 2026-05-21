@@ -43,6 +43,11 @@ import { useUnistyles } from 'react-native-unistyles';
 
 const SILENT_REFRESH_INDICATOR_DELAY_MS = 3000;
 const SILENT_REFRESH_FAILED_TIMEOUT_MS = 12000;
+
+function shouldHideSessionHeaderForCompactLayout(shouldUseCompactLandscapeSessionLayout: boolean) {
+    return shouldUseCompactLandscapeSessionLayout && Platform.OS !== 'web';
+}
+
 export const SessionView = React.memo((props: { id: string }) => {
     const sessionId = props.id;
     const router = useRouter();
@@ -184,7 +189,7 @@ export const SessionView = React.memo((props: { id: string }) => {
             {/* Native header config — iOS uses system header, Android/Web go through createHeader */}
             <Stack.Screen
                 options={{
-                    headerShown: !(shouldUseCompactLandscapeSessionLayout && Platform.OS !== 'web'),
+                    headerShown: !shouldHideSessionHeaderForCompactLayout(shouldUseCompactLandscapeSessionLayout),
                     headerTitle: () => (
                         <ChatHeaderTitle
                             title={headerProps.title}
@@ -963,7 +968,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
 
             {/* Back button for landscape phone mode when header is hidden */}
             {
-                shouldUseCompactLandscapeSessionLayout && (
+                shouldHideSessionHeaderForCompactLayout(shouldUseCompactLandscapeSessionLayout) && (
                     <Pressable
                         onPress={() => router.back()}
                         style={{
