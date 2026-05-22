@@ -1,0 +1,35 @@
+diff --git a/node_modules/@expo/prebuild-config/build/plugins/unversioned/expo-splash-screen/InterfaceBuilder.js b/node_modules/@expo/prebuild-config/build/plugins/unversioned/expo-splash-screen/InterfaceBuilder.js
+index d2905e4..f6f02dc 100644
+--- a/node_modules/@expo/prebuild-config/build/plugins/unversioned/expo-splash-screen/InterfaceBuilder.js
++++ b/node_modules/@expo/prebuild-config/build/plugins/unversioned/expo-splash-screen/InterfaceBuilder.js
+@@ -110,8 +110,30 @@ function applyImageToSplashScreenXML(xml, {
+       }
+     }]
+   };
++  if (!enableFullScreenImage) {
++    imageView.constraints = [{
++      constraint: [{
++        $: {
++          firstAttribute: 'width',
++          constant: width,
++          id: createConstraintId(IMAGE_ID, 'width', String(width))
++        }
++      }, {
++        $: {
++          firstAttribute: 'height',
++          constant: height,
++          id: createConstraintId(IMAGE_ID, 'height', String(height))
++        }
++      }]
++    }];
++  }
+ 
+   // Add ImageView
++  mainView.subviews = mainView.subviews ?? [{}];
++  if (!mainView.subviews[0] || typeof mainView.subviews[0] !== 'object') {
++    mainView.subviews[0] = {};
++  }
++  mainView.subviews[0].imageView = mainView.subviews[0].imageView ?? [];
+   ensureUniquePush(mainView.subviews[0].imageView, imageView);
+   mainView.constraints[0].constraint = [];
+ 

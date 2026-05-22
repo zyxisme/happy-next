@@ -167,8 +167,10 @@ export default {
                 'expo-splash-screen',
                 {
                     ios: {
+                        image: "./sources/assets/images/splash-ios-light.png",
                         backgroundColor: "#F2F2F7",
                         dark: {
+                            image: "./sources/assets/images/splash-ios-dark.png",
                             backgroundColor: "#1C1C1E",
                         }
                     },
