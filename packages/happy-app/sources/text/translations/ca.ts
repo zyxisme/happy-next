@@ -1389,6 +1389,7 @@ export const ca: TranslationStructure = {
         confirmOverwriteInputMessage: 'The input box already has content. Do you want to replace it?',
         confirmDestructive: 'Confirmar acció',
         confirmDestructiveMessage: 'Aquesta és una acció destructiva. Esteu segur que voleu continuar?',
+        forkFromHere: 'Bifurca des d\'aquí',
     },
 
     codex: {

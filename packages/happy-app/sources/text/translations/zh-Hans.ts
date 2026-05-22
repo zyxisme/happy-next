@@ -1391,6 +1391,7 @@ export const zhHans: TranslationStructure = {
         confirmOverwriteInputMessage: '输入框已有内容，是否替换？',
         confirmDestructive: '确认操作',
         confirmDestructiveMessage: '这是一个危险操作，确定要执行吗？',
+        forkFromHere: '从这里分叉',
     },
 
     codex: {

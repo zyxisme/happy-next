@@ -1,5 +1,5 @@
 import * as React from "react";
-import { View, Text, Pressable, Platform, useWindowDimensions } from "react-native";
+import { View, Text, Pressable, Platform } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -18,6 +18,7 @@ import { Modal } from "@/modal";
 import { sync } from "@/sync/sync";
 import { useSetting } from "@/sync/storage";
 import { showCopiedToast } from '@/components/Toast';
+import { formatMessageTime } from '@/utils/messageTime';
 
 export const MessageView = (props: {
   message: Message;
@@ -30,6 +31,7 @@ export const MessageView = (props: {
   isSharedSession?: boolean;
   currentUserId?: string;
   showSenderName?: boolean;
+  onFork?: () => void;
 }) => {
   return (
     <View style={styles.messageContainer} renderToHardwareTextureAndroid={true}>
@@ -45,40 +47,62 @@ export const MessageView = (props: {
           isSharedSession={props.isSharedSession}
           currentUserId={props.currentUserId}
           showSenderName={props.showSenderName}
+          onFork={props.onFork}
         />
       </View>
     </View>
   );
 };
 
-const HOVER_COPY_MIN_WIDTH = 850;
-
-function HoverCopyButton(props: {
-  visible: boolean;
+function MessageActionBar(props: {
   side: 'left' | 'right';
-  onCopy: () => void;
+  hovered: boolean;
+  createdAt: number;
+  onCopy?: () => void;
+  onFork?: () => void;
 }) {
   const { theme } = useUnistyles();
-  const { width } = useWindowDimensions();
-  if (!props.visible || width < HOVER_COPY_MIN_WIDTH) return null;
+  // Web: visible only on hover (but the row always occupies layout space).
+  // Native: always visible.
+  const contentVisible = Platform.OS !== 'web' || props.hovered;
   return (
-    <Pressable
+    <View
       style={[
-        styles.hoverCopyButton,
-        props.side === 'right' ? styles.hoverCopyButtonRight : styles.hoverCopyButtonLeft,
+        styles.actionBar,
+        props.side === 'right' ? styles.actionBarRight : styles.actionBarLeft,
+        Platform.OS === 'web' && { opacity: contentVisible ? 1 : 0 },
       ]}
-      onPress={props.onCopy}
-      accessibilityLabel={t('common.copy')}
-      hitSlop={6}
+      pointerEvents={contentVisible ? 'auto' : 'none'}
     >
-      <Ionicons name="copy-outline" size={14} color={theme.colors.textSecondary} />
-    </Pressable>
+      {props.onCopy ? (
+        <Pressable
+          style={styles.actionButton}
+          onPress={props.onCopy}
+          accessibilityLabel={t('common.copy')}
+          hitSlop={6}
+        >
+          <Ionicons name="copy-outline" size={14} color={theme.colors.textSecondary} />
+        </Pressable>
+      ) : null}
+      {props.onFork ? (
+        <Pressable
+          style={styles.actionButton}
+          onPress={props.onFork}
+          accessibilityLabel={t('message.forkFromHere')}
+          hitSlop={6}
+        >
+          <Ionicons name="git-branch-outline" size={14} color={theme.colors.textSecondary} />
+        </Pressable>
+      ) : null}
+      <Text style={styles.actionTime}>{formatMessageTime(props.createdAt)}</Text>
+    </View>
   );
 }
 
-// Debounces mouseleave so the cursor can cross the empty gap between the
-// bubble and an absolutely-positioned overflowing child (the copy button)
-// without the hover state collapsing mid-traversal.
+// The hover handlers live on the message container and the action bar is an
+// in-flow child of it. This debounce just adds a small grace period on
+// mouseleave so the bar doesn't flicker out when the cursor briefly crosses
+// the container edge (e.g. over the inter-message gap) before settling.
 const HOVER_LEAVE_DEBOUNCE_MS = 200;
 
 function useMessageHover() {
@@ -123,6 +147,7 @@ function RenderBlock(props: {
   isSharedSession?: boolean;
   currentUserId?: string;
   showSenderName?: boolean;
+  onFork?: () => void;
 }): React.ReactElement {
   switch (props.message.kind) {
     case 'user-text':
@@ -138,6 +163,7 @@ function RenderBlock(props: {
           isSharedSession={props.isSharedSession}
           currentUserId={props.currentUserId}
           showSenderName={props.showSenderName}
+          onFork={props.onFork}
         />
       );
 
@@ -151,6 +177,7 @@ function RenderBlock(props: {
           isNewestMessage={props.isNewestMessage}
           onFillInput={props.onFillInput}
           readOnly={props.readOnly}
+          onFork={props.onFork}
         />
       );
 
@@ -184,6 +211,7 @@ function UserTextBlock(props: {
   isSharedSession?: boolean;
   currentUserId?: string;
   showSenderName?: boolean;
+  onFork?: () => void;
 }) {
   const [imageViewerVisible, setImageViewerVisible] = React.useState(false);
   const [imageViewerIndex, setImageViewerIndex] = React.useState(0);
@@ -244,11 +272,11 @@ function UserTextBlock(props: {
   }, [messageText]);
 
   return (
-    <View style={styles.userMessageContainer}>
+    <View style={styles.userMessageContainer} {...hoverHandlers}>
       {senderLabel && (
         <Text style={styles.senderLabel}>{senderLabel}</Text>
       )}
-      <View style={styles.userMessageBubble} {...hoverHandlers}>
+      <View style={styles.userMessageBubble}>
         {images.length > 0 && (
           <>
             <View style={styles.messageImages}>
@@ -284,12 +312,14 @@ function UserTextBlock(props: {
         {props.message.deliveryError ? (
           <Text style={styles.deliveryErrorText}>{props.message.deliveryError}</Text>
         ) : null}
-        <HoverCopyButton
-          visible={hovered && !!messageText}
-          side="right"
-          onCopy={handleCopy}
-        />
       </View>
+      <MessageActionBar
+        side="right"
+        hovered={hovered}
+        createdAt={props.message.createdAt}
+        onCopy={messageText ? handleCopy : undefined}
+        onFork={props.onFork}
+      />
     </View>
   );
 }
@@ -302,6 +332,7 @@ function AgentTextBlock(props: {
   isNewestMessage?: boolean;
   onFillInput?: (text: string, allOptions?: string[]) => void;
   readOnly?: boolean;
+  onFork?: () => void;
 }) {
   const showThinkingMessages = useSetting('showThinkingMessages');
   const [optionsLoadingState, setOptionsLoadingState] = React.useState<OptionsLoadingState>({ loadingIndex: null });
@@ -367,11 +398,15 @@ function AgentTextBlock(props: {
         optionsLoadingState={props.readOnly ? undefined : optionsLoadingState}
         hideOptions={props.readOnly}
       />
-      <HoverCopyButton
-        visible={hovered && !!messageText && !props.message.isThinking}
-        side="left"
-        onCopy={handleCopy}
-      />
+      {!props.message.isThinking && (
+        <MessageActionBar
+          side="left"
+          hovered={hovered}
+          createdAt={props.message.createdAt}
+          onCopy={messageText ? handleCopy : undefined}
+          onFork={props.onFork}
+        />
+      )}
     </View>
   );
 }
@@ -459,13 +494,14 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
     paddingHorizontal: 16,
+    marginBottom: 16,
   },
   userMessageBubble: {
     backgroundColor: theme.colors.userMessageBackground,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 0,
     maxWidth: '100%',
     position: 'relative',
   },
@@ -483,28 +519,34 @@ const styles = StyleSheet.create((theme) => ({
   },
   agentMessageContainer: {
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     borderRadius: 16,
     alignSelf: 'flex-start',
     maxWidth: '100%',
     position: 'relative',
   },
-  hoverCopyButton: {
-    position: 'absolute',
-    bottom: 0,
-    width: 24,
-    height: 24,
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  actionBarRight: {
+    alignSelf: 'flex-end',
+  },
+  actionBarLeft: {
+    alignSelf: 'flex-start',
+  },
+  actionButton: {
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 6,
-    backgroundColor: theme.colors.surface,
-    opacity: 0.85,
   },
-  hoverCopyButtonRight: {
-    right: -30,
-  },
-  hoverCopyButtonLeft: {
-    left: -14,
+  actionTime: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
   },
   agentMessageContainerStretch: {
     alignSelf: 'stretch',

@@ -1408,6 +1408,7 @@ export const en = {
         confirmOverwriteInputMessage: 'The input box already has content. Do you want to replace it?',
         confirmDestructive: 'Confirm action',
         confirmDestructiveMessage: 'This is a destructive action. Are you sure you want to proceed?',
+        forkFromHere: 'Fork from here',
     },
 
     codex: {

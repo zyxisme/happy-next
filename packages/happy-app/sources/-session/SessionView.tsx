@@ -31,6 +31,8 @@ import { useDeviceType, useIsLandscape, useIsTablet } from '@/utils/responsive';
 import { formatPathRelativeToHome, generateCopyTitle, getSessionAvatarId, getSessionName, useSessionStatus, copySessionMetadata, copySessionModeSettings } from '@/utils/sessionUtils';
 import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import { isVersionSupported, useLatestCliVersion } from '@/utils/versionUtils';
+import { matchForkUuid } from '@/utils/forkTarget';
+import type { UserTextMessage } from '@/sync/typesMessage';
 import { log } from '@/log';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useIsFocused, useNavigation } from '@react-navigation/native';
@@ -505,8 +507,10 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         }
     }, [machineId, session.id, session.metadata?.flavor, session.metadata?.claudeSessionId, session.metadata?.codexSessionId]);
 
-    // Handle selecting a message to duplicate from
-    const handleDuplicateSelect = React.useCallback(async (uuid: string) => {
+    // Core fork-and-spawn logic, shared by the duplicate sheet and the
+    // per-message fork icon. `userMessages` is the loaded CLI message list,
+    // used to recover the selected message's text for the new session draft.
+    const forkSessionFromUuid = React.useCallback(async (uuid: string, userMessages: UserMessageWithUuid[]) => {
         const flavor = session.metadata?.flavor;
         const claudeSessionId = session.metadata?.claudeSessionId;
         const codexSessionId = session.metadata?.codexSessionId;
@@ -570,7 +574,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 copySessionModeSettings(session, spawnResult.sessionId);
 
                 // Save the selected message as a draft in the new session so it appears in the input box
-                const selectedMessage = duplicateMessages?.find(m => m.uuid === uuid);
+                const selectedMessage = userMessages.find(m => m.uuid === uuid);
                 if (selectedMessage?.content) {
                     storage.getState().updateSessionDraft(spawnResult.sessionId, {
                         text: selectedMessage.content,
@@ -591,7 +595,76 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
             setDuplicateConfirming(false);
             Modal.alert(t('common.error'), t('duplicate.failed'));
         }
-    }, [machineId, session.id, session.metadata?.flavor, session.metadata?.claudeSessionId, session.metadata?.codexSessionId, session.metadata?.path, session.metadata?.externalContext, session.metadata?.sessionIcon, router, duplicateMessages]);
+    }, [machineId, session.id, session.metadata?.flavor, session.metadata?.claudeSessionId, session.metadata?.codexSessionId, session.metadata?.path, router]);
+
+    // Handle selecting a message in the duplicate sheet
+    const handleDuplicateSelect = React.useCallback((uuid: string) => {
+        forkSessionFromUuid(uuid, duplicateMessages ?? []);
+    }, [forkSessionFromUuid, duplicateMessages]);
+
+    // Runs after the user confirms a per-message fork: load CLI user messages,
+    // match the tapped message to a UUID, then fork. The network load is
+    // deferred to here (post-confirm) so tapping the fork icon shows the
+    // confirm dialog instantly instead of waiting on an RPC round-trip.
+    // Falls back to opening the sheet if the target can't be matched.
+    const performForkFromMessage = React.useCallback(async (target: UserTextMessage) => {
+        const flavor = session.metadata?.flavor;
+        const claudeSessionId = session.metadata?.claudeSessionId;
+        const codexSessionId = session.metadata?.codexSessionId;
+        if (!machineId) return;
+
+        let userMessages: UserMessageWithUuid[] = [];
+        try {
+            if (flavor === 'gemini') {
+                userMessages = (await machineGetGeminiSessionUserMessages(machineId, session.id)).messages;
+            } else if (flavor === 'codex' && codexSessionId) {
+                userMessages = (await machineGetCodexSessionUserMessages(machineId, codexSessionId)).messages;
+            } else if (claudeSessionId) {
+                const result = await machineGetClaudeSessionUserMessages(machineId, claudeSessionId);
+                userMessages = result.messages;
+                duplicateProjectIdRef.current = result.projectId;
+            }
+        } catch (error) {
+            console.error('Failed to load fork messages:', error);
+            Modal.alert(t('common.error'), t('duplicate.loadFailed'));
+            return;
+        }
+
+        const uuid = matchForkUuid({ text: target.text, createdAt: target.createdAt }, userMessages);
+        if (!uuid) {
+            // Fallback: open the sheet so the user can pick manually.
+            setDuplicateMessages(userMessages);
+            setDuplicateSheetVisible(true);
+            return;
+        }
+
+        forkSessionFromUuid(uuid, userMessages);
+    }, [machineId, session.id, session.metadata?.flavor, session.metadata?.claudeSessionId, session.metadata?.codexSessionId, forkSessionFromUuid]);
+
+    // Handle the per-message fork icon: show the confirm dialog immediately,
+    // then do the network work in performForkFromMessage once confirmed.
+    const handleForkFromMessage = React.useCallback((target: UserTextMessage) => {
+        const flavor = session.metadata?.flavor;
+        const claudeSessionId = session.metadata?.claudeSessionId;
+        const codexSessionId = session.metadata?.codexSessionId;
+        const canDuplicate = Boolean(claudeSessionId || flavor === 'gemini' || codexSessionId);
+        if (!machineId || !canDuplicate) {
+            Modal.alert(t('common.error'), t('duplicate.notAvailable'));
+            return;
+        }
+
+        // Blur input to prevent keyboard from re-appearing when the modal closes
+        inputRef.current?.blur();
+
+        Modal.alert(
+            t('duplicate.confirmTitle'),
+            t('duplicate.confirmMessage'),
+            [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('duplicate.confirm'), onPress: () => { performForkFromMessage(target); } },
+            ]
+        );
+    }, [machineId, session.metadata?.flavor, session.metadata?.claudeSessionId, session.metadata?.codexSessionId, performForkFromMessage]);
 
     // Handle closing the duplicate sheet (prevent closing while confirming)
     const handleCloseDuplicateSheet = React.useCallback(() => {
@@ -732,7 +805,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         <>
             <Deferred>
                 {messages.length > 0 && (
-                    <ChatList session={session} onFillInput={handleFillInput} onLoadMore={handleLoadMore} />
+                    <ChatList session={session} onFillInput={handleFillInput} onForkMessage={handleForkFromMessage} onLoadMore={handleLoadMore} />
                 )}
             </Deferred>
         </>

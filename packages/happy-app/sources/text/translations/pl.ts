@@ -1400,6 +1400,7 @@ export const pl: TranslationStructure = {
         confirmOverwriteInputMessage: 'The input box already has content. Do you want to replace it?',
         confirmDestructive: 'Potwierdź akcję',
         confirmDestructiveMessage: 'To jest destrukcyjna operacja. Czy na pewno chcesz kontynuować?',
+        forkFromHere: 'Rozgałęź stąd',
     },
 
     codex: {

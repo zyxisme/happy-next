@@ -1421,6 +1421,7 @@ export const ja: TranslationStructure = {
         confirmOverwriteInputMessage: 'The input box already has content. Do you want to replace it?',
         confirmDestructive: '操作の確認',
         confirmDestructiveMessage: 'これは破壊的な操作です。実行してもよろしいですか？',
+        forkFromHere: 'ここから分岐',
     },
 
     codex: {

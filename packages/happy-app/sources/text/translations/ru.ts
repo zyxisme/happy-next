@@ -1388,6 +1388,7 @@ export const ru: TranslationStructure = {
         confirmOverwriteInputMessage: 'The input box already has content. Do you want to replace it?',
         confirmDestructive: 'Подтвердите действие',
         confirmDestructiveMessage: 'Это деструктивное действие. Вы уверены, что хотите продолжить?',
+        forkFromHere: 'Форкнуть отсюда',
     },
 
     codex: {

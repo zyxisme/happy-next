@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MessageView } from './MessageView';
 import { Metadata, Session } from '@/sync/storageTypes';
 import { ChatFooter } from './ChatFooter';
-import { Message } from '@/sync/typesMessage';
+import { Message, UserTextMessage } from '@/sync/typesMessage';
 import { layout } from './layout';
 import { createScrollButtonVisibilityController } from './scrollButtonVisibilityController';
 
@@ -23,7 +23,7 @@ function shouldHideMessageInChatList(message: Message): boolean {
     return message.kind === 'user-text' && isCompactionMarkerText(message.displayText ?? message.text);
 }
 
-export const ChatList = React.memo((props: { session: Session; onFillInput?: (text: string, allOptions?: string[]) => void; onLoadMore?: () => void }) => {
+export const ChatList = React.memo((props: { session: Session; onFillInput?: (text: string, allOptions?: string[]) => void; onLoadMore?: () => void; onForkMessage?: (target: UserTextMessage) => void }) => {
     const { messages, hasMore } = useSessionMessages(props.session.id);
     const profile = useProfile();
     const isSharedSession = !!(props.session.isShared || props.session.accessLevel);
@@ -37,6 +37,7 @@ export const ChatList = React.memo((props: { session: Session; onFillInput?: (te
             onLoadMore={props.onLoadMore}
             isSharedSession={isSharedSession}
             currentUserId={profile.id}
+            onForkMessage={props.onForkMessage}
         />
     )
 });
@@ -67,6 +68,7 @@ const ChatListInternal = React.memo((props: {
     onLoadMore?: () => void,
     isSharedSession: boolean,
     currentUserId: string,
+    onForkMessage?: (target: UserTextMessage) => void,
 }) => {
     const { theme } = useUnistyles();
     const flatListRef = useRef<FlatList>(null);
@@ -116,18 +118,28 @@ const ChatListInternal = React.memo((props: {
     }
 
     const keyExtractor = useCallback((item: any) => item.id, []);
-    const renderItem = useCallback(({ item, index }: { item: Message, index: number }) => (
-        <MessageView
-            message={item}
-            metadata={props.metadata}
-            sessionId={props.sessionId}
-            isNewestMessage={index === 0}
-            onFillInput={props.onFillInput}
-            isSharedSession={props.isSharedSession}
-            currentUserId={props.currentUserId}
-            showSenderName={senderVisibility?.get(item.id) ?? false}
-        />
-    ), [props.metadata, props.sessionId, props.onFillInput, props.isSharedSession, props.currentUserId, senderVisibility]);
+    const renderItem = useCallback(({ item, index }: { item: Message, index: number }) => {
+        // Fork is only offered on user messages (you fork from a user prompt).
+        const forkTarget = props.onForkMessage && !props.isSharedSession && item.kind === 'user-text'
+            ? item
+            : null;
+        const onFork = forkTarget && props.onForkMessage
+            ? () => props.onForkMessage!(forkTarget)
+            : undefined;
+        return (
+            <MessageView
+                message={item}
+                metadata={props.metadata}
+                sessionId={props.sessionId}
+                isNewestMessage={index === 0}
+                onFillInput={props.onFillInput}
+                onFork={onFork}
+                isSharedSession={props.isSharedSession}
+                currentUserId={props.currentUserId}
+                showSenderName={senderVisibility?.get(item.id) ?? false}
+            />
+        );
+    }, [props.metadata, props.sessionId, props.onFillInput, props.onForkMessage, props.isSharedSession, props.currentUserId, senderVisibility]);
 
     React.useEffect(() => {
         visibleMessagesRef.current = visibleMessages;

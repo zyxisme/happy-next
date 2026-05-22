@@ -1,0 +1,58 @@
+import { getCurrentLanguage } from '@/text';
+
+function pad2(n: number): string {
+    return n < 10 ? `0${n}` : `${n}`;
+}
+
+// Start of the natural week (Monday 00:00) containing `d`.
+function startOfWeek(d: Date): Date {
+    const result = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const day = result.getDay(); // 0 = Sun, 1 = Mon, ... 6 = Sat
+    const diffToMonday = (day + 6) % 7; // Mon -> 0, Sun -> 6
+    result.setDate(result.getDate() - diffToMonday);
+    return result;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+    return a.getFullYear() === b.getFullYear()
+        && a.getMonth() === b.getMonth()
+        && a.getDate() === b.getDate();
+}
+
+/**
+ * Smart-format a message timestamp (ms) relative to `now`.
+ * - today: HH:mm
+ * - earlier this week: <localized short weekday> HH:mm
+ * - earlier this year: MM-DD HH:mm
+ * - earlier years: YYYY-MM-DD
+ *
+ * `now` and `locale` are injectable for testing; default to real now and the
+ * app's current language.
+ *
+ * Note: timestamps in the future (after `now`) are not classified as "this week"
+ * and fall through to the year/date branches.
+ */
+export function formatMessageTime(
+    timestamp: number,
+    now: Date = new Date(),
+    locale: string = getCurrentLanguage(),
+): string {
+    const date = new Date(timestamp);
+    const hm = `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+
+    if (isSameDay(date, now)) {
+        return hm;
+    }
+
+    const weekStart = startOfWeek(now);
+    if (date.getTime() >= weekStart.getTime() && date.getTime() <= now.getTime()) {
+        const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
+        return `${weekday} ${hm}`;
+    }
+
+    if (date.getFullYear() === now.getFullYear()) {
+        return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${hm}`;
+    }
+
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
