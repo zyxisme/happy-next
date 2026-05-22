@@ -5,7 +5,8 @@ import { Link } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, View, Platform, ActivityIndicator } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../StyledText';
 import { Typography } from '@/constants/Typography';
 import { SimpleSyntaxHighlighter } from '../SimpleSyntaxHighlighter';
@@ -204,9 +205,118 @@ function getListItemStyle(depth: number) {
     return { paddingLeft: Math.min(depth, 6) * 18 };
 }
 
+// Canonical display names for common languages. Anything not listed falls back
+// to first-letter capitalization (e.g. "scala" -> "Scala").
+const LANGUAGE_DISPLAY_NAMES: Record<string, string> = Object.assign(Object.create(null), {
+    js: 'JavaScript',
+    javascript: 'JavaScript',
+    mjs: 'JavaScript',
+    cjs: 'JavaScript',
+    jsx: 'JSX',
+    ts: 'TypeScript',
+    typescript: 'TypeScript',
+    tsx: 'TSX',
+    py: 'Python',
+    python: 'Python',
+    rb: 'Ruby',
+    ruby: 'Ruby',
+    go: 'Go',
+    golang: 'Go',
+    rs: 'Rust',
+    rust: 'Rust',
+    java: 'Java',
+    kt: 'Kotlin',
+    kotlin: 'Kotlin',
+    swift: 'Swift',
+    c: 'C',
+    h: 'C',
+    cpp: 'C++',
+    'c++': 'C++',
+    cc: 'C++',
+    cs: 'C#',
+    csharp: 'C#',
+    'c#': 'C#',
+    objc: 'Objective-C',
+    'objective-c': 'Objective-C',
+    php: 'PHP',
+    html: 'HTML',
+    htm: 'HTML',
+    css: 'CSS',
+    scss: 'SCSS',
+    sass: 'Sass',
+    less: 'Less',
+    json: 'JSON',
+    jsonc: 'JSONC',
+    json5: 'JSON5',
+    yaml: 'YAML',
+    yml: 'YAML',
+    toml: 'TOML',
+    xml: 'XML',
+    md: 'Markdown',
+    markdown: 'Markdown',
+    sql: 'SQL',
+    sh: 'Shell',
+    shell: 'Shell',
+    bash: 'Bash',
+    zsh: 'Zsh',
+    ps1: 'PowerShell',
+    powershell: 'PowerShell',
+    dockerfile: 'Dockerfile',
+    makefile: 'Makefile',
+    graphql: 'GraphQL',
+    gql: 'GraphQL',
+    proto: 'Protobuf',
+    scala: 'Scala',
+    dart: 'Dart',
+    r: 'R',
+    lua: 'Lua',
+    perl: 'Perl',
+    pl: 'Perl',
+    hs: 'Haskell',
+    haskell: 'Haskell',
+    ex: 'Elixir',
+    elixir: 'Elixir',
+    erlang: 'Erlang',
+    clj: 'Clojure',
+    clojure: 'Clojure',
+    vue: 'Vue',
+    svelte: 'Svelte',
+    ini: 'INI',
+    diff: 'Diff',
+    tex: 'LaTeX',
+    latex: 'LaTeX',
+    txt: 'Text',
+    text: 'Text',
+    plain: 'Text',
+    plaintext: 'Text',
+});
+
+function formatLanguageLabel(language: string | null): string {
+    if (!language) return 'Text';
+    const normalized = language.trim().toLowerCase();
+    if (!normalized) return 'Text';
+    return LANGUAGE_DISPLAY_NAMES[normalized] ?? language;
+}
+
 function RenderCodeBlock(props: { content: string, language: string | null, first: boolean, last: boolean, selectable: boolean }) {
     const [isHovered, setIsHovered] = React.useState(false);
+    const [isCopyHovered, setIsCopyHovered] = React.useState(false);
     const { scrollViewProps, wheelProps } = useWebHorizontalScroll();
+    const { theme } = useUnistyles();
+
+    const displayLanguage = formatLanguageLabel(props.language);
+
+    // Copy icon visibility:
+    // - non-web: always at full opacity
+    // - web: hidden until the code block is hovered, dimmed (0.6) while hovering
+    //   the block, full opacity when hovering the icon itself
+    const copyStateStyle = Platform.OS !== 'web'
+        ? style.copyButtonVisible
+        : !isHovered
+            ? style.copyButtonHidden
+            : isCopyHovered
+                ? style.copyButtonVisible
+                : style.copyButtonDimmed;
 
     const copyCode = React.useCallback(async () => {
         try {
@@ -227,12 +337,26 @@ function RenderCodeBlock(props: { content: string, language: string | null, firs
             onMouseLeave={() => setIsHovered(false)}
             {...wheelProps}
         >
-            {props.language && <Text selectable={props.selectable} style={style.codeLanguage}>{props.language}</Text>}
+            <View style={style.codeBlockHeader}>
+                <Text selectable={props.selectable} style={style.codeLanguage}>{displayLanguage}</Text>
+                <Pressable
+                    style={[style.copyButton, copyStateStyle]}
+                    onPress={copyCode}
+                    hitSlop={8}
+                    accessibilityLabel={t('common.copy')}
+                    // @ts-ignore - Web only events
+                    onMouseEnter={() => setIsCopyHovered(true)}
+                    // @ts-ignore - Web only events
+                    onMouseLeave={() => setIsCopyHovered(false)}
+                >
+                    <Ionicons name="copy-outline" size={16} color={theme.colors.textSecondary} />
+                </Pressable>
+            </View>
             <ScrollView
                 {...scrollViewProps}
                 style={{ flexGrow: 0, flexShrink: 0 }}
                 horizontal={true}
-                contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}
                 showsHorizontalScrollIndicator={false}
             >
                 <SimpleSyntaxHighlighter
@@ -241,17 +365,6 @@ function RenderCodeBlock(props: { content: string, language: string | null, firs
                     selectable={props.selectable}
                 />
             </ScrollView>
-            <View
-                style={[style.copyButtonWrapper, isHovered && style.copyButtonWrapperVisible]}
-                {...(Platform.OS === 'web' ? ({ className: 'copy-button-wrapper' } as any) : {})}
-            >
-                <Pressable
-                    style={style.copyButton}
-                    onPress={copyCode}
-                >
-                    <Text style={style.copyButtonText}>{t('common.copy')}</Text>
-                </Pressable>
-            </View>
         </View>
     );
 }
@@ -736,26 +849,21 @@ const style = StyleSheet.create((theme) => ({
         zIndex: 1,
         maxWidth: '100%',
     },
-    copyButtonWrapper: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        opacity: 0,
-        zIndex: 10,
-        elevation: 10,
-        pointerEvents: 'none',
-    },
-    copyButtonWrapperVisible: {
-        opacity: 1,
-        pointerEvents: 'auto',
+    codeBlockHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingLeft: 16,
+        paddingRight: 8,
+        paddingTop: 8,
+        minHeight: 28,
     },
     codeLanguage: {
         ...Typography.mono(),
         color: theme.colors.textSecondary,
         fontSize: 12,
-        marginTop: 8,
-        paddingHorizontal: 16,
         marginBottom: 0,
+        opacity: 0.8,
     },
     codeText: {
         ...Typography.mono(),
@@ -782,39 +890,20 @@ const style = StyleSheet.create((theme) => ({
         marginTop: 8,
         marginBottom: 8,
     },
-    copyButtonContainer: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        zIndex: 10,
-        elevation: 10,
-        opacity: 1,
-    },
-    copyButtonContainerHidden: {
-        opacity: 0,
-    },
     copyButton: {
-        backgroundColor: theme.colors.surfaceHighest,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        padding: 4,
         borderRadius: 4,
-        borderWidth: 1,
-        borderColor: theme.colors.divider,
         cursor: 'pointer',
     },
     copyButtonHidden: {
-        display: 'none',
+        opacity: 0,
+        pointerEvents: 'none',
     },
-    copyButtonCopied: {
-        backgroundColor: theme.colors.success,
-        borderColor: theme.colors.success,
+    copyButtonDimmed: {
+        opacity: 0.8,
+    },
+    copyButtonVisible: {
         opacity: 1,
-    },
-    copyButtonText: {
-        ...Typography.default(),
-        color: theme.colors.text,
-        fontSize: 12,
-        lineHeight: 16,
     },
 
     //
