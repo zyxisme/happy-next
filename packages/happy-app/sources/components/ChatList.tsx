@@ -23,7 +23,7 @@ function shouldHideMessageInChatList(message: Message): boolean {
     return message.kind === 'user-text' && isCompactionMarkerText(message.displayText ?? message.text);
 }
 
-export const ChatList = React.memo((props: { session: Session; onFillInput?: (text: string, allOptions?: string[]) => void; onLoadMore?: () => void; onForkMessage?: (target: UserTextMessage) => void }) => {
+export const ChatList = React.memo((props: { session: Session; onFillInput?: (text: string, allOptions?: string[]) => void; onLoadMore?: () => void; onForkMessage?: (target: UserTextMessage) => void; forkingMessageId?: string | null }) => {
     const { messages, hasMore } = useSessionMessages(props.session.id);
     const profile = useProfile();
     const isSharedSession = !!(props.session.isShared || props.session.accessLevel);
@@ -38,6 +38,8 @@ export const ChatList = React.memo((props: { session: Session; onFillInput?: (te
             isSharedSession={isSharedSession}
             currentUserId={profile.id}
             onForkMessage={props.onForkMessage}
+            thinking={props.session.thinking}
+            forkingMessageId={props.forkingMessageId}
         />
     )
 });
@@ -69,6 +71,8 @@ const ChatListInternal = React.memo((props: {
     isSharedSession: boolean,
     currentUserId: string,
     onForkMessage?: (target: UserTextMessage) => void,
+    thinking?: boolean,
+    forkingMessageId?: string | null,
 }) => {
     const { theme } = useUnistyles();
     const flatListRef = useRef<FlatList>(null);
@@ -93,6 +97,39 @@ const ChatListInternal = React.memo((props: {
         }
         return map;
     }, [visibleMessages, props.isSharedSession]);
+
+    // Compute which agent-text messages are the LAST text segment of their turn.
+    // An assistant turn can span several agent-text blocks (interleaved with
+    // tool calls / thinking); the action bar (copy + time) should appear only
+    // once per turn, on its final text block. In the inverted array (index 0 =
+    // newest), scanning toward newer (lower index): the first non-thinking
+    // agent-text means a newer text block exists (not last); a user-text means
+    // we've reached the turn boundary (this turn is complete → this is its last
+    // segment); tool-call / agent-event / thinking blocks are skipped.
+    //
+    // The newest turn (scan reaches the start without hitting a user message)
+    // is only marked complete when the agent is idle (`!thinking`); while the
+    // agent is still generating, the bar is suppressed for the whole turn so it
+    // doesn't attach to a segment that isn't truly final yet.
+    const lastAgentSegmentIds = React.useMemo(() => {
+        const set = new Set<string>();
+        for (let i = 0; i < visibleMessages.length; i++) {
+            const msg = visibleMessages[i];
+            if (msg.kind !== 'agent-text' || msg.isThinking) continue;
+            let isLast = true;
+            let reachedUserBoundary = false;
+            for (let j = i - 1; j >= 0; j--) {
+                const newer = visibleMessages[j];
+                if (newer.kind === 'agent-text' && !newer.isThinking) { isLast = false; break; }
+                if (newer.kind === 'user-text') { reachedUserBoundary = true; break; }
+            }
+            if (!isLast) continue;
+            // Older (already-bounded) turns are always complete; the newest turn
+            // only counts as complete once the agent stops thinking.
+            if (reachedUserBoundary || !props.thinking) set.add(msg.id);
+        }
+        return set;
+    }, [visibleMessages, props.thinking]);
 
     // Track if scroll-to-bottom button should be visible
     const [showScrollButton, setShowScrollButton] = useState(false);
@@ -126,6 +163,12 @@ const ChatListInternal = React.memo((props: {
         const onFork = forkTarget && props.onForkMessage
             ? () => props.onForkMessage!(forkTarget)
             : undefined;
+        // Agent turns show the action bar only on their last text segment;
+        // user messages always show it.
+        const showActionBar = item.kind === 'agent-text'
+            ? lastAgentSegmentIds.has(item.id)
+            : true;
+        const forkLoading = !!props.forkingMessageId && props.forkingMessageId === item.id;
         return (
             <MessageView
                 message={item}
@@ -134,12 +177,14 @@ const ChatListInternal = React.memo((props: {
                 isNewestMessage={index === 0}
                 onFillInput={props.onFillInput}
                 onFork={onFork}
+                showActionBar={showActionBar}
+                forkLoading={forkLoading}
                 isSharedSession={props.isSharedSession}
                 currentUserId={props.currentUserId}
                 showSenderName={senderVisibility?.get(item.id) ?? false}
             />
         );
-    }, [props.metadata, props.sessionId, props.onFillInput, props.onForkMessage, props.isSharedSession, props.currentUserId, senderVisibility]);
+    }, [props.metadata, props.sessionId, props.onFillInput, props.onForkMessage, props.isSharedSession, props.currentUserId, senderVisibility, lastAgentSegmentIds, props.forkingMessageId]);
 
     React.useEffect(() => {
         visibleMessagesRef.current = visibleMessages;

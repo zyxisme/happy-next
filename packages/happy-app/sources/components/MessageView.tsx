@@ -1,5 +1,5 @@
 import * as React from "react";
-import { View, Text, Pressable, Platform } from "react-native";
+import { View, Text, Pressable, Platform, ActivityIndicator } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -19,6 +19,7 @@ import { sync } from "@/sync/sync";
 import { useSetting } from "@/sync/storage";
 import { showCopiedToast } from '@/components/Toast';
 import { formatMessageTime } from '@/utils/messageTime';
+import { hapticsLight } from './haptics';
 
 export const MessageView = (props: {
   message: Message;
@@ -32,6 +33,8 @@ export const MessageView = (props: {
   currentUserId?: string;
   showSenderName?: boolean;
   onFork?: () => void;
+  showActionBar?: boolean;
+  forkLoading?: boolean;
 }) => {
   return (
     <View style={styles.messageContainer} renderToHardwareTextureAndroid={true}>
@@ -48,6 +51,8 @@ export const MessageView = (props: {
           currentUserId={props.currentUserId}
           showSenderName={props.showSenderName}
           onFork={props.onFork}
+          showActionBar={props.showActionBar}
+          forkLoading={props.forkLoading}
         />
       </View>
     </View>
@@ -60,11 +65,13 @@ function MessageActionBar(props: {
   createdAt: number;
   onCopy?: () => void;
   onFork?: () => void;
+  forkLoading?: boolean;
 }) {
   const { theme } = useUnistyles();
   // Web: visible only on hover (but the row always occupies layout space).
-  // Native: always visible.
-  const contentVisible = Platform.OS !== 'web' || props.hovered;
+  // Native: always visible. While a fork is in progress, force the bar visible
+  // on web so the in-icon spinner is shown even if the cursor moved away.
+  const contentVisible = Platform.OS !== 'web' || props.hovered || !!props.forkLoading;
   return (
     <View
       style={[
@@ -87,11 +94,16 @@ function MessageActionBar(props: {
       {props.onFork ? (
         <Pressable
           style={styles.actionButton}
-          onPress={props.onFork}
+          onPress={props.forkLoading ? undefined : () => { hapticsLight(); props.onFork?.(); }}
+          disabled={props.forkLoading}
           accessibilityLabel={t('message.forkFromHere')}
           hitSlop={6}
         >
-          <Ionicons name="git-branch-outline" size={14} color={theme.colors.textSecondary} />
+          {props.forkLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.textSecondary} style={styles.actionSpinner} />
+          ) : (
+            <Ionicons name="git-branch-outline" size={14} color={theme.colors.textSecondary} />
+          )}
         </Pressable>
       ) : null}
       <Text style={styles.actionTime}>{formatMessageTime(props.createdAt)}</Text>
@@ -132,6 +144,7 @@ function useMessageHover() {
 async function copyMessageText(text: string | null | undefined) {
   if (!text) return;
   await Clipboard.setStringAsync(text);
+  hapticsLight();
   showCopiedToast();
 }
 
@@ -148,6 +161,8 @@ function RenderBlock(props: {
   currentUserId?: string;
   showSenderName?: boolean;
   onFork?: () => void;
+  showActionBar?: boolean;
+  forkLoading?: boolean;
 }): React.ReactElement {
   switch (props.message.kind) {
     case 'user-text':
@@ -164,6 +179,8 @@ function RenderBlock(props: {
           currentUserId={props.currentUserId}
           showSenderName={props.showSenderName}
           onFork={props.onFork}
+          showActionBar={props.showActionBar}
+          forkLoading={props.forkLoading}
         />
       );
 
@@ -178,6 +195,7 @@ function RenderBlock(props: {
           onFillInput={props.onFillInput}
           readOnly={props.readOnly}
           onFork={props.onFork}
+          showActionBar={props.showActionBar}
         />
       );
 
@@ -212,6 +230,8 @@ function UserTextBlock(props: {
   currentUserId?: string;
   showSenderName?: boolean;
   onFork?: () => void;
+  showActionBar?: boolean;
+  forkLoading?: boolean;
 }) {
   const [imageViewerVisible, setImageViewerVisible] = React.useState(false);
   const [imageViewerIndex, setImageViewerIndex] = React.useState(0);
@@ -313,13 +333,16 @@ function UserTextBlock(props: {
           <Text style={styles.deliveryErrorText}>{props.message.deliveryError}</Text>
         ) : null}
       </View>
-      <MessageActionBar
-        side="right"
-        hovered={hovered}
-        createdAt={props.message.createdAt}
-        onCopy={messageText ? handleCopy : undefined}
-        onFork={props.onFork}
-      />
+      {props.showActionBar !== false && (
+        <MessageActionBar
+          side="right"
+          hovered={hovered}
+          createdAt={props.message.createdAt}
+          onCopy={messageText ? handleCopy : undefined}
+          onFork={props.onFork}
+          forkLoading={props.forkLoading}
+        />
+      )}
     </View>
   );
 }
@@ -333,6 +356,7 @@ function AgentTextBlock(props: {
   onFillInput?: (text: string, allOptions?: string[]) => void;
   readOnly?: boolean;
   onFork?: () => void;
+  showActionBar?: boolean;
 }) {
   const showThinkingMessages = useSetting('showThinkingMessages');
   const [optionsLoadingState, setOptionsLoadingState] = React.useState<OptionsLoadingState>({ loadingIndex: null });
@@ -398,7 +422,7 @@ function AgentTextBlock(props: {
         optionsLoadingState={props.readOnly ? undefined : optionsLoadingState}
         hideOptions={props.readOnly}
       />
-      {!props.message.isThinking && (
+      {props.showActionBar !== false && !props.message.isThinking && (
         <MessageActionBar
           side="left"
           hovered={hovered}
@@ -547,6 +571,9 @@ const styles = StyleSheet.create((theme) => ({
   actionTime: {
     fontSize: 11,
     color: theme.colors.textSecondary,
+  },
+  actionSpinner: {
+    transform: [{ scale: 0.7 }],
   },
   agentMessageContainerStretch: {
     alignSelf: 'stretch',

@@ -429,6 +429,9 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
     const [duplicateLoading, setDuplicateLoading] = React.useState(false);
     const [duplicateConfirming, setDuplicateConfirming] = React.useState(false);
     const duplicateProjectIdRef = React.useRef<string | null>(null);
+    // Id of the user message whose per-message fork is in progress (drives the
+    // in-icon spinner on its action bar).
+    const [forkingMessageId, setForkingMessageId] = React.useState<string | null>(null);
 
     // Ref for hidden file input (web only)
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -515,7 +518,11 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         const claudeSessionId = session.metadata?.claudeSessionId;
         const codexSessionId = session.metadata?.codexSessionId;
         const sessionPath = session.metadata?.path;
-        if (!machineId || !sessionPath) return;
+        if (!machineId || !sessionPath) {
+            // Reset so the fork loading overlay / sheet spinner can't get stuck.
+            setDuplicateConfirming(false);
+            return;
+        }
 
         // Start confirming state - keep sheet open with loading button
         setDuplicateConfirming(true);
@@ -613,32 +620,39 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         const codexSessionId = session.metadata?.codexSessionId;
         if (!machineId) return;
 
-        let userMessages: UserMessageWithUuid[] = [];
+        // Turn the tapped message's fork icon into a spinner for the whole
+        // post-confirm window (message load + fork), then clear it.
+        setForkingMessageId(target.id);
         try {
-            if (flavor === 'gemini') {
-                userMessages = (await machineGetGeminiSessionUserMessages(machineId, session.id)).messages;
-            } else if (flavor === 'codex' && codexSessionId) {
-                userMessages = (await machineGetCodexSessionUserMessages(machineId, codexSessionId)).messages;
-            } else if (claudeSessionId) {
-                const result = await machineGetClaudeSessionUserMessages(machineId, claudeSessionId);
-                userMessages = result.messages;
-                duplicateProjectIdRef.current = result.projectId;
+            let userMessages: UserMessageWithUuid[] = [];
+            try {
+                if (flavor === 'gemini') {
+                    userMessages = (await machineGetGeminiSessionUserMessages(machineId, session.id)).messages;
+                } else if (flavor === 'codex' && codexSessionId) {
+                    userMessages = (await machineGetCodexSessionUserMessages(machineId, codexSessionId)).messages;
+                } else if (claudeSessionId) {
+                    const result = await machineGetClaudeSessionUserMessages(machineId, claudeSessionId);
+                    userMessages = result.messages;
+                    duplicateProjectIdRef.current = result.projectId;
+                }
+            } catch (error) {
+                console.error('Failed to load fork messages:', error);
+                Modal.alert(t('common.error'), t('duplicate.loadFailed'));
+                return;
             }
-        } catch (error) {
-            console.error('Failed to load fork messages:', error);
-            Modal.alert(t('common.error'), t('duplicate.loadFailed'));
-            return;
-        }
 
-        const uuid = matchForkUuid({ text: target.text, createdAt: target.createdAt }, userMessages);
-        if (!uuid) {
-            // Fallback: open the sheet so the user can pick manually.
-            setDuplicateMessages(userMessages);
-            setDuplicateSheetVisible(true);
-            return;
-        }
+            const uuid = matchForkUuid({ text: target.text, createdAt: target.createdAt }, userMessages);
+            if (!uuid) {
+                // Fallback: open the sheet so the user can pick manually.
+                setDuplicateMessages(userMessages);
+                setDuplicateSheetVisible(true);
+                return;
+            }
 
-        forkSessionFromUuid(uuid, userMessages);
+            await forkSessionFromUuid(uuid, userMessages);
+        } finally {
+            setForkingMessageId(null);
+        }
     }, [machineId, session.id, session.metadata?.flavor, session.metadata?.claudeSessionId, session.metadata?.codexSessionId, forkSessionFromUuid]);
 
     // Handle the per-message fork icon: show the confirm dialog immediately,
@@ -805,7 +819,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         <>
             <Deferred>
                 {messages.length > 0 && (
-                    <ChatList session={session} onFillInput={handleFillInput} onForkMessage={handleForkFromMessage} onLoadMore={handleLoadMore} />
+                    <ChatList session={session} onFillInput={handleFillInput} onForkMessage={handleForkFromMessage} forkingMessageId={forkingMessageId} onLoadMore={handleLoadMore} />
                 )}
             </Deferred>
         </>
@@ -1094,6 +1108,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 onClose={() => setImagePickerSheetVisible(false)}
                 deferItemPress
             />
+
         </>
     )
 }
