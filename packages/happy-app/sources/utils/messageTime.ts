@@ -56,3 +56,22 @@ export function formatMessageTime(
 
     return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
+
+/**
+ * Full, unabbreviated timestamp for tooltips (e.g. the web `title` attribute).
+ * Always includes year, month, day, hour, minute and second in the current
+ * locale's format.
+ */
+export function formatFullMessageTime(
+    timestamp: number,
+    locale: string = getCurrentLanguage(),
+): string {
+    return new Intl.DateTimeFormat(locale, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+    }).format(new Date(timestamp));
+}

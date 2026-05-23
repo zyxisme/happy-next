@@ -17,8 +17,8 @@ import { OptionItem as OptionItemData } from './markdown/parseMarkdown';
 import { Modal } from "@/modal";
 import { sync } from "@/sync/sync";
 import { useSetting } from "@/sync/storage";
-import { showCopiedToast } from '@/components/Toast';
-import { formatMessageTime } from '@/utils/messageTime';
+import { showCopiedToast, showToast } from '@/components/Toast';
+import { formatMessageTime, formatFullMessageTime } from '@/utils/messageTime';
 import { hapticsLight } from './haptics';
 
 export const MessageView = (props: {
@@ -106,7 +106,21 @@ function MessageActionBar(props: {
           )}
         </Pressable>
       ) : null}
-      <Text style={styles.actionTime}>{formatMessageTime(props.createdAt)}</Text>
+      {Platform.OS === 'web' ? (
+        // react-native-web doesn't forward the DOM `title` prop, so wrap the
+        // time in a native <span> to show the full timestamp on hover.
+        <span title={formatFullMessageTime(props.createdAt)} style={{ display: 'inline-flex' }}>
+          <Text style={styles.actionTime}>{formatMessageTime(props.createdAt)}</Text>
+        </span>
+      ) : (
+        // Native: tap the time to reveal the full timestamp in a toast.
+        <Pressable
+          onPress={() => { hapticsLight(); showToast(formatFullMessageTime(props.createdAt), { icon: null }); }}
+          hitSlop={6}
+        >
+          <Text style={styles.actionTime}>{formatMessageTime(props.createdAt)}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

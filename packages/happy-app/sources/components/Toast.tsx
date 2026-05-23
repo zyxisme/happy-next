@@ -3,11 +3,19 @@ import { Animated, Text, StyleSheet, Platform, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { t } from '@/text';
 
-let _show: ((message?: string) => void) | null = null;
+/** Leading icon name, or `null` for a plain info toast with no icon. */
+type ToastIcon = keyof typeof Ionicons.glyphMap | null;
 
-/** Show a brief toast with a checkmark icon. Defaults to "Copied" text. */
-export function showToast(message?: string) {
-    _show?.(message);
+const DEFAULT_ICON: ToastIcon = 'checkmark-circle';
+
+let _show: ((message?: string, icon?: ToastIcon) => void) | null = null;
+
+/**
+ * Show a brief toast. Defaults to a checkmark icon and "Copied" text.
+ * Pass `{ icon: null }` for a plain info toast with no leading icon.
+ */
+export function showToast(message?: string, options?: { icon?: ToastIcon }) {
+    _show?.(message, options?.icon === undefined ? DEFAULT_ICON : options.icon);
 }
 
 /** Shorthand: show the "Copied" toast. */
@@ -25,6 +33,7 @@ export function ToastHost() {
     const opacity = React.useRef(new Animated.Value(0)).current;
     const timeout = React.useRef<ReturnType<typeof setTimeout>>(undefined);
     const [message, setMessage] = React.useState('');
+    const [icon, setIcon] = React.useState<ToastIcon>(DEFAULT_ICON);
     const [bottomOffset, setBottomOffset] = React.useState(BASE_BOTTOM);
 
     React.useEffect(() => {
@@ -38,9 +47,10 @@ export function ToastHost() {
         return () => { showSub.remove(); hideSub.remove(); };
     }, []);
 
-    const show = React.useCallback((msg?: string) => {
+    const show = React.useCallback((msg?: string, nextIcon: ToastIcon = DEFAULT_ICON) => {
         if (timeout.current) clearTimeout(timeout.current);
         setMessage(msg ?? t('common.copied'));
+        setIcon(nextIcon);
         opacity.setValue(1);
         timeout.current = setTimeout(() => {
             Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
@@ -54,7 +64,7 @@ export function ToastHost() {
 
     return (
         <Animated.View pointerEvents="none" style={[toastStyles.container, { opacity, bottom: bottomOffset }]}>
-            <Ionicons name="checkmark-circle" size={16} color="#fff" style={{ marginRight: 6 }} />
+            {icon ? <Ionicons name={icon} size={16} color="#fff" style={{ marginRight: 6 }} /> : null}
             <Text style={toastStyles.text}>{message}</Text>
         </Animated.View>
     );
