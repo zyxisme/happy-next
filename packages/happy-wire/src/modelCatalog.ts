@@ -469,6 +469,7 @@ export function formatModelDisplay(model: string | null | undefined, reasoningEf
 // ─── Context Window Sizes ──────────────────────────────────────
 
 const DEFAULT_CONTEXT_WINDOW = 200_000;
+const EXTENDED_CONTEXT_WINDOW = 1_000_000;
 
 const AGENT_DEFAULT_CONTEXT_WINDOWS: Record<AgentFlavor, number> = {
     claude: 200_000,
@@ -510,7 +511,25 @@ function findContextWindow(model: string): number | undefined {
     return undefined;
 }
 
-export function getMaxContextSize(modelMode: string | null | undefined, agentFlavor: AgentFlavor | string | null | undefined, actualModel?: string | null): number {
+export function getMaxContextSize(
+    modelMode: string | null | undefined,
+    agentFlavor: AgentFlavor | string | null | undefined,
+    actualModel?: string | null,
+    actualContextSize?: number | null,
+): number {
+    const window = computeMaxContextSize(modelMode, agentFlavor, actualModel);
+    // Defensive fallback: a window can't hold more tokens than its size. If the
+    // session's actual usage already exceeds the computed window, the session is
+    // really on the extended (1M) window — surface that so the usage bar doesn't
+    // overflow (e.g. a 1M session whose modelMode is "default" and whose reported
+    // model lacks the [1m] suffix, with no CLI-reported contextWindowSize).
+    if (actualContextSize && actualContextSize > window) {
+        return EXTENDED_CONTEXT_WINDOW;
+    }
+    return window;
+}
+
+function computeMaxContextSize(modelMode: string | null | undefined, agentFlavor: AgentFlavor | string | null | undefined, actualModel?: string | null): number {
     // When modelMode is "default" (CLI configured), use the actual model reported by CLI if available
     if ((!modelMode || modelMode === MODEL_MODE_DEFAULT) && actualModel) {
         const found = findContextWindow(actualModel);

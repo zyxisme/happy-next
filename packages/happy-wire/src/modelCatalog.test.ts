@@ -100,4 +100,16 @@ describe('modelCatalog', () => {
         expect(getMaxContextSize('default', 'claude')).toBe(200_000);
         expect(getMaxContextSize('default', 'gemini')).toBe(1_000_000);
     });
+
+    it('infers a 1M window when actual context usage already exceeds the computed window', () => {
+        // A 200K window can't hold >200K tokens — so the session must be on 1M,
+        // even when modelMode is default and the reported model lacks [1m].
+        expect(getMaxContextSize('default', 'claude', 'claude-opus-4-7', 250_000)).toBe(1_000_000);
+        expect(getMaxContextSize('default', 'claude', undefined, 300_000)).toBe(1_000_000);
+        // Usage within the computed window leaves it unchanged.
+        expect(getMaxContextSize('default', 'claude', 'claude-opus-4-7', 150_000)).toBe(200_000);
+        expect(getMaxContextSize('default', 'claude', 'claude-opus-4-7')).toBe(200_000);
+        // Never shrinks an already-larger window.
+        expect(getMaxContextSize('claude-opus-4-7[1m]', 'claude', undefined, 5_000)).toBe(1_000_000);
+    });
 });
