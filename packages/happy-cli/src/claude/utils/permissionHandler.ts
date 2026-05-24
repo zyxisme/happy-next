@@ -36,6 +36,23 @@ interface PendingRequest {
     input: unknown;
 }
 
+/**
+ * Whether a tool that already reached our permission callback may be
+ * auto-approved purely from the permission mode (i.e. without asking the user).
+ *
+ * Note bypassPermissions deliberately does NOT auto-approve here. The Claude CLI
+ * auto-approves everything it can on its own and only routes to this callback the
+ * tools it refuses to decide — verified empirically: under bypassPermissions it
+ * runs Write without consulting us, but still delegates AskUserQuestion and
+ * ExitPlanMode. So anything that reaches us under bypassPermissions is a
+ * user-interaction the user must resolve; we fail safe by asking rather than
+ * maintaining a hand-kept allow-list that silently approves any future
+ * interaction tool the CLI adds.
+ */
+export function canAutoApproveForMode(mode: PermissionMode, descriptor: { edit?: boolean }): boolean {
+    return mode === 'acceptEdits' && Boolean(descriptor.edit);
+}
+
 export class PermissionHandler {
     private toolCalls: { id: string, name: string, input: any, used: boolean }[] = [];
     private responses = new Map<string, PermissionResponse>();
@@ -165,17 +182,10 @@ export class PermissionHandler {
         const descriptor = getToolDescriptor(toolName);
 
         //
-        // Handle special cases
+        // Mode-based auto-approval
         //
 
-        // Privileged mode (bypassPermissions): auto-approve everything EXCEPT user interaction tools
-        // These tools require explicit user approval even in privileged mode
-        const requiresUserApproval = ['AskUserQuestion', 'ExitPlanMode', 'exit_plan_mode'];
-        if (this.permissionMode === 'bypassPermissions' && !requiresUserApproval.includes(toolName)) {
-            return { behavior: 'allow', updatedInput: input as Record<string, unknown> };
-        }
-
-        if (this.permissionMode === 'acceptEdits' && descriptor.edit) {
+        if (canAutoApproveForMode(this.permissionMode, descriptor)) {
             return { behavior: 'allow', updatedInput: input as Record<string, unknown> };
         }
 
