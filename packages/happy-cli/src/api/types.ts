@@ -19,6 +19,7 @@ import type {
   SessionEvent,
   SessionRole,
   Update as WireUpdate,
+  PermissionMode as WirePermissionMode,
 } from 'happy-wire'
 
 // Re-export shared wire protocol types from happy-wire
@@ -30,18 +31,10 @@ export type {
 export { createEnvelope }
 
 /**
- * Permission mode type - includes both Claude and Codex modes
- * Must match MessageMetaSchema.permissionMode enum values
- *
- * Claude modes: default, acceptEdits, bypassPermissions, plan
- * Codex modes: read-only, safe-yolo, yolo
- *
- * When calling Claude SDK, Codex modes are mapped at the SDK boundary:
- * - yolo → bypassPermissions
- * - safe-yolo → default
- * - read-only → default
+ * Permission mode type - agent-specific values supported by Claude, Codex, and Gemini.
+ * Must match MessageMetaSchema.permissionMode enum values.
  */
-export type PermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'read-only' | 'safe-yolo' | 'yolo'
+export type PermissionMode = WirePermissionMode
 
 /**
  * Usage data type from Claude
@@ -235,7 +228,7 @@ export type SessionMessage = WireSessionMessage
  */
 export const MessageMetaSchema = z.object({
   sentFrom: z.string().optional(), // Source identifier
-  permissionMode: z.enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'read-only', 'safe-yolo', 'yolo']).optional(), // Permission mode for this message
+  permissionMode: z.enum(['default', 'acceptEdits', 'auto', 'bypassPermissions', 'plan', 'read-only', 'on-failure', 'full-auto', 'auto_edit', 'yolo']).optional(), // Permission mode for this message
   model: z.string().nullable().optional(), // Model name for this message (null = reset)
   reasoningEffort: z.string().nullable().optional(), // Reasoning effort for this message (null = reset)
   fallbackModel: z.string().nullable().optional(), // Fallback model for this message (null = reset)

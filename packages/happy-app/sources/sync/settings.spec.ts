@@ -489,7 +489,7 @@ describe('settings', () => {
         });
 
         it('accepts all 7 permission modes', () => {
-            const modes = ['default', 'acceptEdits', 'bypassPermissions', 'plan', 'read-only', 'safe-yolo', 'yolo'];
+            const modes = ['default', 'acceptEdits', 'auto', 'bypassPermissions', 'plan', 'read-only', 'on-failure', 'full-auto', 'auto_edit', 'yolo'];
             modes.forEach(mode => {
                 const profile = {
                     id: crypto.randomUUID(),

@@ -84,8 +84,9 @@ export const AIBackendProfileSchema = z.object({
 
     // Default permission mode for this profile (supports both Claude and Codex modes)
     defaultPermissionMode: z.enum([
-        'default', 'acceptEdits', 'bypassPermissions', 'plan',  // Claude modes
-        'read-only', 'safe-yolo', 'yolo'  // Codex modes
+        'default', 'acceptEdits', 'auto', 'bypassPermissions', 'plan',
+        'read-only', 'on-failure', 'full-auto',
+        'auto_edit', 'yolo'
     ]).optional(),
 
     // Default model mode for this profile

@@ -262,7 +262,7 @@ export async function runGemini(opts: {
     // Resolve permission mode (validate) - same as Codex
     let messagePermissionMode = currentPermissionMode;
     if (message.meta?.permissionMode) {
-      const validModes: PermissionMode[] = ['default', 'read-only', 'safe-yolo', 'yolo'];
+      const validModes: PermissionMode[] = ['default', 'auto_edit', 'plan', 'yolo'];
       if (validModes.includes(message.meta.permissionMode as PermissionMode)) {
         messagePermissionMode = message.meta.permissionMode as PermissionMode;
         currentPermissionMode = messagePermissionMode;
@@ -595,7 +595,7 @@ export async function runGemini(opts: {
     permissionHandler.setPermissionMode(mode);
   };
 
-  const validPermissionModes: PermissionMode[] = ['default', 'read-only', 'safe-yolo', 'yolo'];
+  const validPermissionModes: PermissionMode[] = ['default', 'auto_edit', 'plan', 'yolo'];
   session.rpcHandlerManager.registerHandler<{ mode?: PermissionMode }, boolean>(
     'permission-mode-changed',
     async (payload) => {
@@ -1156,6 +1156,7 @@ export async function runGemini(opts: {
           // Pass model from message - if undefined, will use local config/env/default
           // If explicitly null, will skip local config and use env/default
           model: modelToUse,
+          approvalMode: message.mode.permissionMode as 'default' | 'auto_edit' | 'plan' | 'yolo',
         });
         geminiBackend = backendResult.backend;
 
@@ -1215,6 +1216,7 @@ export async function runGemini(opts: {
               // Pass model from message - if undefined, will use local config/env/default
               // If explicitly null, will skip local config and use env/default
               model: modelToUse,
+              approvalMode: message.mode.permissionMode as 'default' | 'auto_edit' | 'plan' | 'yolo',
             });
             geminiBackend = backendResult.backend;
 

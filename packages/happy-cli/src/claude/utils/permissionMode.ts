@@ -1,26 +1,22 @@
 import type { QueryOptions } from '@/claude/sdk';
 import type { PermissionMode } from '@/api/types';
 
-/** Derived from SDK's QueryOptions - the modes Claude actually supports */
+/** Modes Claude Code CLI accepts for --permission-mode. */
 export type ClaudeSdkPermissionMode = NonNullable<QueryOptions['permissionMode']>;
 
 /**
- * Map any PermissionMode (7 modes) to a Claude-compatible mode (4 modes)
- * This is the ONLY place where Codex modes are mapped to Claude equivalents.
- *
- * Mapping:
- * - yolo → bypassPermissions (both skip all permissions)
- * - safe-yolo → default (ask for permissions)
- * - read-only → default (Claude doesn't support read-only)
- *
- * Claude modes pass through unchanged:
- * - default, acceptEdits, bypassPermissions, plan
+ * Map Happy's Claude permission mode to the Claude CLI mode.
+ * The UI/validation layer must only send Claude-supported modes here.
  */
 export function mapToClaudeMode(mode: PermissionMode): ClaudeSdkPermissionMode {
-    const codexToClaudeMap: Record<string, ClaudeSdkPermissionMode> = {
-        'yolo': 'bypassPermissions',
-        'safe-yolo': 'default',
-        'read-only': 'default',
-    };
-    return codexToClaudeMap[mode] ?? (mode as ClaudeSdkPermissionMode);
+    if (
+        mode === 'default' ||
+        mode === 'acceptEdits' ||
+        mode === 'auto' ||
+        mode === 'bypassPermissions' ||
+        mode === 'plan'
+    ) {
+        return mode;
+    }
+    throw new Error(`Unsupported Claude permission mode: ${mode}`);
 }

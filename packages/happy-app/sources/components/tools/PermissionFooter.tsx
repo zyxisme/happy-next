@@ -29,9 +29,9 @@ export const PermissionFooter: React.FC<PermissionFooterProps> = ({ permission, 
     
     // Check if this is a Codex session - check both metadata.flavor and tool name prefix
     const isCodex = metadata?.flavor === 'codex' || toolName.startsWith('Codex');
-    const getCurrentClaudeMode = (): 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | undefined => {
+    const getCurrentClaudeMode = (): 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan' | undefined => {
         const mode = getSession(sessionId)?.permissionMode;
-        if (mode === 'default' || mode === 'acceptEdits' || mode === 'bypassPermissions' || mode === 'plan') {
+        if (mode === 'default' || mode === 'acceptEdits' || mode === 'auto' || mode === 'bypassPermissions' || mode === 'plan') {
             return mode;
         }
         return undefined;

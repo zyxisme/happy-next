@@ -22,7 +22,7 @@ interface PermissionResponse {
     id: string;
     approved: boolean;
     reason?: string;
-    mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+    mode?: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan';
     allowTools?: string[];
     answers?: Record<string, string>;
     receivedAt?: number;
@@ -167,11 +167,6 @@ export class PermissionHandler {
         //
         // Handle special cases
         //
-
-        // YOLO mode: auto-approve everything (including AskUserQuestion)
-        if (this.permissionMode === 'yolo') {
-            return { behavior: 'allow', updatedInput: input as Record<string, unknown> };
-        }
 
         // Privileged mode (bypassPermissions): auto-approve everything EXCEPT user interaction tools
         // These tools require explicit user approval even in privileged mode

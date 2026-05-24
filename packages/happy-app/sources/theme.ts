@@ -143,7 +143,7 @@ export const lightTheme = {
             bypass: '#FF9500',
             plan: '#34C759',
             readOnly: '#8B8B8D',
-            safeYolo: '#FF6B35',
+            onFailure: '#FF6B35',
             yolo: '#DC143C',
         },
 
@@ -354,7 +354,7 @@ export const darkTheme = {
             bypass: '#FF9F0A',
             plan: '#32D74B',
             readOnly: '#98989D',
-            safeYolo: '#FF7A4C',
+            onFailure: '#FF7A4C',
             yolo: '#FF453A',
         },
 

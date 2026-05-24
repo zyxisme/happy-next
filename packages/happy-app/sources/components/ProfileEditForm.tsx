@@ -67,9 +67,10 @@ export function ProfileEditForm({
 
     // Reset permission mode when agent type changes if current mode is invalid
     React.useEffect(() => {
-        const claudeModes: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'bypassPermissions', 'yolo'];
-        const codexModes: PermissionMode[] = ['default', 'read-only', 'safe-yolo', 'yolo'];
-        const validModes = agentType === 'codex' ? codexModes : claudeModes;
+        const claudeModes: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions'];
+        const codexModes: PermissionMode[] = ['default', 'read-only', 'on-failure', 'full-auto'];
+        const geminiModes: PermissionMode[] = ['default', 'auto_edit', 'plan', 'yolo'];
+        const validModes = agentType === 'codex' ? codexModes : agentType === 'gemini' ? geminiModes : claudeModes;
 
         if (!validModes.includes(defaultPermissionMode)) {
             setDefaultPermissionMode('default');
@@ -239,20 +240,25 @@ export function ProfileEditForm({
                         marginBottom: 12,
                         ...Typography.default('semiBold')
                     }}>
-                        Default Permission Mode
+                        {t('wizard.defaultPermissionMode')}
                     </Text>
                     <ItemGroup title="">
                         {(agentType === 'codex' ? [
-                            { value: 'default' as PermissionMode, label: 'Default', description: 'Ask for permissions', icon: 'shield-outline' },
-                            { value: 'read-only' as PermissionMode, label: 'Read Only', description: 'No file modifications', icon: 'eye-outline' },
-                            { value: 'safe-yolo' as PermissionMode, label: 'Safe YOLO', description: 'Auto-approve safe operations', icon: 'shield-checkmark-outline' },
-                            { value: 'yolo' as PermissionMode, label: 'YOLO', description: 'No confirmations at all', icon: 'warning-outline' },
+                            { value: 'default' as PermissionMode, label: t('agentInput.codexPermissionMode.default'), description: t('wizard.permCodexDefaultDesc'), icon: 'shield-outline' },
+                            { value: 'read-only' as PermissionMode, label: t('agentInput.codexPermissionMode.readOnly'), description: t('wizard.permReadOnlyDesc'), icon: 'eye-outline' },
+                            { value: 'on-failure' as PermissionMode, label: t('agentInput.codexPermissionMode.onFailure'), description: t('wizard.permOnFailureDesc'), icon: 'shield-checkmark-outline' },
+                            { value: 'full-auto' as PermissionMode, label: t('agentInput.codexPermissionMode.fullAuto'), description: t('wizard.permFullAutoDesc'), icon: 'warning-outline' },
+                        ] : agentType === 'gemini' ? [
+                            { value: 'default' as PermissionMode, label: t('agentInput.geminiPermissionMode.default'), description: t('wizard.permGeminiDefaultDesc'), icon: 'shield-outline' },
+                            { value: 'auto_edit' as PermissionMode, label: t('wizard.permAutoEdit'), description: t('wizard.permAutoEditDesc'), icon: 'create-outline' },
+                            { value: 'plan' as PermissionMode, label: t('agentInput.geminiPermissionMode.plan'), description: t('wizard.permGeminiPlanDesc'), icon: 'list-outline' },
+                            { value: 'yolo' as PermissionMode, label: t('wizard.permYolo'), description: t('wizard.permYoloDesc'), icon: 'warning-outline' },
                         ] : [
-                            { value: 'default' as PermissionMode, label: 'Default', description: 'Ask for permissions', icon: 'shield-outline' },
-                            { value: 'acceptEdits' as PermissionMode, label: 'Accept Edits', description: 'Auto-approve edits', icon: 'checkmark-outline' },
-                            { value: 'plan' as PermissionMode, label: 'Plan', description: 'Plan before executing', icon: 'list-outline' },
-                            { value: 'bypassPermissions' as PermissionMode, label: 'Bypass Permissions', description: 'Skip all permissions', icon: 'flash-outline' },
-                            { value: 'yolo' as PermissionMode, label: 'YOLO', description: 'No confirmations at all', icon: 'warning-outline' },
+                            { value: 'default' as PermissionMode, label: t('wizard.permDefault'), description: t('wizard.permDefaultDesc'), icon: 'shield-outline' },
+                            { value: 'acceptEdits' as PermissionMode, label: t('wizard.permAcceptEdits'), description: t('wizard.permAcceptEditsDesc'), icon: 'checkmark-outline' },
+                            { value: 'plan' as PermissionMode, label: t('wizard.permPlan'), description: t('wizard.permPlanDesc'), icon: 'list-outline' },
+                            { value: 'auto' as PermissionMode, label: t('wizard.permAuto'), description: t('wizard.permAutoDesc'), icon: 'sparkles-outline' },
+                            { value: 'bypassPermissions' as PermissionMode, label: t('wizard.permBypass'), description: t('wizard.permBypassDesc'), icon: 'flash-outline' },
                         ]).map((option, index, array) => (
                             <Item
                                 key={option.value}

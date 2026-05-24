@@ -1,53 +1,20 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { mapToClaudeMode } from './permissionMode';
-import type { PermissionMode } from '@/api/types';
+
+const claudeModes = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions'] as const;
 
 describe('mapToClaudeMode', () => {
-    describe('Codex modes are mapped to Claude equivalents', () => {
-        it('maps yolo → bypassPermissions', () => {
-            expect(mapToClaudeMode('yolo')).toBe('bypassPermissions');
-        });
+  it('passes through Claude CLI native permission modes', () => {
+    for (const mode of claudeModes) {
+      expect(mapToClaudeMode(mode)).toBe(mode);
+    }
+  });
 
-        it('maps safe-yolo → default', () => {
-            expect(mapToClaudeMode('safe-yolo')).toBe('default');
-        });
-
-        it('maps read-only → default', () => {
-            expect(mapToClaudeMode('read-only')).toBe('default');
-        });
-    });
-
-    describe('Claude modes pass through unchanged', () => {
-        it('passes through default', () => {
-            expect(mapToClaudeMode('default')).toBe('default');
-        });
-
-        it('passes through acceptEdits', () => {
-            expect(mapToClaudeMode('acceptEdits')).toBe('acceptEdits');
-        });
-
-        it('passes through bypassPermissions', () => {
-            expect(mapToClaudeMode('bypassPermissions')).toBe('bypassPermissions');
-        });
-
-        it('passes through plan', () => {
-            expect(mapToClaudeMode('plan')).toBe('plan');
-        });
-    });
-
-    describe('all 7 PermissionMode values are handled', () => {
-        const allModes: PermissionMode[] = [
-            'default', 'acceptEdits', 'bypassPermissions', 'plan',  // Claude modes
-            'read-only', 'safe-yolo', 'yolo'  // Codex modes
-        ];
-
-        it('returns a valid Claude mode for every PermissionMode', () => {
-            const validClaudeModes = ['default', 'acceptEdits', 'bypassPermissions', 'plan'];
-
-            allModes.forEach(mode => {
-                const result = mapToClaudeMode(mode);
-                expect(validClaudeModes).toContain(result);
-            });
-        });
-    });
+  it('rejects non-Claude permission modes', () => {
+    expect(() => mapToClaudeMode('read-only' as any)).toThrow('Unsupported Claude permission mode');
+    expect(() => mapToClaudeMode('on-failure' as any)).toThrow('Unsupported Claude permission mode');
+    expect(() => mapToClaudeMode('full-auto' as any)).toThrow('Unsupported Claude permission mode');
+    expect(() => mapToClaudeMode('auto_edit' as any)).toThrow('Unsupported Claude permission mode');
+    expect(() => mapToClaudeMode('yolo' as any)).toThrow('Unsupported Claude permission mode');
+  });
 });

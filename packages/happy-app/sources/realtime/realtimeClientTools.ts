@@ -315,7 +315,7 @@ export const realtimeClientTools = {
 
         try {
             if (setting === 'permissionMode') {
-                const validModes = ['default', 'acceptEdits', 'bypassPermissions', 'plan', 'read-only', 'safe-yolo', 'yolo'] as const;
+                const validModes = ['default', 'acceptEdits', 'auto', 'bypassPermissions', 'plan', 'read-only', 'on-failure', 'full-auto', 'auto_edit', 'yolo'] as const;
                 if (!validModes.includes(value as any)) {
                     return `error (invalid permission mode. Valid modes: ${validModes.join(', ')})`;
                 }

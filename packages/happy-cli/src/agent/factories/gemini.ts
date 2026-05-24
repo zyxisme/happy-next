@@ -38,6 +38,9 @@ export interface GeminiBackendOptions extends AgentFactoryOptions {
   /** Current user email (from OAuth id_token) - used to match per-account project ID */
   currentUserEmail?: string;
   
+  /** Gemini CLI approval mode. */
+  approvalMode?: 'default' | 'auto_edit' | 'plan' | 'yolo' | null;
+  
   /** Model to use. If undefined, will use local config, env var, or default.
    *  If explicitly set to null, will use default (skip local config).
    *  (defaults to GEMINI_MODEL env var or 'gemini-2.5-pro') */
@@ -111,6 +114,9 @@ export function createGeminiBackend(options: GeminiBackendOptions): GeminiBacken
   // Model is passed via GEMINI_MODEL env var (gemini CLI reads it automatically)
   // We don't use --model flag to avoid potential stdout conflicts with ACP protocol
   const geminiArgs = ['--experimental-acp'];
+  if (options.approvalMode) {
+    geminiArgs.push('--approval-mode', options.approvalMode);
+  }
 
   // Get Google Cloud Project from local config (for Workspace accounts)
   // Only use if: no email stored (global), or email matches current user
@@ -171,6 +177,7 @@ export function createGeminiBackend(options: GeminiBackendOptions): GeminiBacken
     hasApiKey: !!apiKey,
     model: model,
     modelSource: modelSource,
+    approvalMode: options.approvalMode ?? 'default',
     mcpServerCount: options.mcpServers ? Object.keys(options.mcpServers).length : 0,
   });
 

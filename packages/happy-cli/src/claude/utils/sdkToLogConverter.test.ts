@@ -317,7 +317,7 @@ describe('SDKToLogConverter', () => {
 
     describe('Tool results with mode', () => {
         it('should add mode to tool result when available in responses', () => {
-            const responses = new Map<string, { approved: boolean, mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan', reason?: string }>()
+            const responses = new Map<string, { approved: boolean, mode?: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan', reason?: string }>()
             responses.set('tool_123', { approved: true, mode: 'acceptEdits' })
             
             const converterWithResponses = new SDKToLogConverter(context, responses)
@@ -342,7 +342,7 @@ describe('SDKToLogConverter', () => {
         })
 
         it('should not add mode when not in responses', () => {
-            const responses = new Map<string, { approved: boolean, mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan', reason?: string }>()
+            const responses = new Map<string, { approved: boolean, mode?: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan', reason?: string }>()
             
             const converterWithResponses = new SDKToLogConverter(context, responses)
             
@@ -366,7 +366,7 @@ describe('SDKToLogConverter', () => {
         })
 
         it('should handle mixed content with tool results', () => {
-            const responses = new Map<string, { approved: boolean, mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan', reason?: string }>()
+            const responses = new Map<string, { approved: boolean, mode?: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan', reason?: string }>()
             responses.set('tool_789', { approved: true, mode: 'bypassPermissions' })
             
             const converterWithResponses = new SDKToLogConverter(context, responses)
@@ -394,7 +394,7 @@ describe('SDKToLogConverter', () => {
         })
 
         it('should work with convenience function', () => {
-            const responses = new Map<string, { approved: boolean, mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan', reason?: string }>()
+            const responses = new Map<string, { approved: boolean, mode?: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan', reason?: string }>()
             responses.set('tool_abc', { approved: false, mode: 'plan', reason: 'User rejected' })
             
             const sdkMessage: SDKUserMessage = {

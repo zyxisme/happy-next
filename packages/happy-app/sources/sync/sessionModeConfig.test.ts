@@ -89,7 +89,7 @@ describe('sessionModeConfig', () => {
             patch({
                 agentType: 'codex',
                 includeLastUsed: true,
-                permissionMode: 'safe-yolo',
+                permissionMode: 'on-failure',
                 modelMode: 'gpt-5.4-high',
                 updatedAt: 200,
             }),
@@ -100,7 +100,7 @@ describe('sessionModeConfig', () => {
             modelMode: 'claude-opus-4-6',
         });
         expect(getLastUsedForAgent(doc, 'codex')).toMatchObject({
-            permissionMode: 'safe-yolo',
+            permissionMode: 'on-failure',
             modelMode: 'gpt-5.4-high',
         });
     });

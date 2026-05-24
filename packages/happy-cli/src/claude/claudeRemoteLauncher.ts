@@ -22,7 +22,7 @@ import type { QueueMessageContent } from "./runClaude";
 interface PermissionsField {
     date: number;
     result: 'approved' | 'denied';
-    mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+    mode?: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan';
     allowedTools?: string[];
 }
 
@@ -137,7 +137,7 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
 
     // Create permission handler
     const permissionHandler = new PermissionHandler(session);
-    const validPermissionModes: PermissionMode[] = ['default', 'acceptEdits', 'bypassPermissions', 'plan'];
+    const validPermissionModes: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions'];
 
     session.client.rpcHandlerManager.registerHandler<{ mode?: PermissionMode }, boolean>(
         'permission-mode-changed',

@@ -53,9 +53,9 @@ export class CodexPermissionHandler extends BasePermissionHandler {
         }
 
         switch (this.currentPermissionMode) {
-            case 'yolo':
+            case 'full-auto':
                 return true;
-            case 'safe-yolo':
+            case 'on-failure':
                 return true;
             case 'read-only': {
                 const writeTools = ['write', 'edit', 'create', 'delete', 'patch', 'fs-edit'];
@@ -92,13 +92,13 @@ export class CodexPermissionHandler extends BasePermissionHandler {
                         createdAt: Date.now(),
                         completedAt: Date.now(),
                         status: 'approved',
-                        decision: this.currentPermissionMode === 'yolo' ? 'approved_for_session' : 'approved'
+                        decision: this.currentPermissionMode === 'full-auto' ? 'approved_for_session' : 'approved'
                     }
                 }
             }));
 
             return {
-                decision: this.currentPermissionMode === 'yolo' ? 'approved_for_session' : 'approved'
+                decision: this.currentPermissionMode === 'full-auto' ? 'approved_for_session' : 'approved'
             };
         }
 

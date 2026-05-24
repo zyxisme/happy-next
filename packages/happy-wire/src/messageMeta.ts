@@ -1,8 +1,9 @@
 import * as z from 'zod';
+import { PermissionModeSchema } from './permissionModes';
 
 export const MessageMetaSchema = z.object({
   sentFrom: z.string().optional(),
-  permissionMode: z.enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'read-only', 'safe-yolo', 'yolo']).optional(),
+  permissionMode: PermissionModeSchema.optional(),
   model: z.string().nullable().optional(),
   fallbackModel: z.string().nullable().optional(),
   reasoningEffort: z.string().nullable().optional(),

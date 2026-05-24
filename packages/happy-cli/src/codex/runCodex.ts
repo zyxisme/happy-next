@@ -98,12 +98,8 @@ function mapApprovalPolicy(permissionMode: string): ApprovalPolicy {
         // Codex v0.98+: untrusted, on-failure, on-request, never
         case 'default': return 'on-request';
         case 'read-only': return 'untrusted';
-        case 'safe-yolo': return 'on-failure';
-        case 'yolo': return 'never';
-        // Claude-compatible modes (backward compatibility)
-        case 'bypassPermissions': return 'never';
-        case 'acceptEdits': return 'on-failure';
-        case 'plan': return 'on-request';
+        case 'on-failure': return 'on-failure';
+        case 'full-auto': return 'never';
         default: return 'on-request';
     }
 }
@@ -115,11 +111,8 @@ function mapSandbox(permissionMode: string): SandboxMode {
     switch (permissionMode) {
         case 'default': return 'workspace-write';
         case 'read-only': return 'read-only';
-        case 'safe-yolo': return 'workspace-write';
-        case 'yolo': return 'danger-full-access';
-        case 'bypassPermissions': return 'danger-full-access';
-        case 'acceptEdits': return 'workspace-write';
-        case 'plan': return 'workspace-write';
+        case 'on-failure': return 'workspace-write';
+        case 'full-auto': return 'danger-full-access';
         default: return 'workspace-write';
     }
 }
@@ -544,7 +537,7 @@ export async function runCodex(opts: {
 
     permissionHandler = new CodexPermissionHandler(session, api.push());
 
-    const validPermissionModes: PermissionMode[] = ['default', 'read-only', 'safe-yolo', 'yolo'];
+    const validPermissionModes: PermissionMode[] = ['default', 'read-only', 'on-failure', 'full-auto'];
     session.rpcHandlerManager.registerHandler<{ mode?: PermissionMode }, boolean>(
         'permission-mode-changed',
         async (payload) => {

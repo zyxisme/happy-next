@@ -42,10 +42,13 @@ export interface SessionModeConfigPatch {
 const PERMISSION_MODES = new Set<PermissionMode>([
     'default',
     'acceptEdits',
+    'auto',
     'bypassPermissions',
     'plan',
     'read-only',
-    'safe-yolo',
+    'on-failure',
+    'full-auto',
+    'auto_edit',
     'yolo',
 ]);
 

@@ -372,9 +372,10 @@ function NewSessionWizard() {
     const [permissionMode, setPermissionMode] = React.useState<PermissionMode>(() => {
         const mode = lastUsedSessionMode?.permissionMode;
 
-        const validClaudeModes: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'bypassPermissions', 'yolo'];
-        const validCodexGeminiModes: PermissionMode[] = ['default', 'read-only', 'safe-yolo', 'yolo'];
-        const validModes = (agentType === 'codex' || agentType === 'gemini') ? validCodexGeminiModes : validClaudeModes;
+        const validClaudeModes: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions'];
+        const validCodexModes: PermissionMode[] = ['default', 'read-only', 'on-failure', 'full-auto'];
+        const validGeminiModes: PermissionMode[] = ['default', 'auto_edit', 'plan', 'yolo'];
+        const validModes = agentType === 'codex' ? validCodexModes : agentType === 'gemini' ? validGeminiModes : validClaudeModes;
 
         if (mode && validModes.includes(mode as PermissionMode)) {
             return mode as PermissionMode;
@@ -1020,9 +1021,10 @@ function NewSessionWizard() {
 
     // Restore saved permission mode when agent type changes
     React.useEffect(() => {
-        const validClaudeModes: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'bypassPermissions', 'yolo'];
-        const validCodexGeminiModes: PermissionMode[] = ['default', 'read-only', 'safe-yolo', 'yolo'];
-        const validModes = (agentType === 'codex' || agentType === 'gemini') ? validCodexGeminiModes : validClaudeModes;
+        const validClaudeModes: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions'];
+        const validCodexModes: PermissionMode[] = ['default', 'read-only', 'on-failure', 'full-auto'];
+        const validGeminiModes: PermissionMode[] = ['default', 'auto_edit', 'plan', 'yolo'];
+        const validModes = agentType === 'codex' ? validCodexModes : agentType === 'gemini' ? validGeminiModes : validClaudeModes;
         const manualMode = manualPermissionModeByAgentRef.current[agentType];
 
         if (manualMode && validModes.includes(manualMode)) {
@@ -2342,18 +2344,25 @@ function NewSessionWizard() {
                             <ItemGroup title="">
                                 {(agentType === 'codex'
                                     ? [
-                                        { value: 'default' as PermissionMode, label: t('wizard.permDefault'), description: t('wizard.permDefaultDesc'), icon: 'shield-outline' },
-                                        { value: 'read-only' as PermissionMode, label: t('wizard.permReadOnly'), description: t('wizard.permReadOnlyDesc'), icon: 'eye-outline' },
-                                        { value: 'safe-yolo' as PermissionMode, label: t('wizard.permSafeYolo'), description: t('wizard.permSafeYoloDesc'), icon: 'shield-checkmark-outline' },
-                                        { value: 'yolo' as PermissionMode, label: t('wizard.permYolo'), description: t('wizard.permFullAccess'), icon: 'flash-outline' },
+                                        { value: 'default' as PermissionMode, label: t('agentInput.codexPermissionMode.default'), description: t('wizard.permCodexDefaultDesc'), icon: 'shield-outline' },
+                                        { value: 'read-only' as PermissionMode, label: t('agentInput.codexPermissionMode.readOnly'), description: t('wizard.permReadOnlyDesc'), icon: 'eye-outline' },
+                                        { value: 'on-failure' as PermissionMode, label: t('agentInput.codexPermissionMode.onFailure'), description: t('wizard.permOnFailureDesc'), icon: 'shield-checkmark-outline' },
+                                        { value: 'full-auto' as PermissionMode, label: t('agentInput.codexPermissionMode.fullAuto'), description: t('wizard.permFullAutoDesc'), icon: 'flash-outline' },
                                     ]
-                                    : [
-                                        { value: 'default' as PermissionMode, label: t('wizard.permDefault'), description: t('wizard.permDefaultDesc'), icon: 'shield-outline' },
-                                        { value: 'acceptEdits' as PermissionMode, label: t('wizard.permAcceptEdits'), description: t('wizard.permAcceptEditsDesc'), icon: 'checkmark-outline' },
-                                        { value: 'plan' as PermissionMode, label: t('wizard.permPlan'), description: t('wizard.permPlanDesc'), icon: 'list-outline' },
-                                        { value: 'bypassPermissions' as PermissionMode, label: t('wizard.permBypass'), description: t('wizard.permBypassDesc'), icon: 'flash-outline' },
-                                        { value: 'yolo' as PermissionMode, label: t('wizard.permYolo'), description: t('wizard.permYoloDesc'), icon: 'warning-outline' },
-                                    ]
+                                    : agentType === 'gemini'
+                                        ? [
+                                            { value: 'default' as PermissionMode, label: t('agentInput.geminiPermissionMode.default'), description: t('wizard.permGeminiDefaultDesc'), icon: 'shield-outline' },
+                                            { value: 'auto_edit' as PermissionMode, label: t('wizard.permAutoEdit'), description: t('wizard.permAutoEditDesc'), icon: 'create-outline' },
+                                            { value: 'plan' as PermissionMode, label: t('agentInput.geminiPermissionMode.plan'), description: t('wizard.permGeminiPlanDesc'), icon: 'list-outline' },
+                                            { value: 'yolo' as PermissionMode, label: t('wizard.permYolo'), description: t('wizard.permYoloDesc'), icon: 'warning-outline' },
+                                        ]
+                                        : [
+                                            { value: 'default' as PermissionMode, label: t('wizard.permDefault'), description: t('wizard.permDefaultDesc'), icon: 'shield-outline' },
+                                            { value: 'acceptEdits' as PermissionMode, label: t('wizard.permAcceptEdits'), description: t('wizard.permAcceptEditsDesc'), icon: 'checkmark-outline' },
+                                            { value: 'plan' as PermissionMode, label: t('wizard.permPlan'), description: t('wizard.permPlanDesc'), icon: 'list-outline' },
+                                            { value: 'auto' as PermissionMode, label: t('wizard.permAuto'), description: t('wizard.permAutoDesc'), icon: 'sparkles-outline' },
+                                            { value: 'bypassPermissions' as PermissionMode, label: t('wizard.permBypass'), description: t('wizard.permBypassDesc'), icon: 'flash-outline' },
+                                        ]
                                 ).map((option, index, array) => (
                                     <Item
                                         key={option.value}
