@@ -88,6 +88,7 @@ export const MODEL_MODES = [
     'gemini-3.1-pro-preview',
     'gemini-3-flash',
     'gemini-2.5-pro',
+    'gemini-2.5-flash-lite',
 ] as const;
 
 export type ModelMode = typeof MODEL_MODES[number];
@@ -135,6 +136,7 @@ export const GEMINI_MODEL_MODES = [
     'gemini-3.1-pro-preview',
     'gemini-3-flash',
     'gemini-2.5-pro',
+    'gemini-2.5-flash-lite',
 ] as const satisfies readonly ModelMode[];
 
 export const CODEX_MODEL_MODES = [
@@ -243,6 +245,7 @@ export const GEMINI_MODEL_OPTIONS = [
     { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview)', shortLabel: '3.1 Pro', description: 'Most capable' },
     { value: 'gemini-3-flash', label: 'Gemini 3 Flash', shortLabel: '3 Flash', description: 'Fast and efficient' },
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', shortLabel: '2.5 Pro', description: 'Previous generation' },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite', shortLabel: '2.5 Flash-Lite', description: 'Lightweight free-tier friendly model' },
 ] as const;
 
 export const CODEX_MODEL_FAMILY_OPTIONS = [
@@ -383,6 +386,7 @@ const MODEL_NAME_LABELS: Record<string, string> = {
     'gemini-3.1-pro-preview': 'Gemini 3.1 Pro (Preview)',
     'gemini-3-flash': 'Gemini 3 Flash',
     'gemini-2.5-pro': 'Gemini 2.5 Pro',
+    'gemini-2.5-flash-lite': 'Gemini 2.5 Flash-Lite',
 };
 
 const REASONING_EFFORT_LABELS: Record<string, string> = {
@@ -498,6 +502,7 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
     'gemini-3.1-pro-preview': 1_000_000,
     'gemini-3-flash': 1_000_000,
     'gemini-2.5-pro': 1_000_000,
+    'gemini-2.5-flash-lite': 1_000_000,
 };
 
 /**

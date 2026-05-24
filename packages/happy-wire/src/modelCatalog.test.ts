@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     buildCodexModelMode,
     CODEX_MODEL_MODES,
+    GEMINI_MODEL_MODES,
     getCodexReasoningOptions,
     getMaxContextSize,
     isModelMode,
@@ -19,6 +20,7 @@ describe('modelCatalog', () => {
         expect(isModelModeForAgent('codex', 'gpt-5.3-codex-xhigh')).toBe(true);
         expect(isModelModeForAgent('gemini', 'gpt-5.3-codex-xhigh')).toBe(false);
         expect(isModelModeForAgent('claude', 'claude-opus-4-6')).toBe(true);
+        expect(isModelModeForAgent('gemini', 'gemini-2.5-flash-lite')).toBe(true);
     });
 
     it('parses codex model mode into family and effort', () => {
@@ -53,8 +55,8 @@ describe('modelCatalog', () => {
             model: 'claude-opus-4-5',
             reasoningEffort: null,
         });
-        expect(resolveModelSelectionForFlavor('gemini', 'gemini-2.5-pro')).toEqual({
-            model: 'gemini-2.5-pro',
+        expect(resolveModelSelectionForFlavor('gemini', 'gemini-2.5-flash-lite')).toEqual({
+            model: 'gemini-2.5-flash-lite',
             reasoningEffort: null,
         });
         expect(resolveModelSelectionForFlavor('codex', MODEL_MODE_DEFAULT)).toEqual({
@@ -70,6 +72,11 @@ describe('modelCatalog', () => {
     it('keeps codex model list in catalog shape', () => {
         expect(CODEX_MODEL_MODES[0]).toBe(MODEL_MODE_DEFAULT);
         expect(CODEX_MODEL_MODES).toContain('gpt-5.1-codex-mini-high');
+    });
+
+    it('keeps gemini free-tier fallback model in catalog', () => {
+        expect(GEMINI_MODEL_MODES[0]).toBe(MODEL_MODE_DEFAULT);
+        expect(GEMINI_MODEL_MODES).toContain('gemini-2.5-flash-lite');
     });
 
     it('resolves context windows for claude composite and fast model modes', () => {
@@ -93,7 +100,7 @@ describe('modelCatalog', () => {
         // Codex actual model
         expect(getMaxContextSize('default', 'codex', 'gpt-5.2-codex')).toBe(258_400);
         // Gemini actual model
-        expect(getMaxContextSize('default', 'gemini', 'gemini-2.5-pro')).toBe(1_000_000);
+        expect(getMaxContextSize('default', 'gemini', 'gemini-2.5-flash-lite')).toBe(1_000_000);
         // Unknown model falls back to agent default
         expect(getMaxContextSize('default', 'claude', 'some-unknown-model')).toBe(200_000);
         // No actualModel falls back to agent default
