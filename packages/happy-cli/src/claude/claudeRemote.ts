@@ -206,21 +206,32 @@ export async function claudeRemote(opts: {
         }
         awaitingNextUserMessage = true;
         try {
-            const next = await opts.nextMessage();
-            if (!next) {
-                streamEnded = true;
-                messages.end();
-                return;
-            }
-            mode = next.mode;
-            const messageContent = await toClaudeMessageContent(next.message);
-            messages.push({
-                type: 'user',
-                message: {
-                    role: 'user',
-                    content: messageContent
+            while (!streamEnded) {
+                const next = await opts.nextMessage();
+                if (!next) {
+                    streamEnded = true;
+                    messages.end();
+                    return;
                 }
-            });
+                mode = next.mode;
+                try {
+                    const messageContent = await toClaudeMessageContent(next.message);
+                    messages.push({
+                        type: 'user',
+                        message: {
+                            role: 'user',
+                            content: messageContent
+                        }
+                    });
+                    return;
+                } catch (formatError) {
+                    logger.debug('[claudeRemote] Failed to format user message', formatError);
+                    if (opts.onCompletionEvent) {
+                        opts.onCompletionEvent('Failed to process message attachments. Please try again.');
+                    }
+                    opts.onReady();
+                }
+            }
         } catch (error) {
             logger.debug('[claudeRemote] Failed to fetch next user message', error);
             streamEnded = true;
