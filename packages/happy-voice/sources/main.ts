@@ -1,37 +1,51 @@
-import { startApiServer } from './api/app';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import {
+    serializerCompiler,
+    validatorCompiler,
+} from 'fastify-type-provider-zod';
 import { env } from './runtime/env';
 import { logError, logInfo } from './runtime/log';
 import { sessionStore } from './runtime/sessionStore';
-import { startWorker } from './worker/agent';
+import { registerRoutes } from './api/routes';
 
-type ServiceMode = 'api' | 'worker' | 'all';
+async function startApiServer() {
+    const app = Fastify({
+        bodyLimit: 5 * 1024 * 1024,
+        logger: false,
+    });
 
-function resolveMode(): ServiceMode {
-    const cliMode = process.argv[2] as ServiceMode | undefined;
-    const envMode = process.env.HAPPY_VOICE_MODE as ServiceMode | undefined;
-    return cliMode || envMode || 'api';
+    app.setValidatorCompiler(validatorCompiler);
+    app.setSerializerCompiler(serializerCompiler);
+
+    await app.register(cors, { origin: '*' });
+
+    registerRoutes(app);
+
+    // Dev-only browser test harness (validates the live RTC audio loop on :PORT/test).
+    if (env.NODE_ENV !== 'production') {
+        app.get('/test', async (_req, reply) => {
+            reply
+                .type('text/html')
+                .send(readFileSync(join(process.cwd(), 'sources/test/harness.html'), 'utf8'));
+        });
+        logInfo('Dev test harness available at /test');
+    }
+
+    await app.listen({ host: env.HOST, port: env.PORT });
+    logInfo(`happy-voice listening on http://${env.HOST}:${env.PORT}`);
 }
 
 async function run() {
-    const mode = resolveMode();
-    logInfo(`Booting happy-voice in mode=${mode} env=${env.NODE_ENV}`);
+    logInfo(`Booting happy-voice env=${env.NODE_ENV}`);
 
     setInterval(() => {
         sessionStore.pruneExpired();
     }, 5 * 60 * 1000).unref();
 
-    if (mode === 'api') {
-        await startApiServer();
-        return;
-    }
-
-    if (mode === 'worker') {
-        await startWorker();
-        return;
-    }
-
     await startApiServer();
-    await startWorker();
 }
 
 run().catch((error) => {

@@ -12,7 +12,7 @@ import {
 import { storage, getSession } from '@/sync/storage';
 import { Message } from '@/sync/typesMessage';
 import { VOICE_CONFIG } from '../voiceConfig';
-import { config } from '@/config';
+import { getVoiceProvider } from '@/sync/voiceConfig';
 
 /**
  * Centralized voice assistant hooks for multi-session context updates.
@@ -42,9 +42,13 @@ function reportContextualUpdate(update: string | null | undefined) {
     voice.sendContextualUpdate(update);
 }
 
-function reportTextUpdate(update: string | null | undefined) {
+// Marks injected text as a speak-only notification (ready / permission) so the
+// Happy Voice gateway routes it to a tools-disabled turn instead of the main
+// (forward-capable) flow. Keep "hv-notify" in sync with happy-voice llmProxy.ts.
+type VoiceNotifyKind = 'ready' | 'permission';
+function reportTextUpdate(update: string | null | undefined, kind: VoiceNotifyKind = 'ready') {
     if (VOICE_CONFIG.ENABLE_DEBUG_LOGGING) {
-        console.log('🎤 Voice: Reporting text update:', update);
+        console.log('🎤 Voice: Reporting text update:', kind, update);
     }
     if (!update) return;
     const voice = getVoiceSession();
@@ -52,7 +56,7 @@ function reportTextUpdate(update: string | null | undefined) {
         console.log('🎤 Voice: Voice session:', voice);
     }
     if (!voice || !isVoiceSessionStarted()) return;
-    voice.sendTextMessage(update);
+    voice.sendTextMessage(`[[hv-notify:${kind}]]${update}`);
 }
 
 function reportSession(sessionId: string) {
@@ -98,7 +102,7 @@ export const voiceHooks = {
         if (lastFocusSession === sessionId) return;
         lastFocusSession = sessionId;
         setCurrentRealtimeSessionId(sessionId);
-        if (config.voiceProvider === 'happy-voice') {
+        if (getVoiceProvider() === 'happy-voice') {
             // Happy Voice providers should treat focus as a hard context switch.
             // Force re-sending a full snapshot so downstream can replace old session context.
             shownSessions.delete(sessionId);
@@ -123,11 +127,11 @@ export const voiceHooks = {
         if (VOICE_CONFIG.DISABLE_PERMISSION_REQUESTS) return;
 
         if (sessionId !== lastFocusSession) {
-            reportTextUpdate(`background-session-permission:${sessionId}`);
+            reportTextUpdate(`background-session-permission:${sessionId}`, 'permission');
             return;
         }
         reportSession(sessionId);
-        reportTextUpdate(formatPermissionRequest(sessionId, requestId, toolName, toolArgs));
+        reportTextUpdate(formatPermissionRequest(sessionId, requestId, toolName, toolArgs), 'permission');
     },
 
     /**
@@ -154,7 +158,7 @@ export const voiceHooks = {
         const session = getSession(sessionId);
         if (!session) return prompt;
         const messages = storage.getState().sessionMessages[sessionId]?.messages ?? [];
-        if (config.voiceProvider === 'happy-voice') {
+        if (getVoiceProvider() === 'happy-voice') {
             prompt += formatSessionFull(session, messages);
         } else {
             prompt += 'THIS IS AN ACTIVE SESSION: \n\n' + formatSessionFull(session, messages);
@@ -175,11 +179,11 @@ export const voiceHooks = {
         if (VOICE_CONFIG.DISABLE_READY_EVENTS) return;
 
         if (sessionId !== lastFocusSession) {
-            reportTextUpdate(`background-session-ready:${sessionId}`);
+            reportTextUpdate(`background-session-ready:${sessionId}`, 'ready');
             return;
         }
         reportSession(sessionId);
-        reportTextUpdate(formatReadyEvent(sessionId));
+        reportTextUpdate(formatReadyEvent(sessionId), 'ready');
     },
 
     /**

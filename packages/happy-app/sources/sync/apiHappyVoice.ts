@@ -6,10 +6,18 @@ import type { HappyVoiceContextPayload } from '@/realtime/HappyVoiceContextSeria
 export interface HappyVoiceStartResponse {
     allowed: boolean;
     gatewaySessionId: string;
-    roomName: string;
-    roomUrl: string;
-    participantIdentity: string;
-    participantToken: string;
+    /** 'volc-rtc' for the Volcano Engine gateway. */
+    provider: 'volc-rtc';
+    /** Volcano RTC application id. */
+    appId: string;
+    /** RTC room id to join. */
+    roomId: string;
+    /** Human participant RTC uid. */
+    uid: string;
+    /** AIGC agent (bot) RTC uid — target for control messages. */
+    agentUid: string;
+    /** RTC join token (AppId + AppKey). */
+    rtcToken: string;
     expiresAt: string;
 }
 
@@ -86,34 +94,9 @@ export async function stopHappyVoiceSession(gatewaySessionId: string): Promise<v
     }
 }
 
-export async function sendHappyVoiceText(gatewaySessionId: string, message: string): Promise<void> {
-    const response = await fetch(`${getVoiceGatewayUrl()}/v1/voice/session/text`, {
-        method: 'POST',
-        headers: getVoiceGatewayHeaders(),
-        body: JSON.stringify({ gatewaySessionId, message }),
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to send voice text: ${response.status} ${errorText}`);
-    }
-}
-
-export async function sendHappyVoiceContext(
-    gatewaySessionId: string,
-    payload: HappyVoiceContextPayload,
-): Promise<void> {
-    const response = await fetch(`${getVoiceGatewayUrl()}/v1/voice/session/context`, {
-        method: 'POST',
-        headers: getVoiceGatewayHeaders(),
-        body: JSON.stringify({ gatewaySessionId, payload }),
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to send voice context: ${response.status} ${errorText}`);
-    }
-}
+// NOTE: mid-session text/context injection now happens client-side over RTC
+// control messages (see HappyVoiceSession.web.tsx), so the gateway no longer
+// exposes /session/text or /session/context.
 
 export interface HappyVoiceTtsResponse {
     audioBase64: string;

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Happy Voice (火山/豆包) 测试台</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; color: #1d1d1f; }
+    h1 { font-size: 20px; }
+    .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+    label { width: 120px; color: #555; font-size: 13px; }
+    input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+    button { padding: 10px 18px; border: 0; border-radius: 10px; font-size: 15px; cursor: pointer; }
+    #start { background: #0a84ff; color: #fff; }
+    #stop { background: #ff3b30; color: #fff; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    .state { font-weight: 600; padding: 6px 12px; border-radius: 999px; background: #eee; display: inline-block; min-width: 90px; text-align: center; }
+    .state.thinking { background: #ffe9a8; } .state.speaking { background: #c8f0c8; } .state.error { background: #ffd0cc; }
+    #subs { margin-top: 16px; border: 1px solid #eee; border-radius: 10px; padding: 12px; min-height: 120px; white-space: pre-wrap; font-size: 14px; }
+    #log { margin-top: 12px; font-size: 12px; color: #888; white-space: pre-wrap; max-height: 200px; overflow: auto; }
+    .sub-user { color: #0a84ff; } .sub-bot { color: #1d8a3a; }
+  </style>
+</head>
+<body>
+  <h1>🎙️ Happy Voice 测试台 (火山 RTC + 豆包)</h1>
+  <p style="color:#666;font-size:13px">点「开始」授权麦克风后即可对豆包说话。注意：此页不连 happy-server，所以"操控 Claude Code 的工具"不会真正执行，但纯语音对话可完整验证。</p>
+  <div class="row"><label>网关地址</label><input id="base" value="" placeholder="留空=同源" /></div>
+  <div class="row"><label>VOICE_PUBLIC_KEY</label><input id="key" value="dev-voice-public-key" /></div>
+  <div class="row">
+    <button id="start">开始对话</button>
+    <button id="stop" disabled>结束</button>
+    <span class="state" id="state">idle</span>
+  </div>
+  <div id="subs"></div>
+  <div id="log"></div>
+
+  <script type="module">
+    import VERTC, { MediaType, RoomProfileType } from 'https://cdn.jsdelivr.net/npm/@volcengine/rtc@4.66.37/+esm';
+
+    const $ = (id) => document.getElementById(id);
+    const log = (m) => { $('log').textContent += m + '\n'; $('log').scrollTop = 1e9; console.log(m); };
+    const setState = (s) => { const e = $('state'); e.textContent = s; e.className = 'state ' + s; };
+    let engine = null, gsid = null, agentUid = null;
+
+    function tlvDecode(buf) {
+      const t = new Uint8Array(buf, 0, 4), l = new Uint8Array(buf, 4, 4), v = new Uint8Array(buf, 8);
+      let type = ''; for (let i = 0; i < 4; i++) type += String.fromCharCode(t[i]);
+      const len = (l[0] << 24) | (l[1] << 16) | (l[2] << 8) | l[3];
+      return { type, value: new TextDecoder().decode(v.subarray(0, len)) };
+    }
+    const BRIEF = { 1: 'idle', 2: 'thinking', 3: 'speaking', 4: 'idle', 5: 'idle' };
+    function addSub(who, text) {
+      const d = document.createElement('div');
+      d.className = who === 'user' ? 'sub-user' : 'sub-bot';
+      d.textContent = (who === 'user' ? '🧑 ' : '🤖 ') + text;
+      $('subs').appendChild(d); $('subs').scrollTop = 1e9;
+    }
+
+    $('start').onclick = async () => {
+      try {
+        $('start').disabled = true;
+        const base = $('base').value.replace(/\/+$/, '');
+        setState('connecting');
+        log('POST /v1/voice/session/start ...');
+        const r = await fetch(base + '/v1/voice/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-voice-key': $('key').value },
+          body: JSON.stringify({ userId: 'web-test', sessionId: 'web-test-' + Date.now(), language: 'zh' }),
+        });
+        if (!r.ok) throw new Error('start failed: ' + r.status + ' ' + await r.text());
+        const s = await r.json();
+        gsid = s.gatewaySessionId; agentUid = s.agentUid;
+        log('room=' + s.roomId + ' uid=' + s.uid + ' agent=' + s.agentUid);
+
+        engine = VERTC.createEngine(s.appId);
+        engine.on(VERTC.events.onError, (e) => log('RTC error: ' + JSON.stringify(e)));
+        engine.on(VERTC.events.onUserJoined, (e) => log('user joined: ' + (e?.userInfo?.userId)));
+        engine.on(VERTC.events.onUserPublishStream, (e) => log('publish: ' + e.userId));
+        engine.on(VERTC.events.onAutoplayFailed, () => {
+          log('autoplay blocked — click page to resume');
+          const resume = () => { try { engine.play?.(); } catch {} window.removeEventListener('pointerdown', resume); };
+          window.addEventListener('pointerdown', resume, { once: true });
+        });
+        engine.on(VERTC.events.onRoomBinaryMessageReceived, (e) => {
+          try {
+            const { type, value } = tlvDecode(e.message);
+            if (type === 'conv') {
+              const p = JSON.parse(value); const code = p?.Stage?.Code;
+              if (BRIEF[code]) setState(BRIEF[code]);
+            } else if (type === 'subv') {
+              const d = JSON.parse(value)?.data?.[0];
+              if (d?.text) addSub(d.userId === agentUid ? 'bot' : 'user', d.text);
+            }
+          } catch {}
+        });
+
+        log('joinRoom ...');
+        await engine.joinRoom(s.rtcToken, s.roomId, { userId: s.uid },
+          { isAutoPublish: true, isAutoSubscribeAudio: true, roomProfileType: RoomProfileType.chat });
+        await engine.startAudioCapture();
+        setState('idle');
+        $('stop').disabled = false;
+        log('✅ connected — 开始说话吧');
+      } catch (err) {
+        setState('error'); log('❌ ' + (err?.message || err)); $('start').disabled = false;
+      }
+    };
+
+    $('stop').onclick = async () => {
+      $('stop').disabled = true;
+      try { await engine?.stopAudioCapture(); await engine?.leaveRoom(); VERTC.destroyEngine(engine); } catch (e) { log('leave err: ' + e); }
+      engine = null;
+      const base = $('base').value.replace(/\/+$/, '');
+      if (gsid) fetch(base + '/v1/voice/session/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-voice-key': $('key').value }, body: JSON.stringify({ gatewaySessionId: gsid }) }).catch(() => {});
+      setState('idle'); $('start').disabled = false; log('stopped');
+    };
+  </script>
+</body>
+</html>

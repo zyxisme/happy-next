@@ -1,67 +1,52 @@
-import dotenv from 'dotenv';
 import { z } from 'zod';
 
-dotenv.config({ path: process.env.HAPPY_VOICE_ENV_FILE || '.env.local' });
+// Env is provided by `tsx --env-file=.env.local` in dev and by the container in prod.
 
 const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     HOST: z.string().default('0.0.0.0'),
-    PORT: z.coerce.number().int().positive().default(3040),
+    PORT: z.coerce.number().int().positive().default(3045),
 
+    // App-facing auth (x-voice-key).
     VOICE_PUBLIC_KEY: z.string().min(1, 'VOICE_PUBLIC_KEY is required'),
 
-    LIVEKIT_URL: z.string().min(1, 'LIVEKIT_URL is required'),
-    LIVEKIT_WS_URL: z.string().optional(),
-    LIVEKIT_API_KEY: z.string().min(1, 'LIVEKIT_API_KEY is required'),
-    LIVEKIT_API_SECRET: z.string().min(1, 'LIVEKIT_API_SECRET is required'),
-    LIVEKIT_AGENT_NAME: z.string().default('happy-voice-agent'),
-    LIVEKIT_ROOM_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
-    LIVEKIT_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(600),
+    // RTC (audio transport + room join token). Use the "AI agent" type RTC app.
+    VOLC_RTC_APP_ID: z.string().min(1, 'VOLC_RTC_APP_ID is required'),
+    VOLC_RTC_APP_KEY: z.string().min(1, 'VOLC_RTC_APP_KEY is required'),
+    // OpenAPI signing (IAM access key) for StartVoiceChat / StopVoiceChat.
+    VOLC_ACCESS_KEY_ID: z.string().min(1, 'VOLC_ACCESS_KEY_ID is required'),
+    VOLC_SECRET_ACCESS_KEY: z.string().min(1, 'VOLC_SECRET_ACCESS_KEY is required'),
+    VOLC_RTC_REGION: z.string().default('cn-north-1'),
+    VOLC_RTC_API_VERSION: z.string().default('2025-06-01'),
+    RTC_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(86400),
 
-    AGENT_STT: z.string().default('openai/gpt-4o-mini-transcribe:zh'),
-    AGENT_LLM: z.string().default('openai/gpt-4.1-mini'),
-    AGENT_TTS: z.string().default('cartesia/sonic-3:9626c31c-bec5-4cca-baa8-f8ba9e84c8bc'),
-    // Required when AGENT_TTS is a cartesia/* model (used by the /tts/bytes REST call).
-    CARTESIA_API_KEY: z.string().optional(),
-    // TTS speech-text cleaning (POST /v1/voice/tts). Never blocks playback:
-    // on any failure the route falls back to the original text.
-    TTS_CLEAN_ENABLED: z
-        .string()
-        .default('true')
-        .transform((v) => {
-            const s = v.trim().toLowerCase();
-            return s !== 'false' && s !== '0' && s !== 'off';
-        }),
-    TTS_CLEAN_MODEL: z.string().optional(),
-    TTS_CLEAN_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
-    // For reasoning models only (e.g. "low"): forwarded as reasoning_effort to cut
-    // latency. Leave empty for non-reasoning models, which would reject it.
-    TTS_CLEAN_REASONING_EFFORT: z.string().optional(),
-    PROMPT_TTS_CLEAN_FILE: z.string().default('prompts/tts-clean.system.txt'),
-    AGENT_WELCOME_MESSAGE: z.string().default('Say hello and ask what the user wants to build.'),
-    AGENT_READY_PLAYOUT_MODE: z.enum(['best_effort', 'strict']).default('best_effort'),
-    AGENT_READY_SUMMARY_MODEL: z.string().optional(),
-    AGENT_READY_SUMMARY_TIMEOUT_MS: z.coerce.number().int().positive().default(7000),
-    AGENT_READY_SUMMARY_INPUT_MAX_CHARS: z.coerce.number().int().positive().default(2200),
-    AGENT_MIN_ENDPOINTING_DELAY_MS: z.coerce.number().int().positive().default(1600),
-    AGENT_MAX_ENDPOINTING_DELAY_MS: z.coerce.number().int().positive().default(7000),
-    AGENT_VAD_ACTIVATION_THRESHOLD: z.coerce.number().min(0).max(1).default(0.5),
-    AGENT_VAD_MIN_SPEECH_DURATION_MS: z.coerce.number().int().nonnegative().default(50),
-    AGENT_VAD_MIN_SILENCE_DURATION_MS: z.coerce.number().int().nonnegative().default(550),
-    AGENT_VAD_PREFIX_PADDING_DURATION_MS: z.coerce.number().int().nonnegative().default(500),
-    AGENT_LOG_LLM_IO: z.string().default('true'),
+    // ASR (seed bigmodel; auth is bound to the agent RTC app — no separate token).
+    VOLC_ASR_RESOURCE_ID: z.string().default('volc.seedasr.sauc.duration'),
+    VOLC_ASR_STREAM_MODE: z.coerce.number().int().default(2),
+    VOLC_ASR_SILENCE_MS: z.coerce.number().int().positive().default(600),
 
-    // Prompt templates (support docker volume overrides)
-    PROMPT_VOICE_MAIN_FILE: z.string().default('prompts/voice-main.system.txt'),
-    PROMPT_VOICE_TOOL_FOLLOWUP_FILE: z.string().default('prompts/voice-tool-followup.system.txt'),
-    PROMPT_VOICE_READY_SUMMARY_FILE: z.string().default('prompts/voice-ready-summary.system.txt'),
-    PROMPT_RECENT_VOICE_MESSAGES: z.coerce.number().int().positive().default(12),
-    PROMPT_RECENT_APP_CONTEXT_MESSAGES: z.coerce.number().int().positive().default(12),
-    PROMPT_RECENT_MAX_CHARS: z.coerce.number().int().positive().default(6000),
+    // LLM (Doubao via built-in ArkV3 — runs inside Volcano, streaming).
+    DOUBAO_MODEL: z.string().default('doubao-seed-2-0-lite-260215'),
+    LLM_THINKING_TYPE: z.string().default('disabled'),
+    LLM_HISTORY_LENGTH: z.coerce.number().int().positive().default(10),
+    LLM_TEMPERATURE: z.coerce.number().default(0.1),
+    LLM_TOP_P: z.coerce.number().default(0.3),
+    LLM_MAX_TOKENS: z.coerce.number().int().positive().default(1024),
 
-    TOOL_BRIDGE_BASE_URL: z.string().optional(),
-    TOOL_BRIDGE_API_KEY: z.string().optional(),
-    TOOL_BRIDGE_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+    // Agent TTS (bidirectional streaming, for the live conversation).
+    VOLC_AGENT_TTS_RESOURCE_ID: z.string().default('seed-tts-1.0'),
+    VOLC_AGENT_TTS_SPEAKER: z.string().default('zh_female_vv_mars_bigtts'),
+
+    // Message-playback TTS (one-shot REST, for the app's "read message aloud" feature).
+    VOLC_TTS_APP_ID: z.string().min(1, 'VOLC_TTS_APP_ID is required'),
+    VOLC_TTS_TOKEN: z.string().min(1, 'VOLC_TTS_TOKEN is required'),
+    VOLC_TTS_CLUSTER: z.string().default('volcano_tts'),
+    VOLC_TTS_VOICE_TYPE: z.string().default('zh_female_vv_uranus_bigtts'),
+
+    DEFAULT_LANGUAGE: z.string().default('zh'),
+    AGENT_WELCOME_MESSAGE: z.string().default('你好，需要我做点什么？'),
+
+    PROMPT_VOICE_AGENT_FILE: z.string().default('prompts/voice-agent.system.txt'),
 });
 
 const parsed = envSchema.safeParse(process.env);

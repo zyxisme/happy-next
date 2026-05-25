@@ -68,6 +68,7 @@
     "@more-tech/react-native-libsodium": "^1.5.5",
     "@noble/ed25519": "^3.0.0",
     "@paralleldrive/cuid2": "^3.3.0",
+    "@volcengine/rtc": "~4.66.20",
     "@peoplesgrocers/seti-ui-file-icons": "1.11.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.0.1",

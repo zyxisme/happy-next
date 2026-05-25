@@ -1,15 +1,27 @@
 export type VoiceSessionState = 'starting' | 'active' | 'stopped' | 'error';
 
+export interface HappyVoiceContextPayload {
+    version: 1;
+    format: 'happy-app-context-v1';
+    contentType: 'text/plain';
+    text: string;
+    createdAt: string;
+}
+
 export interface VoiceSessionRecord {
     gatewaySessionId: string;
     userId: string;
     appSessionId: string;
-    roomName: string;
-    participantIdentity: string;
-    dispatchId?: string;
-    state: VoiceSessionState;
-    initialContextPayload?: HappyVoiceContextPayload;
+    /** Volcano RTC room id */
+    roomId: string;
+    /** StartVoiceChat task id (== roomId by convention) */
+    taskId: string;
+    /** Human participant RTC uid */
+    uid: string;
+    /** AIGC agent (bot) RTC uid */
+    agentUid: string;
     language?: string;
+    state: VoiceSessionState;
     createdAt: string;
     updatedAt: string;
     expiresAt: string;
@@ -28,17 +40,11 @@ export interface VoiceStartRequest {
 export interface VoiceStartResponse {
     allowed: boolean;
     gatewaySessionId: string;
-    roomName: string;
-    roomUrl: string;
-    participantIdentity: string;
-    participantToken: string;
+    provider: 'volc-rtc';
+    appId: string;
+    roomId: string;
+    uid: string;
+    agentUid: string;
+    rtcToken: string;
     expiresAt: string;
-}
-
-export interface HappyVoiceContextPayload {
-    version: 1;
-    format: 'happy-app-context-v1';
-    contentType: 'text/plain';
-    text: string;
-    createdAt: string;
 }

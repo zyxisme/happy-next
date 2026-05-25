@@ -1,8 +1,8 @@
 import { Session } from "@/sync/storageTypes";
 import { Message } from "@/sync/typesMessage";
 import { trimIdent } from "@/utils/trimIdent";
-import { config } from "@/config";
 import { VOICE_CONFIG } from "../voiceConfig";
+import { getVoiceProvider } from "@/sync/voiceConfig";
 
 interface SessionMetadata {
     summary?: { text?: string };
@@ -64,7 +64,7 @@ export function formatMessage(message: Message): string | null {
 
     // Lines
     let lines: string[] = [];
-    if (config.voiceProvider === 'happy-voice') {
+    if (getVoiceProvider() === 'happy-voice') {
         const obj = formatMessageObj(message);
         if (!obj) return null;
         return JSON.stringify(obj);
@@ -91,7 +91,7 @@ export function formatMessage(message: Message): string | null {
 }
 
 export function formatNewSingleMessage(sessionId: string, message: Message): string | null {
-    if (config.voiceProvider === 'happy-voice') {
+    if (getVoiceProvider() === 'happy-voice') {
         const obj = formatMessageObj(message);
         if (!obj) return null;
         return JSON.stringify({ type: 'messages', messages: [obj] });
@@ -104,7 +104,7 @@ export function formatNewSingleMessage(sessionId: string, message: Message): str
 }
 
 export function formatNewMessages(sessionId: string, messages: Message[]): string | null {
-    if (config.voiceProvider === 'happy-voice') {
+    if (getVoiceProvider() === 'happy-voice') {
         const objs = [...messages]
             .sort((a, b) => a.createdAt - b.createdAt)
             .map(formatMessageObj)
@@ -137,12 +137,12 @@ export function formatHistory(sessionId: string, messages: Message[]): string {
         ? messages.slice(0, VOICE_CONFIG.MAX_HISTORY_MESSAGES)
         : messages;
 
-    if (config.voiceProvider === 'happy-voice') {
+    if (getVoiceProvider() === 'happy-voice') {
         // Stored message order is newest->oldest; Happy Voice providers use oldest->newest.
         messagesToFormat = [...messagesToFormat].reverse();
     }
     let formatted = messagesToFormat.map(formatMessage).filter(Boolean);
-    if (config.voiceProvider === 'happy-voice') {
+    if (getVoiceProvider() === 'happy-voice') {
         return formatted.join('\n');
     }
     return 'History of messages in session: ' + sessionId + '\n\n' + formatted.join('\n\n');
@@ -156,7 +156,7 @@ export function formatSessionFull(session: Session, messages: Message[]): string
     const sessionName = session.metadata?.summary?.text;
     const sessionPath = session.metadata?.path;
 
-    if (config.voiceProvider === 'happy-voice') {
+    if (getVoiceProvider() === 'happy-voice') {
         return JSON.stringify({
             type: 'session',
             sessionId: session.id,

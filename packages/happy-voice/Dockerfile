@@ -4,7 +4,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates libglib2.0-0 \
+    && apt-get install -y --no-install-recommends ca-certificates \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -15,4 +15,4 @@ COPY sources ./sources
 COPY prompts ./prompts
 COPY tsconfig.json ./
 
-CMD ["yarn", "start:api"]
+CMD ["yarn", "start"]

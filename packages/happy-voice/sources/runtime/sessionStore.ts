@@ -19,18 +19,17 @@ export const sessionStore = {
     markState(gatewaySessionId: string, state: VoiceSessionState, lastError?: string) {
         const existing = sessions.get(gatewaySessionId);
         if (!existing) return undefined;
-        const updated: VoiceSessionRecord = {
-            ...existing,
-            state,
-            lastError,
-            updatedAt: nowIso(),
-        };
+        const updated: VoiceSessionRecord = { ...existing, state, lastError, updatedAt: nowIso() };
         sessions.set(gatewaySessionId, updated);
         return updated;
     },
 
     list() {
         return Array.from(sessions.values());
+    },
+
+    delete(gatewaySessionId: string) {
+        sessions.delete(gatewaySessionId);
     },
 
     pruneExpired() {
