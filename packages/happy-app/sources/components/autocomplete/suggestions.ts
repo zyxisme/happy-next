@@ -12,7 +12,7 @@ export async function getCommandSuggestions(sessionId: string, query: string): P
     const searchTerm = query.slice(1);
 
     try {
-        const commands = await searchCommands(sessionId, searchTerm, { limit: 5 });
+        const commands = await searchCommands(sessionId, searchTerm);
 
         return commands.map((cmd: CommandItem) => ({
             key: `cmd-${cmd.command}`,
@@ -62,7 +62,7 @@ export async function getFileMentionSuggestions(sessionId: string, query: string
     const searchTerm = query.slice(1);
 
     try {
-        const files = await searchFiles(sessionId, searchTerm, { limit: 5 });
+        const files = await searchFiles(sessionId, searchTerm, { limit: 50 });
 
         return files.map((file: FileItem) => ({
             key: `file-${file.fullPath}`,
