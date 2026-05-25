@@ -20,6 +20,7 @@ import { useSetting } from "@/sync/storage";
 import { showCopiedToast, showToast } from '@/components/Toast';
 import { formatMessageTime, formatFullMessageTime } from '@/utils/messageTime';
 import { hapticsLight } from './haptics';
+import { useMessageTts } from '@/hooks/useMessageTts';
 
 export const MessageView = (props: {
   message: Message;
@@ -66,8 +67,11 @@ function MessageActionBar(props: {
   onCopy?: () => void;
   onFork?: () => void;
   forkLoading?: boolean;
+  onSpeak?: () => void | Promise<void>;
+  ttsState?: 'idle' | 'loading' | 'playing';
 }) {
   const { theme } = useUnistyles();
+  const ttsState = props.ttsState ?? 'idle';
   // Web: visible only on hover (but the row always occupies layout space).
   // Native: always visible. While a fork is in progress, force the bar visible
   // on web so the in-icon spinner is shown even if the cursor moved away.
@@ -89,6 +93,25 @@ function MessageActionBar(props: {
           hitSlop={6}
         >
           <Ionicons name="copy-outline" size={14} color={theme.colors.textSecondary} />
+        </Pressable>
+      ) : null}
+      {props.onSpeak ? (
+        <Pressable
+          style={styles.actionButton}
+          onPress={ttsState === 'loading' ? undefined : () => { hapticsLight(); props.onSpeak?.(); }}
+          disabled={ttsState === 'loading'}
+          accessibilityLabel={ttsState === 'playing' ? t('message.stopVoice') : t('message.playVoice')}
+          hitSlop={6}
+        >
+          {ttsState === 'loading' ? (
+            <ActivityIndicator size="small" color={theme.colors.textSecondary} style={styles.actionSpinner} />
+          ) : (
+            <Ionicons
+              name={ttsState === 'playing' ? 'pause-circle-outline' : 'play-circle-outline'}
+              size={16}
+              color={theme.colors.textSecondary}
+            />
+          )}
         </Pressable>
       ) : null}
       {props.onFork ? (
@@ -375,11 +398,6 @@ function AgentTextBlock(props: {
   const showThinkingMessages = useSetting('showThinkingMessages');
   const [optionsLoadingState, setOptionsLoadingState] = React.useState<OptionsLoadingState>({ loadingIndex: null });
 
-  // Hide thinking messages if setting is disabled
-  if (props.message.isThinking && !showThinkingMessages) {
-    return null;
-  }
-
   // Click to send
   const handleOptionPress = React.useCallback(async (option: Option, allOptions: OptionItemData[]) => {
     if (option.destructive) {
@@ -420,6 +438,13 @@ function AgentTextBlock(props: {
   const handleCopy = React.useCallback(() => {
     copyMessageText(messageText);
   }, [messageText]);
+  const { state: ttsState, toggle: handleSpeak } = useMessageTts(props.message.id, messageText);
+
+  // Hide thinking messages if setting is disabled. Must run AFTER all hooks so
+  // the hook count stays constant across renders (Rules of Hooks).
+  if (props.message.isThinking && !showThinkingMessages) {
+    return null;
+  }
 
   return (
     <View
@@ -443,6 +468,8 @@ function AgentTextBlock(props: {
           createdAt={props.message.createdAt}
           onCopy={messageText ? handleCopy : undefined}
           onFork={props.onFork}
+          onSpeak={messageText ? handleSpeak : undefined}
+          ttsState={ttsState}
         />
       )}
     </View>

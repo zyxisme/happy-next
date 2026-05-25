@@ -114,3 +114,23 @@ export async function sendHappyVoiceContext(
         throw new Error(`Failed to send voice context: ${response.status} ${errorText}`);
     }
 }
+
+export interface HappyVoiceTtsResponse {
+    audioBase64: string;
+    mimeType: string;
+}
+
+export async function synthesizeSpeech(text: string): Promise<HappyVoiceTtsResponse> {
+    const response = await fetch(`${getVoiceGatewayUrl()}/v1/voice/tts`, {
+        method: 'POST',
+        headers: getVoiceGatewayHeaders(),
+        body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to synthesize speech: ${response.status} ${errorText}`);
+    }
+
+    return await response.json();
+}

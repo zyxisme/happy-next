@@ -1395,6 +1395,8 @@ export const ca: TranslationStructure = {
         confirmDestructive: 'Confirmar acció',
         confirmDestructiveMessage: 'Aquesta és una acció destructiva. Esteu segur que voleu continuar?',
         forkFromHere: 'Bifurca des d\'aquí',
+        playVoice: 'Reprodueix la veu',
+        stopVoice: 'Atura la veu',
     },
 
     codex: {

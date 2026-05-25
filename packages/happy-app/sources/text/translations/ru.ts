@@ -1394,6 +1394,8 @@ export const ru: TranslationStructure = {
         confirmDestructive: 'Подтвердите действие',
         confirmDestructiveMessage: 'Это деструктивное действие. Вы уверены, что хотите продолжить?',
         forkFromHere: 'Форкнуть отсюда',
+        playVoice: 'Озвучить',
+        stopVoice: 'Остановить',
     },
 
     codex: {

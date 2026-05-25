@@ -1395,6 +1395,8 @@ export const pt: TranslationStructure = {
         confirmDestructive: 'Confirmar ação',
         confirmDestructiveMessage: 'Esta é uma ação destrutiva. Tem certeza de que deseja continuar?',
         forkFromHere: 'Bifurcar a partir daqui',
+        playVoice: 'Reproduzir voz',
+        stopVoice: 'Parar voz',
     },
 
     codex: {

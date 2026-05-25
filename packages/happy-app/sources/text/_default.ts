@@ -1414,6 +1414,8 @@ export const en = {
         confirmDestructive: 'Confirm action',
         confirmDestructiveMessage: 'This is a destructive action. Are you sure you want to proceed?',
         forkFromHere: 'Fork from here',
+        playVoice: 'Play voice',
+        stopVoice: 'Stop voice',
     },
 
     codex: {

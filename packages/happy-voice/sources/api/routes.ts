@@ -14,6 +14,7 @@ import {
     sendRoomData,
 } from '../runtime/livekit';
 import { sessionStore } from '../runtime/sessionStore';
+import { synthesizeToWav } from '../runtime/tts';
 import type {
     HappyVoiceContextPayload,
     VoiceSessionRecord,
@@ -75,6 +76,10 @@ const contextSchema = z.object({
         text: z.string().min(1),
         createdAt: z.string().min(1),
     }),
+});
+
+const ttsSchema = z.object({
+    text: z.string().min(1).max(5000),
 });
 
 export function registerRoutes(
@@ -330,6 +335,46 @@ export function registerRoutes(
         } catch (error) {
             logError('Failed to forward context update to room', { gatewaySessionId, error });
             return reply.send({ accepted: false, note: 'room data publish failed' });
+        }
+    });
+
+    typed.post('/v1/voice/tts', {
+        schema: {
+            body: ttsSchema,
+            response: {
+                200: z.object({
+                    audioBase64: z.string(),
+                    mimeType: z.string(),
+                }),
+                401: z.object({
+                    error: z.string(),
+                    message: z.string(),
+                }),
+                500: z.object({
+                    error: z.string(),
+                    message: z.string(),
+                }),
+            },
+        },
+    }, async (request, reply) => {
+        if (!isAuthorized(request)) {
+            return rejectUnauthorized(reply);
+        }
+
+        const { text } = ttsSchema.parse(request.body);
+        try {
+            const wav = await synthesizeToWav(text);
+            logInfo('TTS synthesis completed', { chars: text.length, bytes: wav.length });
+            return reply.send({
+                audioBase64: wav.toString('base64'),
+                mimeType: 'audio/wav',
+            });
+        } catch (error) {
+            logError('TTS synthesis failed', { error, chars: text.length });
+            return reply.code(500).send({
+                error: 'tts_failed',
+                message: error instanceof Error ? error.message : 'Unknown error',
+            });
         }
     });
 }

@@ -1397,6 +1397,8 @@ export const zhHant: TranslationStructure = {
         confirmDestructive: '確認操作',
         confirmDestructiveMessage: '這是一個危險操作，確定要執行嗎？',
         forkFromHere: '從這裡分叉',
+        playVoice: '朗讀',
+        stopVoice: '停止朗讀',
     },
 
     codex: {

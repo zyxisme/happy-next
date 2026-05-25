@@ -1427,6 +1427,8 @@ export const ja: TranslationStructure = {
         confirmDestructive: '操作の確認',
         confirmDestructiveMessage: 'これは破壊的な操作です。実行してもよろしいですか？',
         forkFromHere: 'ここから分岐',
+        playVoice: '読み上げ',
+        stopVoice: '停止',
     },
 
     codex: {

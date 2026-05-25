@@ -8,8 +8,6 @@ import {
     llm,
     voice,
 } from '@livekit/agents';
-import * as cartesiaTts from '@livekit/agents-plugin-cartesia';
-import * as elevenlabsTts from '@livekit/agents-plugin-elevenlabs';
 import * as openaiPlugin from '@livekit/agents-plugin-openai';
 import * as silero from '@livekit/agents-plugin-silero';
 import { BackgroundVoiceCancellation } from '@livekit/noise-cancellation-node';
@@ -36,6 +34,7 @@ import { withLLMLogging } from '../runtime/loggingLlm';
 import { loadAndRenderPromptFile } from '../runtime/prompts';
 import { sendRoomData } from '../runtime/livekit';
 import { toolBridgeClient } from '../runtime/toolBridge';
+import { createTts, stripProviderPrefix } from '../runtime/tts';
 import type { HappyVoiceContextPayload } from '../types/voice';
 import {
     type BridgedVoiceToolName,
@@ -198,22 +197,6 @@ function isLlmIoLoggingEnabled(): boolean {
     return rawValue !== 'false' && rawValue !== '0' && rawValue !== 'off';
 }
 
-/** Strip provider prefix: "openai/gpt-5.2" → "gpt-5.2" */
-function stripProviderPrefix(modelString: string): string {
-    const idx = modelString.indexOf('/');
-    return idx !== -1 ? modelString.slice(idx + 1) : modelString;
-}
-
-/** Parse TTS model string: "cartesia/sonic-3:voice-id" → { model, voice } */
-function parseTTSModelString(modelString: string): { model: string; voice?: string } {
-    const name = stripProviderPrefix(modelString);
-    const idx = name.indexOf(':');
-    if (idx !== -1) {
-        return { model: name.slice(0, idx), voice: name.slice(idx + 1) };
-    }
-    return { model: name };
-}
-
 /** Parse STT model string: "openai/gpt-4o-mini-transcribe:zh" → { model, language } */
 function parseSTTModelString(modelString: string): { model: string; language?: string } {
     const name = stripProviderPrefix(modelString);
@@ -275,24 +258,6 @@ function createLlm(modelString: string): llm.LLM {
     }
     return base;
 }
-
-/** Create a TTS instance: "cartesia/...", "openai/...", "elevenlabs/..." uses direct plugin, otherwise LiveKit Inference string. */
-function createTts(modelString: string): cartesiaTts.TTS | openaiPlugin.TTS | elevenlabsTts.TTS | string {
-    if (modelString.startsWith('cartesia/')) {
-        const { model, voice } = parseTTSModelString(modelString);
-        return new cartesiaTts.TTS({ model, voice, language: 'zh' });
-    }
-    if (modelString.startsWith('openai/')) {
-        const { model, voice } = parseTTSModelString(modelString);
-        return new openaiPlugin.TTS({ model, voice: (voice || 'alloy') as any });
-    }
-    if (modelString.startsWith('elevenlabs/')) {
-        const { model, voice } = parseTTSModelString(modelString);
-        return new elevenlabsTts.TTS({ model, voiceId: voice });
-    }
-    return modelString;
-}
-
 
 function getMainSessionLlm(): llm.LLM {
     const model = env.AGENT_LLM;
