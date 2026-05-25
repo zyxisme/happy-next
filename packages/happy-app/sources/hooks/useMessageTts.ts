@@ -11,6 +11,20 @@ let currentPlayingId: string | null = null;
 const listeners = new Set<() => void>();
 function notifyAll() { listeners.forEach(fn => fn()); }
 
+/**
+ * expo-audio releases a player's native shared object when its source changes (or
+ * on unmount). Calling a method on a released player throws
+ * NativeSharedObjectNotFoundException, so all imperative calls are wrapped to
+ * swallow that race rather than crash the app.
+ */
+function safePlayerCall(fn: () => void) {
+    try {
+        fn();
+    } catch {
+        // Player was released underneath us; nothing to do.
+    }
+}
+
 /** Turn synthesized base64 audio into a playable URI (data URI on web, cache file on native). */
 async function writeAudioUri(messageId: string, audioBase64: string, mimeType: string): Promise<string> {
     if (Platform.OS === 'web') {
@@ -32,6 +46,9 @@ export function useMessageTts(messageId: string, text: string | null | undefined
     const [uri, setUri] = React.useState<string | null>(null);
     const [loading, setLoading] = React.useState(false);
     const loadingRef = React.useRef(false);
+    // Set when synthesis just produced a uri: play as soon as the (newly created)
+    // player finishes loading the source. See the isLoaded effect below.
+    const pendingPlayRef = React.useRef(false);
     const player = useAudioPlayer(uri || undefined);
     const status = useAudioPlayerStatus(player);
     const [, forceUpdate] = React.useReducer((x: number) => x + 1, 0);
@@ -45,12 +62,13 @@ export function useMessageTts(messageId: string, text: string | null | undefined
     // Invalidate cached audio if the message text changes (e.g. streamed/edited messages).
     React.useEffect(() => {
         setUri(null);
+        pendingPlayRef.current = false;
     }, [text]);
 
     // Pause if another message took over playback.
     React.useEffect(() => {
         if (currentPlayingId !== null && currentPlayingId !== messageId && status.playing) {
-            player.pause();
+            safePlayerCall(() => player.pause());
         }
     }, [currentPlayingId, messageId, status.playing, player]);
 
@@ -60,15 +78,14 @@ export function useMessageTts(messageId: string, text: string | null | undefined
     const toggle = React.useCallback(async () => {
         if (!text) return;
         if (isPlaying) {
-            player.pause();
+            safePlayerCall(() => player.pause());
             currentPlayingId = null;
             notifyAll();
             return;
         }
         if (uri) {
             currentPlayingId = messageId;
-            player.seekTo(0);
-            player.play();
+            safePlayerCall(() => { player.seekTo(0); player.play(); });
             notifyAll();
             return;
         }
@@ -79,7 +96,8 @@ export function useMessageTts(messageId: string, text: string | null | undefined
             const { audioBase64, mimeType } = await synthesizeSpeech(text);
             const newUri = await writeAudioUri(messageId, audioBase64, mimeType);
             currentPlayingId = messageId;
-            setUri(newUri); // effect below starts playback once the source is set
+            pendingPlayRef.current = true;
+            setUri(newUri); // effect below starts playback once the new player has loaded
             notifyAll();
         } catch {
             // Never surface loading errors; reset to idle so the user can retry.
@@ -89,17 +107,18 @@ export function useMessageTts(messageId: string, text: string | null | undefined
         }
     }, [text, isPlaying, uri, player, messageId]);
 
-    // Once a freshly-synthesized uri is set and this message is the designated one, play it.
+    // Changing the source makes expo-audio create a brand-new player whose audio
+    // is not loaded synchronously. Calling play() right after setUri() is a no-op,
+    // so we wait for the new player to report isLoaded before starting playback.
+    // pendingPlayRef gates this to a single play per synthesis (no replay on later
+    // status ticks).
     React.useEffect(() => {
-        if (uri && currentPlayingId === messageId && !status.playing) {
-            player.seekTo(0);
-            player.play();
+        if (pendingPlayRef.current && status.isLoaded && currentPlayingId === messageId) {
+            pendingPlayRef.current = false;
+            safePlayerCall(() => { player.seekTo(0); player.play(); });
             notifyAll();
         }
-        // Intentionally keyed on [uri] only: including status.playing/player/messageId
-        // would re-trigger play() on every status tick (e.g. replay after pause).
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [uri]);
+    }, [status.isLoaded, currentPlayingId, messageId, player]);
 
     // Clear singleton when playback finishes.
     React.useEffect(() => {
@@ -109,16 +128,20 @@ export function useMessageTts(messageId: string, text: string | null | undefined
         }
     }, [status.didJustFinish, messageId]);
 
-    // Stop on unmount if this message was playing.
+    // Clear the global singleton on unmount if this message owned playback.
+    // Keyed on [messageId] only (NOT player): expo-audio swaps the player instance
+    // whenever the source changes, and including it here would run this cleanup on
+    // every swap — pausing an already-released player (crash) and wrongly clearing
+    // currentPlayingId. We also don't call player.pause(): expo-audio's release()
+    // on unmount stops the audio, and the player may already be released.
     React.useEffect(() => {
         return () => {
             if (currentPlayingId === messageId) {
-                player.pause();
                 currentPlayingId = null;
                 notifyAll();
             }
         };
-    }, [messageId, player]);
+    }, [messageId]);
 
     return { state, toggle };
 }

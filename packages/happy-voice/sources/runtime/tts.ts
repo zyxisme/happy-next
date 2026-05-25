@@ -64,8 +64,63 @@ export function encodeWav(pcm: Int16Array, sampleRate: number, channels: number)
     return buffer;
 }
 
+// Cartesia REST. The LiveKit cartesia plugin's synthesize().collect() frames the
+// streamed audio through its real-time AudioByteStream machinery, which for a
+// one-shot request is ~3x slower than the plain /tts/bytes REST endpoint
+// (measured ~13s vs ~4.5s for 90 zh chars). For this one-shot endpoint we call
+// REST directly.
+const CARTESIA_TTS_URL = 'https://api.cartesia.ai/tts/bytes';
+const CARTESIA_VERSION = '2024-11-13';
+
+/** Build the Cartesia /tts/bytes request from a "cartesia/<model>:<voice>" string. Pure / testable. */
+export function buildCartesiaTtsRequest(modelString: string, text: string): {
+    url: string;
+    headers: Record<string, string>;
+    body: string;
+} {
+    const apiKey = env.CARTESIA_API_KEY;
+    if (!apiKey) {
+        throw new Error('CARTESIA_API_KEY is required for Cartesia TTS synthesis');
+    }
+    const { model, voice } = parseTTSModelString(modelString);
+    if (!voice) {
+        throw new Error(`Cartesia AGENT_TTS "${modelString}" is missing a voice id`);
+    }
+    return {
+        url: CARTESIA_TTS_URL,
+        headers: {
+            'Cartesia-Version': CARTESIA_VERSION,
+            'X-API-Key': apiKey,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model_id: model,
+            transcript: text,
+            voice: { mode: 'id', id: voice },
+            language: 'zh',
+            output_format: { container: 'wav', encoding: 'pcm_s16le', sample_rate: 44100 },
+        }),
+    };
+}
+
+async function synthesizeCartesiaToWav(modelString: string, text: string): Promise<Buffer> {
+    const { url, headers, body } = buildCartesiaTtsRequest(modelString, text);
+    const res = await fetch(url, { method: 'POST', headers, body });
+    if (!res.ok) {
+        // Truncate: the provider error body can carry internal details (e.g. key info).
+        const errText = (await res.text().catch(() => '')).slice(0, 300);
+        throw new Error(`Cartesia TTS failed: ${res.status} ${errText}`);
+    }
+    return Buffer.from(await res.arrayBuffer());
+}
+
 /** Synthesize text to a WAV buffer using the configured AGENT_TTS provider. */
 export async function synthesizeToWav(text: string): Promise<Buffer> {
+    // Cartesia: call REST directly (the streaming plugin paces audio ~real-time).
+    if (env.AGENT_TTS.startsWith('cartesia/')) {
+        return synthesizeCartesiaToWav(env.AGENT_TTS, text);
+    }
+    // Other providers: fall back to the LiveKit plugin's one-shot collect().
     const tts = createTts(env.AGENT_TTS);
     if (typeof tts === 'string') {
         throw new Error(`AGENT_TTS "${env.AGENT_TTS}" is not a directly synthesizable provider`);

@@ -73,9 +73,11 @@ function MessageActionBar(props: {
   const { theme } = useUnistyles();
   const ttsState = props.ttsState ?? 'idle';
   // Web: visible only on hover (but the row always occupies layout space).
-  // Native: always visible. While a fork is in progress, force the bar visible
-  // on web so the in-icon spinner is shown even if the cursor moved away.
-  const contentVisible = Platform.OS !== 'web' || props.hovered || !!props.forkLoading;
+  // Native: always visible. While a fork is in progress, or TTS is loading/playing,
+  // force the bar visible on web so the spinner / play state stays shown even if
+  // the cursor moved away.
+  const ttsActive = ttsState === 'loading' || ttsState === 'playing';
+  const contentVisible = Platform.OS !== 'web' || props.hovered || !!props.forkLoading || ttsActive;
   return (
     <View
       style={[

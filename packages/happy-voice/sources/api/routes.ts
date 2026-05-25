@@ -15,6 +15,7 @@ import {
 } from '../runtime/livekit';
 import { sessionStore } from '../runtime/sessionStore';
 import { synthesizeToWav } from '../runtime/tts';
+import { cleanTextForSpeech } from '../runtime/ttsTextCleaner';
 import type {
     HappyVoiceContextPayload,
     VoiceSessionRecord,
@@ -363,8 +364,14 @@ export function registerRoutes(
 
         const { text } = ttsSchema.parse(request.body);
         try {
-            const wav = await synthesizeToWav(text);
-            logInfo('TTS synthesis completed', { chars: text.length, bytes: wav.length });
+            const speakable = env.TTS_CLEAN_ENABLED ? await cleanTextForSpeech(text) : text;
+            const wav = await synthesizeToWav(speakable);
+            logInfo('TTS synthesis completed', {
+                chars: text.length,
+                cleanedChars: speakable.length,
+                cleaned: speakable !== text,
+                bytes: wav.length,
+            });
             return reply.send({
                 audioBase64: wav.toString('base64'),
                 mimeType: 'audio/wav',

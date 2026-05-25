@@ -21,6 +21,23 @@ const envSchema = z.object({
     AGENT_STT: z.string().default('openai/gpt-4o-mini-transcribe:zh'),
     AGENT_LLM: z.string().default('openai/gpt-4.1-mini'),
     AGENT_TTS: z.string().default('cartesia/sonic-3:9626c31c-bec5-4cca-baa8-f8ba9e84c8bc'),
+    // Required when AGENT_TTS is a cartesia/* model (used by the /tts/bytes REST call).
+    CARTESIA_API_KEY: z.string().optional(),
+    // TTS speech-text cleaning (POST /v1/voice/tts). Never blocks playback:
+    // on any failure the route falls back to the original text.
+    TTS_CLEAN_ENABLED: z
+        .string()
+        .default('true')
+        .transform((v) => {
+            const s = v.trim().toLowerCase();
+            return s !== 'false' && s !== '0' && s !== 'off';
+        }),
+    TTS_CLEAN_MODEL: z.string().optional(),
+    TTS_CLEAN_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+    // For reasoning models only (e.g. "low"): forwarded as reasoning_effort to cut
+    // latency. Leave empty for non-reasoning models, which would reject it.
+    TTS_CLEAN_REASONING_EFFORT: z.string().optional(),
+    PROMPT_TTS_CLEAN_FILE: z.string().default('prompts/tts-clean.system.txt'),
     AGENT_WELCOME_MESSAGE: z.string().default('Say hello and ask what the user wants to build.'),
     AGENT_READY_PLAYOUT_MODE: z.enum(['best_effort', 'strict']).default('best_effort'),
     AGENT_READY_SUMMARY_MODEL: z.string().optional(),
