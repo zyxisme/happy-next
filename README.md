@@ -111,6 +111,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Microphone mute, voice message send confirmation, "thinking" indicator
 - Context-aware voice: app state is injected into the voice LLM automatically
 - Auto-switch providers by prefix (e.g. `openai/gpt-4.1-mini`, `cartesia/sonic-3`)
+- Read any AI reply aloud with a one-tap voice button in the message footer (one-shot text-to-speech via the voice gateway, reusing the configured TTS provider)
 
 ### Multi-Repo Worktree Workspaces
 - Create, switch, and archive multi-repo workspaces from the app
@@ -174,6 +175,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Session rename with lock (prevent AI auto-update), search in history
 - Options click-to-send / long-press-to-fill, scroll-to-bottom button
 - "Always show context size" defaults to on so usage is visible without opening session details
+- Per-message action bar with copy, fork-from-here (with progress spinner), read-aloud, and full timestamp on web hover / native tap
 - Web desktop: hover-to-show copy button on chat messages and right-click on options reusing the mobile long-press behavior
 - Mobile text selection: in-app selection page uses browser-native long-press with static syntax highlighting (Lezer) for reliable first-tap selection on Android
 - Pull-to-refresh, inset dividers, Agent tool display with robot icon

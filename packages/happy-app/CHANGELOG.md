@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 11 - 2026-05-25
+
+Voice playback for AI replies, a per-message action bar, richer chat formatting, DooTask project autofill, session reliability fixes, and updated model catalogs.
+
+- Messages: read AI replies aloud with a new voice button in the message footer (text-to-speech via Happy Voice), one message at a time
+- Messages: per-message action bar with copy, fork-from-here (with progress spinner), and full timestamp on web hover / native tap
+- Messages: richer markdown rendering — code-block header with copy button, improved chat formatting
+- Composer: keep the keyboard-selected autocomplete suggestion in view; remove the hardcoded cap on slash-command and file autocomplete
+- Sessions: preserve 1M context when duplicating a session; several session-encryption reliability fixes (restore from cache, rebuild when entering an unencrypted session)
+- DooTask: auto-fill machine and working directory from the project's defaults; markdown indentation / underline / strikethrough; long sender-name truncation and localized assistant label
+- Models: curated Claude / Codex / Gemini catalogs, add Gemini 2.5 Flash Lite, centralized per-agent permission modes; Codex updated to 0.133.0
+- Agents: sync Claude tools and slash commands from the session init message; Codex skill autocomplete
+- Web & platform: theme-consistent native controls, color-scheme guard, HMR bundle-URL fix, refreshed iOS/Android splash images
+- CLI: prevent transient image-download failures from killing sessions; spawn Claude CLI via shell on Windows
+
 ## Version 10 - 2026-05-18
 
 Sessions cold-start reliability overhaul, local session list cache, agent picker on the machine page, ChatBubble text-overflow fix, iOS build fix, and Happy CLI v0.3.4 with PATH injection for system daemons.

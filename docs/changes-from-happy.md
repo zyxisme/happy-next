@@ -11,7 +11,7 @@ This document summarizes what changed in Happy Next compared to the original Hap
 | Orchestrator | Multi-agent DAG task scheduling with per-task model, working directory, and real-time monitoring |
 | Pending queue | Server-side message queue with auto-dispatch, queue panel UI, and send-now option |
 | Multi-agent | Claude Code, Codex, and Gemini are all first-class agents |
-| Voice | LiveKit-based voice gateway with pluggable STT/LLM/TTS providers |
+| Voice | LiveKit-based voice gateway with pluggable STT/LLM/TTS providers, plus read-aloud (TTS) of AI replies |
 | Workspaces | Multi-repo worktree creation, switching, archiving, and PR flows |
 | Code browser | File browser, Monaco editor, commit history, git stage/commit/discard, image preview |
 | Session sharing | Direct invite and public link sharing with E2E encryption and access control |
@@ -97,6 +97,7 @@ Happy Next includes a complete voice gateway stack, from a simple ElevenLabs-onl
 - **Speech fragment merging** for interrupted user turns
 - **Configurable welcome message** from app settings
 - **System prompt engineering**: English prompts, semantic XML separation, inline LLM hints
+- **Read-aloud for AI replies**: a one-shot `POST /v1/voice/tts` endpoint synthesizes a message's text (reusing the configured `AGENT_TTS` provider) and the app plays it from a voice button in the message footer, with single-message-at-a-time playback
 
 ## Multi-Repo Worktree Workspaces
 
@@ -225,6 +226,7 @@ Extensive improvements to the chat and session management experience.
 - **Session rename** with lock to prevent AI auto-update
 - **Session preview** on history page
 - **`/duplicate` command** in chat input to fork a session from any message (with DuplicateSheet picker)
+- **Per-message action bar**: copy, fork-from-here (with progress spinner), read-aloud (TTS), and full timestamp on web hover / native tap
 - **Options**: click-to-send and long-press-to-fill
 - **Context menu** improvements (web backdrop blur, mobile action sheets)
 - **Scroll-to-bottom button**
