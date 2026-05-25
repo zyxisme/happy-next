@@ -611,6 +611,8 @@ const styles = StyleSheet.create((theme) => ({
   },
   actionTime: {
     fontSize: 11,
+    height: 20,
+    lineHeight: 20,
     color: theme.colors.textSecondary,
   },
   actionSpinner: {
