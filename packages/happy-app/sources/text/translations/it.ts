@@ -987,6 +987,9 @@ export const it: TranslationStructure = {
         suggestion: {
             fileLabel: 'FILE',
             folderLabel: 'CARTELLA',
+            skillScopeRepo: 'REPO',
+            skillScopePersonal: 'UTENTE',
+            skillScopeSystem: 'SISTEMA',
         },
         noMachinesAvailable: 'Nessuna macchina',
     },

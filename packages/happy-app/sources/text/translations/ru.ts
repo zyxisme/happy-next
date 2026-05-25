@@ -968,6 +968,9 @@ export const ru: TranslationStructure = {
         suggestion: {
             fileLabel: 'ФАЙЛ',
             folderLabel: 'ПАПКА',
+            skillScopeRepo: 'РЕПО',
+            skillScopePersonal: 'ПОЛЬЗ',
+            skillScopeSystem: 'СИСТ',
         },
         noMachinesAvailable: 'Нет машин',
     },

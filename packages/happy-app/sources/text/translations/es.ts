@@ -957,6 +957,9 @@ export const es: TranslationStructure = {
         suggestion: {
             fileLabel: 'ARCHIVO',
             folderLabel: 'CARPETA',
+            skillScopeRepo: 'REPO',
+            skillScopePersonal: 'USUARIO',
+            skillScopeSystem: 'SISTEMA',
         },
         noMachinesAvailable: 'Sin máquinas',
     },
