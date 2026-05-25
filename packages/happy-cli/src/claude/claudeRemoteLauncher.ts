@@ -174,6 +174,9 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
     // Sync model & reasoning effort into session metadata (mirrors Codex's syncSessionModelInfo)
     let currentSyncedModel: string | undefined;
     let currentSyncedEffort: string | undefined;
+    // Tracks tools/slash commands already synced from system/init so we skip redundant updates
+    let currentSyncedToolsSig: string | undefined;
+    let currentSyncedSlashCommandsSig: string | undefined;
     function syncModelMetadata(mode: EnhancedMode) {
         const model = mode.model;
         const effort = mode.reasoningEffort;
@@ -203,13 +206,27 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
         // Write to message log
         formatClaudeMessageForInk(message, messageBuffer);
 
-        // Extract model from system/init — contains the actual model ID (e.g. "claude-opus-4-6[1m]")
-        // which lets the app determine the correct context window size
+        // Sync capabilities from system/init: the actual model ID (e.g. "claude-opus-4-6[1m]",
+        // lets the app pick the right context window) plus tools and slash commands for
+        // autocomplete. The eager probe in runClaude populates these before the first message;
+        // this keeps them correct/refreshed from the real session (and covers cases the probe misses).
         if (message.type === 'system' && (message as SDKSystemMessage).subtype === 'init') {
-            const initModel = (message as SDKSystemMessage).model;
-            if (initModel && initModel !== currentSyncedModel) {
-                currentSyncedModel = initModel;
-                session.client.updateMetadata((m) => ({ ...m, model: initModel }));
+            const init = message as SDKSystemMessage;
+            const nextModel = init.model && init.model !== currentSyncedModel ? init.model : undefined;
+            const toolsSig = init.tools ? JSON.stringify(init.tools) : undefined;
+            const slashCommandsSig = init.slash_commands ? JSON.stringify(init.slash_commands) : undefined;
+            const toolsChanged = toolsSig !== undefined && toolsSig !== currentSyncedToolsSig;
+            const slashCommandsChanged = slashCommandsSig !== undefined && slashCommandsSig !== currentSyncedSlashCommandsSig;
+            if (nextModel || toolsChanged || slashCommandsChanged) {
+                if (nextModel) currentSyncedModel = nextModel;
+                if (toolsChanged) currentSyncedToolsSig = toolsSig;
+                if (slashCommandsChanged) currentSyncedSlashCommandsSig = slashCommandsSig;
+                session.client.updateMetadata((m) => ({
+                    ...m,
+                    ...(nextModel ? { model: nextModel } : {}),
+                    ...(toolsChanged ? { tools: init.tools } : {}),
+                    ...(slashCommandsChanged ? { slashCommands: init.slash_commands } : {}),
+                }));
             }
         }
 
