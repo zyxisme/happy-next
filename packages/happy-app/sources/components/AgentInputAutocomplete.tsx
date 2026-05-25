@@ -19,7 +19,7 @@ export const AgentInputAutocomplete = React.memo((props: AgentInputAutocompleteP
     }
 
     return (
-        <FloatingOverlay maxHeight={240} keyboardShouldPersistTaps="handled">
+        <FloatingOverlay maxHeight={240} keyboardShouldPersistTaps="handled" selectedIndex={selectedIndex} itemHeight={itemHeight}>
             {suggestions.map((suggestion, index) => (
                 <Pressable
                     key={index}

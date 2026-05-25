@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { Platform } from 'react-native';
+import { Platform, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent, ScrollView } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { computeScrollIntoView } from './scrollIntoView';
 
 const stylesheet = StyleSheet.create((theme, runtime) => ({
     container: {
@@ -23,23 +24,60 @@ interface FloatingOverlayProps {
     maxHeight?: number;
     showScrollIndicator?: boolean;
     keyboardShouldPersistTaps?: boolean | 'always' | 'never' | 'handled';
+    /**
+     * When provided (together with `itemHeight`), the overlay keeps the item at
+     * `selectedIndex` scrolled into view as it changes — used for keyboard
+     * navigation of lists that overflow `maxHeight`.
+     */
+    selectedIndex?: number;
+    /** Fixed height of each row, required for `selectedIndex` scroll-into-view. */
+    itemHeight?: number;
 }
 
 export const FloatingOverlay = React.memo((props: FloatingOverlayProps) => {
     const styles = stylesheet;
-    const { 
-        children, 
-        maxHeight = 240, 
-        showScrollIndicator = false, 
-        keyboardShouldPersistTaps = 'handled' 
+    const {
+        children,
+        maxHeight = 240,
+        showScrollIndicator = false,
+        keyboardShouldPersistTaps = 'handled',
+        selectedIndex,
+        itemHeight,
     } = props;
+
+    const scrollRef = React.useRef<ScrollView>(null);
+    const scrollYRef = React.useRef(0);
+    const viewportHeightRef = React.useRef(maxHeight);
+
+    React.useEffect(() => {
+        if (selectedIndex === undefined || itemHeight === undefined) {
+            return;
+        }
+        const nextY = computeScrollIntoView({
+            selectedIndex,
+            itemHeight,
+            currentScrollY: scrollYRef.current,
+            viewportHeight: viewportHeightRef.current || maxHeight,
+        });
+        if (nextY !== null) {
+            scrollRef.current?.scrollTo({ y: nextY, animated: true });
+        }
+    }, [selectedIndex, itemHeight, maxHeight]);
 
     return (
         <Animated.View style={[styles.container, { maxHeight }]}>
             <Animated.ScrollView
+                ref={scrollRef}
                 style={{ maxHeight }}
                 keyboardShouldPersistTaps={keyboardShouldPersistTaps}
                 showsVerticalScrollIndicator={showScrollIndicator}
+                scrollEventThrottle={16}
+                onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+                    scrollYRef.current = e.nativeEvent.contentOffset.y;
+                }}
+                onLayout={(e: LayoutChangeEvent) => {
+                    viewportHeightRef.current = e.nativeEvent.layout.height;
+                }}
             >
                 {children}
             </Animated.ScrollView>
