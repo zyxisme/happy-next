@@ -1034,7 +1034,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                     ) : isClaude ? (
                                         <>
                                             {renderRadioOptions(claudeFamilyOptions, claudeSelection.family, handleClaudeFamilyChange)}
-                                            {claudeSelection.family !== 'default' && (
+                                            {claudeSelection.family !== 'default' && claudeReasoningOptions.length > 0 && (
                                                 <>
                                                     <View style={[styles.overlayDivider, { marginTop: 4, marginBottom: 6 }]} />
                                                     <Text style={{

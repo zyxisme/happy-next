@@ -22,6 +22,10 @@ Yarn 1.x monorepo (`yarn@1.22.22`).
 
 Run `yarn typecheck` in the package you modified. In happy-server the command is `yarn build` (which is `tsc --noEmit`, not a real build step).
 
+## happy-wire (run after every change)
+
+After modifying the **happy-wire** package, always run `yarn build` in it — consumers depend on its compiled `dist` output, so changes won't take effect until rebuilt.
+
 ## Running a Single Test (Vitest)
 
 ```bash

@@ -34,21 +34,22 @@ describe('modelCatalog', () => {
         });
     });
 
-    it('builds codex model mode with mini fallback and default', () => {
-        expect(buildCodexModelMode('gpt-5.1-codex-mini', 'low')).toBe('gpt-5.1-codex-mini-medium');
+    it('builds codex model mode and default', () => {
+        expect(buildCodexModelMode('gpt-5.4-mini', 'low')).toBe('gpt-5.4-mini-low');
+        expect(buildCodexModelMode('gpt-5.4-mini', 'xhigh')).toBe('gpt-5.4-mini-xhigh');
         expect(buildCodexModelMode('gpt-5.3-codex', 'xhigh')).toBe('gpt-5.3-codex-xhigh');
         expect(buildCodexModelMode(MODEL_MODE_DEFAULT, 'high')).toBe(MODEL_MODE_DEFAULT);
     });
 
     it('returns valid reasoning options per codex family', () => {
-        expect(getCodexReasoningOptions('gpt-5.1-codex-mini')).toEqual(['high', 'medium']);
+        expect(getCodexReasoningOptions('gpt-5.4-mini')).toEqual(['xhigh', 'high', 'medium', 'low']);
         expect(getCodexReasoningOptions('gpt-5.3-codex')).toEqual(['xhigh', 'high', 'medium', 'low']);
         expect(getCodexReasoningOptions(MODEL_MODE_DEFAULT)).toEqual(['high', 'medium', 'low']);
     });
 
     it('resolves session model selection payload for each flavor', () => {
-        expect(resolveModelSelectionForFlavor('codex', 'gpt-5.2-codex-high')).toEqual({
-            model: 'gpt-5.2-codex',
+        expect(resolveModelSelectionForFlavor('codex', 'gpt-5.2-high')).toEqual({
+            model: 'gpt-5.2',
             reasoningEffort: 'high',
         });
         expect(resolveModelSelectionForFlavor('claude', 'claude-opus-4-5')).toEqual({
@@ -71,7 +72,7 @@ describe('modelCatalog', () => {
 
     it('keeps codex model list in catalog shape', () => {
         expect(CODEX_MODEL_MODES[0]).toBe(MODEL_MODE_DEFAULT);
-        expect(CODEX_MODEL_MODES).toContain('gpt-5.1-codex-mini-high');
+        expect(CODEX_MODEL_MODES).toContain('gpt-5.4-mini-high');
     });
 
     it('keeps gemini free-tier fallback model in catalog', () => {
@@ -98,7 +99,7 @@ describe('modelCatalog', () => {
         // -fast suffix
         expect(getMaxContextSize('default', 'claude', 'claude-sonnet-4-6-fast')).toBe(200_000);
         // Codex actual model
-        expect(getMaxContextSize('default', 'codex', 'gpt-5.2-codex')).toBe(258_400);
+        expect(getMaxContextSize('default', 'codex', 'gpt-5.2')).toBe(258_400);
         // Gemini actual model
         expect(getMaxContextSize('default', 'gemini', 'gemini-2.5-flash-lite')).toBe(1_000_000);
         // Unknown model falls back to agent default
