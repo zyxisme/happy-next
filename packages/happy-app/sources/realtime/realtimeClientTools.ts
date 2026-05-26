@@ -381,7 +381,7 @@ export const realtimeClientTools = {
             return "error (no active session)";
         }
 
-        const maxChars = parsed.data.maxChars ?? 800;
+        const maxChars = parsed.data.maxChars ?? 2000;
         const latestReply = getLatestAssistantReplyFromCurrentSession(maxChars);
         if (!latestReply) {
             return 'No recent assistant reply found in the current session.';
