@@ -86,6 +86,8 @@ export default {
         plugins: [
             require("./plugins/withCIGradleMemory.js"),
             require("./plugins/withEinkCompatibility.js"),
+            require("./plugins/withVolcEngineAndroidMaven.js"),
+            require("./plugins/withVolcEnginePodsSource.js"),
             require("./plugins/withRNAudioAPIIosFFmpeg.js"),
             [
                 "expo-build-properties",
