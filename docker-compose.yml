@@ -13,7 +13,7 @@ services:
       - EXPO_PUBLIC_ELEVENLABS_AGENT_ID=${ELEVENLABS_AGENT_ID}
       # Voice Gateway
       - EXPO_PUBLIC_VOICE_PROVIDER=${EXPO_PUBLIC_VOICE_PROVIDER:-happy-voice}
-      - EXPO_PUBLIC_VOICE_BASE_URL=${EXPO_PUBLIC_VOICE_BASE_URL:-http://localhost:3045}
+      - EXPO_PUBLIC_VOICE_BASE_URL=${EXPO_PUBLIC_VOICE_BASE_URL:-http://localhost:3040}
       # For docker-compose, happy-voice must call happy-server by container DNS, not host localhost.
       - EXPO_PUBLIC_VOICE_TOOL_BRIDGE_BASE_URL=${EXPO_PUBLIC_VOICE_TOOL_BRIDGE_BASE_URL:-http://happy-server:3031}
       - EXPO_PUBLIC_VOICE_PUBLIC_KEY=${VOICE_PUBLIC_KEY:-dev-voice-public-key}
@@ -62,12 +62,12 @@ services:
       context: ./packages/happy-voice
       dockerfile: Dockerfile
     ports:
-      - "3045:3045"
+      - "3040:3040"
     restart: unless-stopped
     environment:
       - NODE_ENV=production
       - HOST=0.0.0.0
-      - PORT=3045
+      - PORT=3040
       # App-facing auth (x-voice-key)
       - VOICE_PUBLIC_KEY=${VOICE_PUBLIC_KEY:-dev-voice-public-key}
       # 火山 RTC — MUST be an "AI agent" type RTC app

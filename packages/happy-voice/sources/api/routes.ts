@@ -82,7 +82,12 @@ export function registerRoutes(app: FastifyInstance) {
         const now = Date.now();
         const expiresAt = new Date(now + env.RTC_TOKEN_TTL_SECONDS * 1000).toISOString();
         const language = body.language || env.DEFAULT_LANGUAGE;
-        const welcomeMessage = body.welcomeMessage || env.AGENT_WELCOME_MESSAGE;
+        // Welcome message may hold several '|'-separated options; pick one at random.
+        const welcomeRaw = body.welcomeMessage || env.AGENT_WELCOME_MESSAGE;
+        const welcomeOptions = welcomeRaw.split('|').map((s) => s.trim()).filter(Boolean);
+        const welcomeMessage = welcomeOptions.length > 1
+            ? welcomeOptions[Math.floor(Math.random() * welcomeOptions.length)]
+            : welcomeRaw.trim();
 
         const systemPrompt = renderPrompt(env.PROMPT_VOICE_AGENT_FILE, {
             language_preference: language,
