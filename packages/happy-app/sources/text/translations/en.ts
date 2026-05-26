@@ -1175,6 +1175,19 @@ export const en: TranslationStructure = {
         speedFast: 'Fast (3s)',
         speedNormal: 'Normal (5s)',
         speedSlow: 'Slow (8s)',
+
+        voiceTitle: 'Voice',
+        voiceDescription: 'Choose the voice used by the voice assistant. This setting syncs across all your devices.',
+        voiceSelectTitle: 'Voice',
+        voiceSearchPlaceholder: 'Search voices...',
+        voiceDefault: 'Default',
+        voiceFooter: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'voice', plural: 'voices' })} available`,
+        voicePreview: 'Preview',
+        voiceUse: 'Use this voice',
+        voiceInUse: 'Currently in use',
+        speechRateTitle: 'Speech Rate',
+        speechRateDescription: 'Adjust how fast the voice assistant speaks. 0 is normal; negative is slower, positive is faster.',
+        speechRateNormal: 'Normal (0)',
     },
 
     voiceSendConfirmation: {

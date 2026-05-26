@@ -1169,6 +1169,19 @@ export const ru: TranslationStructure = {
         speedFast: 'Быстро (3с)',
         speedNormal: 'Обычно (5с)',
         speedSlow: 'Медленно (8с)',
+
+        voiceTitle: 'Голос',
+        voiceDescription: 'Выберите голос для голосового ассистента. Эта настройка синхронизируется на всех устройствах.',
+        voiceSelectTitle: 'Голос',
+        voiceSearchPlaceholder: 'Поиск голосов...',
+        voiceDefault: 'По умолчанию',
+        voiceFooter: ({ count }: { count: number }) => `Доступно ${count} ${plural({ count, one: 'голос', few: 'голоса', many: 'голосов' })}`,
+        voicePreview: 'Прослушать',
+        voiceUse: 'Использовать этот голос',
+        voiceInUse: 'Используется',
+        speechRateTitle: 'Скорость речи',
+        speechRateDescription: 'Настройте, насколько быстро говорит голосовой ассистент. 0 — нормально, отрицательные значения медленнее, положительные быстрее.',
+        speechRateNormal: 'Нормально (0)',
     },
 
     voiceSendConfirmation: {

@@ -28,6 +28,12 @@ export interface StartVoiceChatParams {
     agentUid: string;
     welcomeMessage: string;
     systemPrompt: string;
+    /** User-selected voice (VoiceType). Falls back to env default when omitted. */
+    voiceType?: string;
+    /** Resource id matching voiceType (e.g. seed-tts-2.0). Falls back to env default. */
+    resourceId?: string;
+    /** Speech rate, -50..100 (0 = normal). Only applied when non-zero. */
+    speechRate?: number;
 }
 
 /**
@@ -66,9 +72,13 @@ export async function startVoiceChat(params: StartVoiceChatParams): Promise<void
             TTSConfig: {
                 Provider: 'volcano_bidirection',
                 ProviderParams: {
-                    Credential: { ResourceId: env.VOLC_AGENT_TTS_RESOURCE_ID },
+                    Credential: { ResourceId: params.resourceId || env.VOLC_AGENT_TTS_RESOURCE_ID },
                     VolcanoTTSParameters: JSON.stringify({
-                        req_params: { speaker: env.VOLC_TTS_VOICE },
+                        req_params: {
+                            speaker: params.voiceType || env.VOLC_TTS_VOICE,
+                            // speech_rate is -50..100 (0 = normal); only send when customized.
+                            ...(params.speechRate ? { speech_rate: params.speechRate } : {}),
+                        },
                     }),
                 },
             },

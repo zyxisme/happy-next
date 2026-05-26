@@ -1158,6 +1158,19 @@ export const ca: TranslationStructure = {
         speedFast: 'Ràpid (3s)',
         speedNormal: 'Normal (5s)',
         speedSlow: 'Lent (8s)',
+
+        voiceTitle: 'Veu',
+        voiceDescription: 'Tria la veu que utilitza l\'assistent de veu. Aquesta configuració se sincronitza en tots els teus dispositius.',
+        voiceSelectTitle: 'Veu',
+        voiceSearchPlaceholder: 'Cerca veus...',
+        voiceDefault: 'Predeterminada',
+        voiceFooter: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'veu', plural: 'veus' })} disponibles`,
+        voicePreview: 'Escolta',
+        voiceUse: 'Utilitza aquesta veu',
+        voiceInUse: 'En ús',
+        speechRateTitle: 'Velocitat de veu',
+        speechRateDescription: 'Ajusta la rapidesa amb què parla l\'assistent de veu. 0 és normal; negatiu és més lent, positiu més ràpid.',
+        speechRateNormal: 'Normal (0)',
     },
 
     voiceSendConfirmation: {

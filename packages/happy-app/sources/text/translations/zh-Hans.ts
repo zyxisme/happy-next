@@ -1160,6 +1160,19 @@ export const zhHans: TranslationStructure = {
         speedFast: '较快 (3秒)',
         speedNormal: '正常 (5秒)',
         speedSlow: '较慢 (8秒)',
+
+        voiceTitle: '音色',
+        voiceDescription: '选择语音助手使用的音色。此设置会在你的所有设备间同步。',
+        voiceSelectTitle: '音色',
+        voiceSearchPlaceholder: '搜索音色…',
+        voiceDefault: '默认',
+        voiceFooter: ({ count }: { count: number }) => `${count} 种可用音色`,
+        voicePreview: '试听',
+        voiceUse: '使用此音色',
+        voiceInUse: '当前使用中',
+        speechRateTitle: '语速',
+        speechRateDescription: '调整语音助手说话的快慢。0 为正常，负值更慢，正值更快。',
+        speechRateNormal: '正常 (0)',
     },
 
     voiceSendConfirmation: {

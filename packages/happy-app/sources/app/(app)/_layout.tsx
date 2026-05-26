@@ -206,6 +206,12 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
+                name="settings/voice/voice"
+                options={{
+                    headerTitle: t('settingsVoice.voiceSelectTitle'),
+                }}
+            />
+            <Stack.Screen
                 name="settings/voice/welcome-message"
                 options={{
                     headerTitle: t('settingsVoice.welcomeMessage'),

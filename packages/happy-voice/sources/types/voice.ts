@@ -35,6 +35,9 @@ export interface VoiceStartRequest {
     language?: string;
     toolBridgeBaseUrl?: string;
     welcomeMessage?: string;
+    voiceType?: string;
+    resourceId?: string;
+    speechRate?: number;
 }
 
 export interface VoiceStartResponse {

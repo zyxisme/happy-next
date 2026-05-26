@@ -52,7 +52,7 @@ export default function LanguageSelectionScreen() {
                     <View style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        backgroundColor: theme.colors.input.background,
+                        backgroundColor: theme.colors.surface,
                         borderRadius: 10,
                         paddingHorizontal: 12,
                         paddingVertical: 8,

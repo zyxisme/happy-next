@@ -2,7 +2,25 @@ import { getHappyVoiceGatewayUrl, getHappyVoicePublicKey } from './voiceConfig';
 import { getServerUrl } from './serverConfig';
 import { storage } from './storage';
 import { cleanForSpeech } from '@/realtime/happyVoiceProtocol';
+import { findVoiceByType } from '@/constants/Voices';
 import type { HappyVoiceContextPayload } from '@/realtime/HappyVoiceContextSerializer';
+
+/**
+ * Read the user's voice/speech-rate preferences from synced settings and resolve
+ * the gateway request fields. When no voice is selected, voiceType/resourceId are
+ * left undefined so the gateway falls back to its env defaults. speechRate is
+ * omitted when 0 (normal) to preserve default behavior.
+ */
+function getVoicePrefs(): { voiceType?: string; resourceId?: string; speechRate?: number } {
+    const settings = storage.getState().settings;
+    const voice = findVoiceByType(settings.voiceAssistantVoice);
+    const speechRate = settings.voiceAssistantSpeechRate;
+    return {
+        voiceType: voice?.voiceType,
+        resourceId: voice?.resourceId,
+        speechRate: speechRate && speechRate !== 0 ? speechRate : undefined,
+    };
+}
 
 export interface HappyVoiceStartResponse {
     allowed: boolean;
@@ -60,6 +78,7 @@ export async function startHappyVoiceSession(
     }
 
     const toolBridgeBaseUrl = process.env.EXPO_PUBLIC_VOICE_TOOL_BRIDGE_BASE_URL || getServerUrl();
+    const voicePrefs = getVoicePrefs();
 
     const response = await fetch(`${getVoiceGatewayUrl()}/v1/voice/session/start`, {
         method: 'POST',
@@ -71,6 +90,7 @@ export async function startHappyVoiceSession(
             language,
             toolBridgeBaseUrl,
             welcomeMessage,
+            ...voicePrefs,
         }),
     });
 
@@ -105,10 +125,11 @@ export interface HappyVoiceTtsResponse {
 }
 
 export async function synthesizeSpeech(text: string): Promise<HappyVoiceTtsResponse> {
+    const { voiceType, speechRate } = getVoicePrefs();
     const response = await fetch(`${getVoiceGatewayUrl()}/v1/voice/tts`, {
         method: 'POST',
         headers: getVoiceGatewayHeaders(),
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, voiceType, speechRate }),
     });
 
     if (!response.ok) {
@@ -137,10 +158,11 @@ export async function streamSpeech(
     signal?: AbortSignal,
     fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
+    const { voiceType, speechRate } = getVoicePrefs();
     const response = await fetchImpl(`${getVoiceGatewayUrl()}/v1/voice/tts/stream`, {
         method: 'POST',
         headers: getVoiceGatewayHeaders(),
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, voiceType, speechRate }),
         signal,
     });
     if (!response.ok || !response.body) {

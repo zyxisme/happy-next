@@ -42,10 +42,17 @@ const startSchema = z.object({
     language: z.string().optional(),
     toolBridgeBaseUrl: z.string().optional(),
     welcomeMessage: z.string().max(500).optional(),
+    voiceType: z.string().optional(),
+    resourceId: z.string().optional(),
+    speechRate: z.number().min(-50).max(100).optional(),
 });
 
 const stopSchema = z.object({ gatewaySessionId: z.string().uuid() });
-const ttsSchema = z.object({ text: z.string().min(1).max(5000) });
+const ttsSchema = z.object({
+    text: z.string().min(1).max(5000),
+    voiceType: z.string().optional(),
+    speechRate: z.number().min(-50).max(100).optional(),
+});
 
 export function registerRoutes(app: FastifyInstance) {
     const typed = app.withTypeProvider<ZodTypeProvider>();
@@ -120,7 +127,17 @@ export function registerRoutes(app: FastifyInstance) {
                 ttlSeconds: env.RTC_TOKEN_TTL_SECONDS,
             });
 
-            await startVoiceChat({ roomId, taskId: roomId, uid, agentUid, welcomeMessage, systemPrompt });
+            await startVoiceChat({
+                roomId,
+                taskId: roomId,
+                uid,
+                agentUid,
+                welcomeMessage,
+                systemPrompt,
+                voiceType: body.voiceType,
+                resourceId: body.resourceId,
+                speechRate: body.speechRate,
+            });
 
             sessionStore.markState(gatewaySessionId, 'active');
             logInfo('Voice session started', { gatewaySessionId, roomId, userId: body.userId, appSessionId: body.sessionId });
@@ -191,9 +208,9 @@ export function registerRoutes(app: FastifyInstance) {
         },
     }, async (request, reply) => {
         if (!isAuthorized(request)) return rejectUnauthorized(reply);
-        const { text } = ttsSchema.parse(request.body);
+        const { text, voiceType, speechRate } = ttsSchema.parse(request.body);
         try {
-            const result = await synthesize(text);
+            const result = await synthesize(text, { voiceType, speechRate });
             return reply.send(result);
         } catch (error) {
             logError('TTS synthesis failed', { error, chars: text.length });
@@ -211,7 +228,7 @@ export function registerRoutes(app: FastifyInstance) {
         schema: { body: ttsSchema },
     }, async (request, reply) => {
         if (!isAuthorized(request)) return rejectUnauthorized(reply);
-        const { text } = ttsSchema.parse(request.body);
+        const { text, voiceType, speechRate } = ttsSchema.parse(request.body);
 
         reply.hijack();
         reply.raw.writeHead(200, {
@@ -228,7 +245,7 @@ export function registerRoutes(app: FastifyInstance) {
             const s = raw.trim();
             if (!s || controller.signal.aborted) return;
             try {
-                const { audioBase64, mimeType } = await synthesize(s);
+                const { audioBase64, mimeType } = await synthesize(s, { voiceType, speechRate });
                 if (!reply.raw.writableEnded) {
                     reply.raw.write(`data: ${JSON.stringify({ seq: seq++, text: s, audioBase64, mimeType })}\n\n`);
                 }

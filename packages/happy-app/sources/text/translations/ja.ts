@@ -1190,6 +1190,19 @@ export const ja: TranslationStructure = {
         speedFast: '速い (3秒)',
         speedNormal: '普通 (5秒)',
         speedSlow: '遅い (8秒)',
+
+        voiceTitle: '音声',
+        voiceDescription: '音声アシスタントが使用する声を選択します。この設定はすべてのデバイスで同期されます。',
+        voiceSelectTitle: '音声',
+        voiceSearchPlaceholder: '音声を検索...',
+        voiceDefault: 'デフォルト',
+        voiceFooter: ({ count }: { count: number }) => `${count}件の音声が利用可能`,
+        voicePreview: '試聴',
+        voiceUse: 'この音声を使う',
+        voiceInUse: '使用中',
+        speechRateTitle: '話速',
+        speechRateDescription: '音声アシスタントの話す速さを調整します。0が標準で、マイナスは遅く、プラスは速くなります。',
+        speechRateNormal: '標準 (0)',
     },
 
     voiceSendConfirmation: {

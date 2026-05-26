@@ -1160,6 +1160,19 @@ export const zhHant: TranslationStructure = {
         speedFast: '較快 (3秒)',
         speedNormal: '正常 (5秒)',
         speedSlow: '較慢 (8秒)',
+
+        voiceTitle: '音色',
+        voiceDescription: '選擇語音助手使用的音色。此設定會在你的所有裝置間同步。',
+        voiceSelectTitle: '音色',
+        voiceSearchPlaceholder: '搜尋音色…',
+        voiceDefault: '預設',
+        voiceFooter: ({ count }: { count: number }) => `${count} 種可用音色`,
+        voicePreview: '試聽',
+        voiceUse: '使用此音色',
+        voiceInUse: '目前使用中',
+        speechRateTitle: '語速',
+        speechRateDescription: '調整語音助手說話的快慢。0 為正常，負值較慢，正值較快。',
+        speechRateNormal: '正常 (0)',
     },
 
     voiceSendConfirmation: {
