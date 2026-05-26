@@ -33,4 +33,4 @@ paths:
 
 ## Changelog
 
-When adding features/fixes, update `/CHANGELOG.md` then run `npx tsx sources/scripts/parseChangelog.ts` to regenerate `sources/changelog/changelog.json`. Auto-parsed during `yarn ota`.
+Do NOT touch `CHANGELOG.md` or `sources/changelog/changelog.json` during normal feature/fix development. The changelog is updated **only at release time**, by the `/release` skill, which writes the version entry and regenerates `changelog.json`.
