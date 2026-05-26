@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, TextInput, FlatList } from 'react-native';
+import { View, TextInput, FlatList, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Item } from '@/components/Item';
@@ -7,8 +7,9 @@ import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { useSettingMutable } from '@/sync/storage';
 import { useUnistyles } from 'react-native-unistyles';
-import { LANGUAGES, getLanguageDisplayName, type Language } from '@/constants/Languages';
+import { LANGUAGES, getLanguageDisplayName } from '@/constants/Languages';
 import { t } from '@/text';
+import { layout } from '@/components/layout';
 
 export default function LanguageSelectionScreen() {
     const { theme } = useUnistyles();
@@ -39,48 +40,53 @@ export default function LanguageSelectionScreen() {
         <ItemList style={{ paddingTop: 0 }}>
             {/* Search Header */}
             <View style={{
-                backgroundColor: theme.colors.surface,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderBottomWidth: 1,
-                borderBottomColor: theme.colors.divider
+                paddingTop: 12,
+                paddingBottom: 4,
+                alignItems: 'center',
             }}>
                 <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: theme.colors.input.background,
-                    borderRadius: 10,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
+                    width: '100%',
+                    maxWidth: layout.maxWidth,
+                    paddingHorizontal: Platform.select({ ios: 0, default: 4 }),
                 }}>
-                    <Ionicons 
-                        name="search-outline" 
-                        size={20} 
-                        color={theme.colors.textSecondary} 
-                        style={{ marginRight: 8 }}
-                    />
-                    <TextInput
-                        style={{
-                            flex: 1,
-                            fontSize: 16,
-                            color: theme.colors.input.text,
-                        }}
-                        placeholder={t('settingsVoice.language.searchPlaceholder')}
-                        placeholderTextColor={theme.colors.input.placeholder}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                    />
-                    {searchQuery.length > 0 && (
+                    <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: theme.colors.input.background,
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        marginHorizontal: Platform.select({ ios: 16, default: 12 }),
+                    }}>
                         <Ionicons 
-                            name="close-circle" 
+                            name="search-outline" 
                             size={20} 
-                            color={theme.colors.textSecondary}
-                            onPress={() => setSearchQuery('')}
-                            style={{ marginLeft: 8 }}
+                            color={theme.colors.textSecondary} 
+                            style={{ marginRight: 8 }}
                         />
-                    )}
+                        <TextInput
+                            style={{
+                                flex: 1,
+                                fontSize: 16,
+                                color: theme.colors.input.text,
+                            }}
+                            placeholder={t('settingsVoice.language.searchPlaceholder')}
+                            placeholderTextColor={theme.colors.input.placeholder}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+                        {searchQuery.length > 0 && (
+                            <Ionicons 
+                                name="close-circle" 
+                                size={20} 
+                                color={theme.colors.textSecondary}
+                                onPress={() => setSearchQuery('')}
+                                style={{ marginLeft: 8 }}
+                            />
+                        )}
+                    </View>
                 </View>
             </View>
 
