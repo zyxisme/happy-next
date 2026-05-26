@@ -19,7 +19,7 @@ export async function synthesize(text: string): Promise<{ audioBase64: string; m
         },
         user: { uid: 'happy-voice' },
         audio: {
-            voice_type: env.VOLC_TTS_VOICE_TYPE,
+            voice_type: env.VOLC_TTS_VOICE,
             encoding: 'mp3',
             speed_ratio: 1.0,
         },

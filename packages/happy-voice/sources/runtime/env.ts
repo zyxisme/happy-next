@@ -33,15 +33,30 @@ const envSchema = z.object({
     LLM_TOP_P: z.coerce.number().default(0.3),
     LLM_MAX_TOKENS: z.coerce.number().int().positive().default(1024),
 
+    // Unified voice/speaker — used by BOTH the live agent TTS and message-playback TTS.
+    VOLC_TTS_VOICE: z.string().default('zh_female_vv_mars_bigtts'),
+
     // Agent TTS (bidirectional streaming, for the live conversation).
     VOLC_AGENT_TTS_RESOURCE_ID: z.string().default('seed-tts-1.0'),
-    VOLC_AGENT_TTS_SPEAKER: z.string().default('zh_female_vv_mars_bigtts'),
 
     // Message-playback TTS (one-shot REST, for the app's "read message aloud" feature).
     VOLC_TTS_APP_ID: z.string().min(1, 'VOLC_TTS_APP_ID is required'),
     VOLC_TTS_TOKEN: z.string().min(1, 'VOLC_TTS_TOKEN is required'),
     VOLC_TTS_CLUSTER: z.string().default('volcano_tts'),
-    VOLC_TTS_VOICE_TYPE: z.string().default('zh_female_vv_uranus_bigtts'),
+
+    // Message-playback TTS text cleaning (streamed): LLM via Ark, regex fallback.
+    ARK_API_KEY: z.string().optional(),
+    ARK_BASE_URL: z.string().default('https://ark.cn-beijing.volces.com/api/v3'),
+    TTS_CLEAN_LLM: z
+        .string()
+        .optional()
+        .transform((v) => {
+            if (v === undefined) return true;
+            const s = v.trim().toLowerCase();
+            return s !== 'false' && s !== '0' && s !== 'off' && s !== '';
+        }),
+    TTS_CLEAN_MODEL: z.string().default('doubao-seed-2-0-lite-260215'),
+    TTS_CLEAN_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
 
     DEFAULT_LANGUAGE: z.string().default('zh'),
     AGENT_WELCOME_MESSAGE: z.string().default('你好，需要我做点什么？'),

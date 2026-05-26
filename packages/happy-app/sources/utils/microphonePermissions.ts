@@ -50,6 +50,27 @@ export async function requestMicrophonePermission(): Promise<MicrophonePermissio
 }
 
 /**
+ * Put the iOS audio session into playback mode so audio routes to the
+ * loudspeaker (not the quiet earpiece).
+ *
+ * iOS routes playback to the earpiece by default / whenever the session is left
+ * in `playAndRecord` (which the voice flow's `allowsRecording: true` sets). Both
+ * TTS playback (before any call) and the end of a voice call need to assert this
+ * playback category to get loudspeaker output. Native-only; a no-op on web.
+ */
+export async function setPlaybackAudioMode(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    await AudioModule.setAudioModeAsync({
+      allowsRecording: false,
+      playsInSilentMode: true,
+    });
+  } catch (error) {
+    console.error('Error setting playback audio mode:', error);
+  }
+}
+
+/**
  * Check current microphone permission status without prompting
  */
 export async function checkMicrophonePermission(): Promise<MicrophonePermissionResult> {

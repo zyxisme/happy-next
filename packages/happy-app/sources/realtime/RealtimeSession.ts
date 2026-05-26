@@ -3,7 +3,7 @@ import { storage } from '@/sync/storage';
 import { Modal } from '@/modal';
 import { t } from '@/text';
 import { getElevenLabsAgentId, getVoiceProvider } from '@/sync/voiceConfig';
-import { requestMicrophonePermission, showMicrophonePermissionDeniedAlert } from '@/utils/microphonePermissions';
+import { requestMicrophonePermission, showMicrophonePermissionDeniedAlert, setPlaybackAudioMode } from '@/utils/microphonePermissions';
 
 let voiceSession: VoiceSession | null = null;
 let voiceSessionStarted: boolean = false;
@@ -122,6 +122,9 @@ export async function stopRealtimeSession() {
         storage.getState().setMicrophoneMuted(false);
     } catch (error) {
         console.error('Failed to stop realtime session:', error);
+    } finally {
+        // Restore loudspeaker playback (the call left iOS in earpiece/record mode).
+        await setPlaybackAudioMode();
     }
 }
 

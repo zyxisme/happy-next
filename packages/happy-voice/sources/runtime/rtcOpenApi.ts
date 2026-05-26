@@ -68,7 +68,7 @@ export async function startVoiceChat(params: StartVoiceChatParams): Promise<void
                 ProviderParams: {
                     Credential: { ResourceId: env.VOLC_AGENT_TTS_RESOURCE_ID },
                     VolcanoTTSParameters: JSON.stringify({
-                        req_params: { speaker: env.VOLC_AGENT_TTS_SPEAKER },
+                        req_params: { speaker: env.VOLC_TTS_VOICE },
                     }),
                 },
             },

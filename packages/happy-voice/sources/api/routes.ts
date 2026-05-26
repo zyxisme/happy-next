@@ -8,6 +8,7 @@ import { sessionStore } from '../runtime/sessionStore';
 import { buildRtcToken } from '../runtime/rtcToken';
 import { startVoiceChat, stopVoiceChat } from '../runtime/rtcOpenApi';
 import { synthesize } from '../runtime/tts';
+import { streamCleanForSpeech, regexCleanForSpeech } from '../runtime/ark';
 import { renderPrompt } from '../runtime/prompts';
 import type { VoiceSessionRecord } from '../types/voice';
 
@@ -194,6 +195,102 @@ export function registerRoutes(app: FastifyInstance) {
                 error: 'tts_failed',
                 message: error instanceof Error ? error.message : 'Unknown error',
             });
+        }
+    });
+
+    // Streaming "read message aloud": LLM-clean (streamed) → split into sentences →
+    // synthesize each sentence → push as SSE audio chunks so the client can play
+    // progressively ("process while playing"). Falls back to regex clean.
+    typed.post('/v1/voice/tts/stream', {
+        schema: { body: ttsSchema },
+    }, async (request, reply) => {
+        if (!isAuthorized(request)) return rejectUnauthorized(reply);
+        const { text } = ttsSchema.parse(request.body);
+
+        reply.hijack();
+        reply.raw.writeHead(200, {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+        });
+
+        const controller = new AbortController();
+        reply.raw.on('close', () => controller.abort());
+
+        let seq = 0;
+        let sentAny = false;
+        const sendSentence = async (raw: string) => {
+            const s = raw.trim();
+            if (!s || controller.signal.aborted) return;
+            try {
+                const { audioBase64, mimeType } = await synthesize(s);
+                if (!reply.raw.writableEnded) {
+                    reply.raw.write(`data: ${JSON.stringify({ seq: seq++, text: s, audioBase64, mimeType })}\n\n`);
+                    sentAny = true;
+                }
+            } catch (error) {
+                logError('TTS sentence failed', { error, preview: s.slice(0, 40) });
+            }
+        };
+
+        const SENTENCE_BOUNDARY = /[。！？!?；;\n]/;
+        const MAX_SENTENCE = 60;
+        let buf = '';
+        const drain = async (final: boolean) => {
+            for (;;) {
+                const m = buf.match(SENTENCE_BOUNDARY);
+                if (m && m.index !== undefined) {
+                    const cut = m.index + 1;
+                    await sendSentence(buf.slice(0, cut));
+                    buf = buf.slice(cut);
+                    continue;
+                }
+                if (buf.length > MAX_SENTENCE) {
+                    await sendSentence(buf.slice(0, MAX_SENTENCE));
+                    buf = buf.slice(MAX_SENTENCE);
+                    continue;
+                }
+                break;
+            }
+            if (final && buf.trim()) {
+                await sendSentence(buf);
+                buf = '';
+            }
+        };
+
+        let idleTimer: ReturnType<typeof setTimeout> | undefined;
+        const resetIdle = () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => controller.abort(), env.TTS_CLEAN_TIMEOUT_MS);
+        };
+
+        try {
+            if (env.TTS_CLEAN_LLM && env.ARK_API_KEY) {
+                try {
+                    resetIdle();
+                    await streamCleanForSpeech(text, async (piece) => {
+                        resetIdle();
+                        buf += piece;
+                        await drain(false);
+                    }, controller.signal);
+                    await drain(true);
+                } catch (error) {
+                    logError('LLM clean failed; regex fallback', { error });
+                    if (!sentAny && !controller.signal.aborted) {
+                        buf = regexCleanForSpeech(text);
+                        await drain(true);
+                    }
+                }
+            } else {
+                buf = regexCleanForSpeech(text);
+                await drain(true);
+            }
+        } finally {
+            if (idleTimer) clearTimeout(idleTimer);
+            if (!reply.raw.writableEnded) {
+                reply.raw.write('data: [DONE]\n\n');
+                reply.raw.end();
+            }
         }
     });
 }

@@ -117,3 +117,56 @@ export async function synthesizeSpeech(text: string): Promise<HappyVoiceTtsRespo
 
     return await response.json();
 }
+
+export interface TtsStreamChunk {
+    seq: number;
+    text: string;
+    audioBase64: string;
+    mimeType: string;
+}
+
+/**
+ * Streamed "read message aloud" (web): the gateway LLM-cleans + splits into
+ * sentences and pushes audio chunks over SSE; onChunk fires per sentence so the
+ * client can play progressively. Uses fetch ReadableStream (web only).
+ */
+export async function streamSpeech(
+    text: string,
+    onChunk: (chunk: TtsStreamChunk) => void,
+    signal?: AbortSignal,
+    fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+    const response = await fetchImpl(`${getVoiceGatewayUrl()}/v1/voice/tts/stream`, {
+        method: 'POST',
+        headers: getVoiceGatewayHeaders(),
+        body: JSON.stringify({ text }),
+        signal,
+    });
+    if (!response.ok || !response.body) {
+        throw new Error(`Failed to stream speech: ${response.status}`);
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const evt = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            for (const line of evt.split('\n')) {
+                if (!line.startsWith('data:')) continue;
+                const data = line.slice(5).trim();
+                if (data === '[DONE]') return;
+                try {
+                    const obj = JSON.parse(data) as TtsStreamChunk;
+                    if (obj.audioBase64) onChunk(obj);
+                } catch {
+                    // ignore
+                }
+            }
+        }
+    }
+}
