@@ -1128,6 +1128,12 @@ export const en: TranslationStructure = {
         copyMessage: 'Copy Commit Message',
     },
 
+    voiceAssistant: {
+        happySays: ({ text }: { text: string }) => `Happy says: ${text}`,
+        happyWantsTool: ({ tool }: { tool: string }) => `Happy wants to use ${tool}. Allow it?`,
+        happyNeedsPermission: 'Happy needs permission. Allow it?',
+    },
+
     settingsVoice: {
         providerTitle: 'Voice Provider',
         providerDescription: 'Choose which voice service to use. Changes take effect on the next voice session.',

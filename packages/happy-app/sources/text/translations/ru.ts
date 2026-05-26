@@ -1122,6 +1122,12 @@ export const ru: TranslationStructure = {
         copyMessage: 'Копировать сообщение коммита',
     },
 
+    voiceAssistant: {
+        happySays: ({ text }: { text: string }) => `Happy говорит: ${text}`,
+        happyWantsTool: ({ tool }: { tool: string }) => `Happy хочет использовать ${tool}. Разрешить?`,
+        happyNeedsPermission: 'Happy требуется разрешение. Разрешить?',
+    },
+
     settingsVoice: {
         providerTitle: 'Голосовой провайдер',
         providerDescription: 'Выберите голосовой сервис. Изменения вступят в силу при следующей голосовой сессии.',

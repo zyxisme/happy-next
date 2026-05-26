@@ -2,12 +2,12 @@ import React, { useEffect, useRef } from 'react';
 import VERTC, { MediaType, RoomProfileType, type IRTCEngine } from '@volcengine/rtc';
 import { registerVoiceSession, getSessionVersion, setRealtimeStatusIfCurrent, setRealtimeModeIfCurrent } from './RealtimeSession';
 import { storage } from '@/sync/storage';
-import { getCurrentLanguage } from '@/text';
-import { startHappyVoiceSession, stopHappyVoiceSession } from '@/sync/apiHappyVoice';
+import { getCurrentLanguage, t } from '@/text';
+import { startHappyVoiceSession, stopHappyVoiceSession, cleanSpeechText } from '@/sync/apiHappyVoice';
 import { getWelcomeMessage } from '@/sync/voiceConfig';
 import type { VoiceSession, VoiceSessionConfig } from './types';
 import { serializeHappyVoiceContext } from './HappyVoiceContextSerializer';
-import { buildAgentCommand, cleanForSpeech, parseAgentMessage } from './happyVoiceProtocol';
+import { buildAgentCommand, parseAgentMessage } from './happyVoiceProtocol';
 import { runFunctionCall } from './realtimeFunctionCall';
 
 let engine: IRTCEngine | null = null;
@@ -170,15 +170,19 @@ class HappyVoiceSessionImpl implements VoiceSession {
         const kind = match?.[1] ?? 'ready';
         if (kind === 'ready') {
             if (!lastHappyReply) return;
-            const clean = cleanForSpeech(lastHappyReply);
-            if (!clean) return;
-            const speak = clean.length > 180 ? 'Happy 回复了，详情在屏幕上。' : `Happy 说：${clean}`;
-            sendAgentCommand('ExternalTextToSpeech', speak);
+            const reply = lastHappyReply;
+            void (async () => {
+                const cleaned = (await cleanSpeechText(reply)).trim();
+                if (!cleaned) return;
+                const MAX_SPOKEN = 1000;
+                const body = cleaned.length > MAX_SPOKEN ? `${cleaned.slice(0, MAX_SPOKEN)}……` : cleaned;
+                sendAgentCommand('ExternalTextToSpeech', t('voiceAssistant.happySays', { text: body }));
+            })();
         } else {
             // permission: announce briefly and wait for the user's allow/deny.
             const payload = match?.[2] ?? message;
             const tool = payload.match(/use\s+([A-Za-z]+)/)?.[1];
-            sendAgentCommand('ExternalTextToSpeech', tool ? `Happy 想使用 ${tool}，要允许吗？` : 'Happy 需要权限，要允许吗？');
+            sendAgentCommand('ExternalTextToSpeech', tool ? t('voiceAssistant.happyWantsTool', { tool }) : t('voiceAssistant.happyNeedsPermission'));
         }
     }
 

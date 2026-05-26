@@ -26,15 +26,15 @@ const envSchema = z.object({
     VOLC_ASR_SILENCE_MS: z.coerce.number().int().positive().default(600),
 
     // LLM (Doubao via built-in ArkV3 — runs inside Volcano, streaming).
-    DOUBAO_MODEL: z.string().default('doubao-seed-2-0-lite-260215'),
+    DOUBAO_MODEL: z.string().default('doubao-seed-2-0-lite-260428'),
     LLM_THINKING_TYPE: z.string().default('disabled'),
     LLM_HISTORY_LENGTH: z.coerce.number().int().positive().default(10),
     LLM_TEMPERATURE: z.coerce.number().default(0.1),
     LLM_TOP_P: z.coerce.number().default(0.3),
-    LLM_MAX_TOKENS: z.coerce.number().int().positive().default(1024),
+    LLM_MAX_TOKENS: z.coerce.number().int().positive().default(512),
 
     // Unified voice/speaker — used by BOTH the live agent TTS and message-playback TTS.
-    VOLC_TTS_VOICE: z.string().default('zh_female_vv_mars_bigtts'),
+    VOLC_TTS_VOICE: z.string().default('zh_female_vv_uranus_bigtts'),
 
     // Agent TTS (bidirectional streaming, for the live conversation).
     VOLC_AGENT_TTS_RESOURCE_ID: z.string().default('seed-tts-1.0'),
@@ -55,7 +55,7 @@ const envSchema = z.object({
             const s = v.trim().toLowerCase();
             return s !== 'false' && s !== '0' && s !== 'off' && s !== '';
         }),
-    TTS_CLEAN_MODEL: z.string().default('doubao-seed-2-0-lite-260215'),
+    TTS_CLEAN_MODEL: z.string().default('doubao-seed-2-0-lite-260428'),
     TTS_CLEAN_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
 
     DEFAULT_LANGUAGE: z.string().default('zh'),

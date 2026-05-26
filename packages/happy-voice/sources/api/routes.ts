@@ -8,7 +8,7 @@ import { sessionStore } from '../runtime/sessionStore';
 import { buildRtcToken } from '../runtime/rtcToken';
 import { startVoiceChat, stopVoiceChat } from '../runtime/rtcOpenApi';
 import { synthesize } from '../runtime/tts';
-import { streamCleanForSpeech, regexCleanForSpeech } from '../runtime/ark';
+import { streamCleanForSpeech, regexCleanForSpeech, cleanForSpeechOnce } from '../runtime/ark';
 import { renderPrompt } from '../runtime/prompts';
 import type { VoiceSessionRecord } from '../types/voice';
 
@@ -297,5 +297,34 @@ export function registerRoutes(app: FastifyInstance) {
                 reply.raw.end();
             }
         }
+    });
+
+    // Clean-only (non-streaming): LLM-clean text for speech, regex fallback.
+    // Used by the in-call "announce Happy's reply" path before ExternalTextToSpeech.
+    typed.post('/v1/voice/clean', {
+        schema: {
+            body: ttsSchema,
+            response: {
+                200: z.object({ text: z.string() }),
+                401: z.object({ error: z.string(), message: z.string() }),
+            },
+        },
+    }, async (request, reply) => {
+        if (!isAuthorized(request)) return rejectUnauthorized(reply);
+        const { text } = ttsSchema.parse(request.body);
+        if (env.TTS_CLEAN_LLM && env.ARK_API_KEY) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), env.TTS_CLEAN_TIMEOUT_MS);
+            try {
+                const cleaned = await cleanForSpeechOnce(text, controller.signal);
+                return reply.send({ text: cleaned || regexCleanForSpeech(text) });
+            } catch (error) {
+                logError('LLM clean failed; regex fallback', { error, chars: text.length });
+                return reply.send({ text: regexCleanForSpeech(text) });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+        return reply.send({ text: regexCleanForSpeech(text) });
     });
 }

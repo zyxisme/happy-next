@@ -1113,6 +1113,12 @@ export const zhHans: TranslationStructure = {
         copyMessage: '复制提交信息',
     },
 
+    voiceAssistant: {
+        happySays: ({ text }: { text: string }) => `Happy 说：${text}`,
+        happyWantsTool: ({ tool }: { tool: string }) => `Happy 想使用 ${tool}，要允许吗？`,
+        happyNeedsPermission: 'Happy 需要权限，要允许吗？',
+    },
+
     settingsVoice: {
         providerTitle: '语音供应商',
         providerDescription: '选择使用哪个语音服务。更改将在下次语音会话时生效。',

@@ -1,6 +1,7 @@
 import { getHappyVoiceGatewayUrl, getHappyVoicePublicKey } from './voiceConfig';
 import { getServerUrl } from './serverConfig';
 import { storage } from './storage';
+import { cleanForSpeech } from '@/realtime/happyVoiceProtocol';
 import type { HappyVoiceContextPayload } from '@/realtime/HappyVoiceContextSerializer';
 
 export interface HappyVoiceStartResponse {
@@ -168,5 +169,27 @@ export async function streamSpeech(
                 }
             }
         }
+    }
+}
+
+/**
+ * LLM-clean text for speech via the gateway (regex fallback). Used by the in-call
+ * "announce Happy's reply" path before handing text to ExternalTextToSpeech.
+ * Always resolves to speakable text — falls back to client-side regex on any error.
+ */
+export async function cleanSpeechText(text: string): Promise<string> {
+    try {
+        const response = await fetch(`${getVoiceGatewayUrl()}/v1/voice/clean`, {
+            method: 'POST',
+            headers: getVoiceGatewayHeaders(),
+            body: JSON.stringify({ text }),
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to clean speech: ${response.status}`);
+        }
+        const data = (await response.json()) as { text?: string };
+        return (data.text && data.text.trim()) || cleanForSpeech(text);
+    } catch {
+        return cleanForSpeech(text);
     }
 }

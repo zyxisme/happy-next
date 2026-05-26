@@ -1126,6 +1126,12 @@ export const en = {
         copyMessage: 'Copy Commit Message',
     },
 
+    voiceAssistant: {
+        happySays: ({ text }: { text: string }) => `Happy says: ${text}`,
+        happyWantsTool: ({ tool }: { tool: string }) => `Happy wants to use ${tool}. Allow it?`,
+        happyNeedsPermission: 'Happy needs permission. Allow it?',
+    },
+
     settingsVoice: {
         // Provider selection
         providerTitle: 'Voice Provider',
