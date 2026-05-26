@@ -129,8 +129,25 @@ class HappyVoiceSessionImpl implements VoiceSession {
                 }
                 applyMode(version, event.mode);
             };
+            // joinRoom/startAudioCapture return synchronous status codes; the real
+            // room-join result arrives asynchronously via onRoomStateChanged
+            // (state 0 = joined, non-zero = failure). Gate 'connected'/'error' on
+            // it instead of optimistically assuming success, so join failures surface.
+            let settled = false;
             nextRoom.setRTCRoomEventHandler({
                 onRoomBinaryMessageReceived: onBinary,
+                onRoomStateChanged: (_roomId: string, _uid: string, state: number) => {
+                    if (settled || version !== getSessionVersion()) return;
+                    settled = true;
+                    if (state === 0) {
+                        setRealtimeStatusIfCurrent(version, 'connected');
+                        setRealtimeModeIfCurrent(version, 'idle', true);
+                    } else {
+                        console.error('[HappyVoice] join failed, state=', state);
+                        void teardownEngine();
+                        setRealtimeStatusIfCurrent(version, 'error');
+                    }
+                },
             });
 
             nextRoom.joinRoom({
@@ -145,19 +162,13 @@ class HappyVoiceSessionImpl implements VoiceSession {
                 },
             });
             nextEngine.startAudioCapture();
-            // joinRoom/startAudioCapture are synchronous status-code calls; the room-join
-            // result actually arrives asynchronously via onRoomStateChanged. We optimistically
-            // mark 'connected' here per the current design. TODO(device-test): if the UI shows
-            // 'connected' too early or fails to surface join errors, gate status on
-            // onRoomStateChanged instead.
 
             manager = nextManager;
             engine = nextEngine;
             room = nextRoom;
             activeGatewaySessionId = start.gatewaySessionId;
             activeAgentUid = start.agentUid;
-            setRealtimeStatusIfCurrent(version, 'connected');
-            setRealtimeModeIfCurrent(version, 'idle', true);
+            // Status is set to 'connected' by onRoomStateChanged above.
         } catch (error) {
             console.error('[HappyVoice] Failed to start session:', error);
             await teardownEngine();

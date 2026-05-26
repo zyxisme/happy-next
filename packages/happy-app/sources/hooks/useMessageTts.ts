@@ -4,6 +4,7 @@ import * as React from 'react';
 import { fetch as expoFetch } from 'expo/fetch';
 import { streamSpeech } from '@/sync/apiHappyVoice';
 import { setPlaybackAudioMode } from '@/utils/microphonePermissions';
+import { isVoiceSessionStarted } from '@/realtime/RealtimeSession';
 
 export type MessageTtsState = 'idle' | 'loading' | 'playing';
 
@@ -148,7 +149,11 @@ export function useMessageTts(messageId: string, text: string | null | undefined
 
         // iOS routes playback to the earpiece by default (and the voice flow can
         // leave the session in record mode); force loudspeaker before playing.
-        await setPlaybackAudioMode();
+        // Skip during an active voice call — switching off recording would cut the
+        // call's mic, and the call already routes audio to the loudspeaker.
+        if (!isVoiceSessionStarted()) {
+            await setPlaybackAudioMode();
+        }
 
         const ac = new AbortController();
         abortRef.current = ac;
