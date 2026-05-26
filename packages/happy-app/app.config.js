@@ -205,8 +205,6 @@ export default {
             },
             app: {
                 postHogKey: process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
-                elevenLabsAgentId: process.env.EXPO_PUBLIC_ELEVENLABS_AGENT_ID,
-                voiceProvider: process.env.EXPO_PUBLIC_VOICE_PROVIDER,
                 voiceBaseUrl: process.env.EXPO_PUBLIC_VOICE_BASE_URL,
                 voicePublicKey: process.env.EXPO_PUBLIC_VOICE_PUBLIC_KEY
             }

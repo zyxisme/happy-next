@@ -1,10 +1,8 @@
 import { getVoiceSession, isVoiceSessionStarted, setCurrentRealtimeSessionId } from '../RealtimeSession';
 import {
     formatNewMessages,
-    formatNewSingleMessage,
     formatPermissionRequest,
     formatReadyEvent,
-    formatSessionFocus,
     formatSessionFull,
     formatSessionOffline,
     formatSessionOnline
@@ -12,7 +10,6 @@ import {
 import { storage, getSession } from '@/sync/storage';
 import { Message } from '@/sync/typesMessage';
 import { VOICE_CONFIG } from '../voiceConfig';
-import { getVoiceProvider } from '@/sync/voiceConfig';
 
 /**
  * Centralized voice assistant hooks for multi-session context updates.
@@ -102,15 +99,10 @@ export const voiceHooks = {
         if (lastFocusSession === sessionId) return;
         lastFocusSession = sessionId;
         setCurrentRealtimeSessionId(sessionId);
-        if (getVoiceProvider() === 'happy-voice') {
-            // Happy Voice providers should treat focus as a hard context switch.
-            // Force re-sending a full snapshot so downstream can replace old session context.
-            shownSessions.delete(sessionId);
-            reportSession(sessionId);
-            return;
-        }
+        // Happy Voice treats focus as a hard context switch.
+        // Force re-sending a full snapshot so downstream can replace old session context.
+        shownSessions.delete(sessionId);
         reportSession(sessionId);
-        reportContextualUpdate(formatSessionFocus(sessionId, metadata));
     },
 
     /**
@@ -158,11 +150,7 @@ export const voiceHooks = {
         const session = getSession(sessionId);
         if (!session) return prompt;
         const messages = storage.getState().sessionMessages[sessionId]?.messages ?? [];
-        if (getVoiceProvider() === 'happy-voice') {
-            prompt += formatSessionFull(session, messages);
-        } else {
-            prompt += 'THIS IS AN ACTIVE SESSION: \n\n' + formatSessionFull(session, messages);
-        }
+        prompt += formatSessionFull(session, messages);
         shownSessions.add(sessionId);
         // prompt += 'Another active sessions: \n\n';
         // for (let s of storage.getState().getActiveSessions()) {

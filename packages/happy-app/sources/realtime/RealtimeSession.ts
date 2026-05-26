@@ -2,7 +2,6 @@ import type { VoiceSession } from './types';
 import { storage } from '@/sync/storage';
 import { Modal } from '@/modal';
 import { t } from '@/text';
-import { getElevenLabsAgentId, getVoiceProvider } from '@/sync/voiceConfig';
 import { requestMicrophonePermission, showMicrophonePermissionDeniedAlert, setPlaybackAudioMode } from '@/utils/microphonePermissions';
 
 let voiceSession: VoiceSession | null = null;
@@ -52,36 +51,11 @@ export async function startRealtimeSession(sessionId: string, initialContext?: s
     }
 
     try {
-        if (getVoiceProvider() === 'happy-voice') {
-            currentSessionId = sessionId;
-            voiceSessionStarted = true;
-            await voiceSession.startSession({
-                sessionId,
-                initialContext,
-            });
-
-            // If stop was called while we were connecting, clean up
-            if (abort.signal.aborted) {
-                await voiceSession.endSession();
-                return;
-            }
-            return;
-        }
-
-        const agentId = getElevenLabsAgentId();
-
-        if (!agentId) {
-            console.error('Agent ID not configured');
-            return;
-        }
-
         currentSessionId = sessionId;
         voiceSessionStarted = true;
-
         await voiceSession.startSession({
             sessionId,
             initialContext,
-            agentId,
         });
 
         // If stop was called while we were connecting, clean up

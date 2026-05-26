@@ -2,7 +2,6 @@ import { Session } from "@/sync/storageTypes";
 import { Message } from "@/sync/typesMessage";
 import { trimIdent } from "@/utils/trimIdent";
 import { VOICE_CONFIG } from "../voiceConfig";
-import { getVoiceProvider } from "@/sync/voiceConfig";
 
 interface SessionMetadata {
     summary?: { text?: string };
@@ -60,63 +59,13 @@ function formatMessageObj(message: Message): ContextMessage | null {
     return null;
 }
 
-export function formatMessage(message: Message): string | null {
-
-    // Lines
-    let lines: string[] = [];
-    if (getVoiceProvider() === 'happy-voice') {
-        const obj = formatMessageObj(message);
-        if (!obj) return null;
-        return JSON.stringify(obj);
-    } else {
-        if (message.kind === 'agent-text') {
-            lines.push(`Agent: \n<text>${message.text}</text>`);
-        } else if (message.kind === 'user-text') {
-            lines.push(`User sent message: \n<text>${message.text}</text>`);
-        } else if (message.kind === 'tool-call' && !VOICE_CONFIG.DISABLE_TOOL_CALLS) {
-            const toolDescription = message.tool.description ? ` - ${message.tool.description}` : '';
-            if (VOICE_CONFIG.LIMITED_TOOL_CALLS) {
-                if (message.tool.description) {
-                    lines.push(`Agent is using ${message.tool.name}${toolDescription}`);
-                }
-            } else {
-                lines.push(`Agent is using ${message.tool.name}${toolDescription} (tool_use_id: ${message.id}) with arguments: <arguments>${JSON.stringify(message.tool.input)}</arguments>`);
-            }
-        }
-    }
-    if (lines.length === 0) {
-        return null;
-    }
-    return lines.join('\n\n');
-}
-
-export function formatNewSingleMessage(sessionId: string, message: Message): string | null {
-    if (getVoiceProvider() === 'happy-voice') {
-        const obj = formatMessageObj(message);
-        if (!obj) return null;
-        return JSON.stringify({ type: 'messages', messages: [obj] });
-    }
-    let formatted = formatMessage(message);
-    if (!formatted) {
-        return null;
-    }
-    return 'New message in session: ' + sessionId + '\n\n' + formatted;
-}
-
 export function formatNewMessages(sessionId: string, messages: Message[]): string | null {
-    if (getVoiceProvider() === 'happy-voice') {
-        const objs = [...messages]
-            .sort((a, b) => a.createdAt - b.createdAt)
-            .map(formatMessageObj)
-            .filter((m): m is ContextMessage => m !== null);
-        if (objs.length === 0) return null;
-        return JSON.stringify({ type: 'messages', messages: objs });
-    }
-    let formatted = [...messages].sort((a, b) => a.createdAt - b.createdAt).map(formatMessage).filter(Boolean);
-    if (formatted.length === 0) {
-        return null;
-    }
-    return 'New messages in session: ' + sessionId + '\n\n' + formatted.join('\n\n');
+    const objs = [...messages]
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map(formatMessageObj)
+        .filter((m): m is ContextMessage => m !== null);
+    if (objs.length === 0) return null;
+    return JSON.stringify({ type: 'messages', messages: objs });
 }
 
 function formatHistoryAsArray(messages: Message[]): ContextMessage[] {
@@ -131,23 +80,6 @@ function formatHistoryAsArray(messages: Message[]): ContextMessage[] {
     return messagesToFormat.map(formatMessageObj).filter((m): m is ContextMessage => m !== null);
 }
 
-export function formatHistory(sessionId: string, messages: Message[]): string {
-    let messagesToFormat: Message[];
-    messagesToFormat = VOICE_CONFIG.MAX_HISTORY_MESSAGES > 0
-        ? messages.slice(0, VOICE_CONFIG.MAX_HISTORY_MESSAGES)
-        : messages;
-
-    if (getVoiceProvider() === 'happy-voice') {
-        // Stored message order is newest->oldest; Happy Voice providers use oldest->newest.
-        messagesToFormat = [...messagesToFormat].reverse();
-    }
-    let formatted = messagesToFormat.map(formatMessage).filter(Boolean);
-    if (getVoiceProvider() === 'happy-voice') {
-        return formatted.join('\n');
-    }
-    return 'History of messages in session: ' + sessionId + '\n\n' + formatted.join('\n\n');
-}
-
 //
 // Session states
 //
@@ -156,36 +88,13 @@ export function formatSessionFull(session: Session, messages: Message[]): string
     const sessionName = session.metadata?.summary?.text;
     const sessionPath = session.metadata?.path;
 
-    if (getVoiceProvider() === 'happy-voice') {
-        return JSON.stringify({
-            type: 'session',
-            sessionId: session.id,
-            path: sessionPath || '',
-            summary: sessionName || '',
-            messages: formatHistoryAsArray(messages),
-        });
-    }
-
-    const lines: string[] = [];
-
-    // Add session context
-    lines.push(`# Session ID: ${session.id}`);
-    lines.push(`# Project path: ${sessionPath}`);
-    lines.push(`# Session summary:\n${sessionName}`);
-
-    // Add session metadata if available
-    if (session.metadata?.summary?.text && sessionName !== session.metadata.summary.text) {
-        lines.push('## Session Summary');
-        lines.push(session.metadata.summary.text);
-        lines.push('');
-    }
-
-    // Add history
-    lines.push('## Our interaction history so far');
-    lines.push('');
-    lines.push(formatHistory(session.id, messages));
-
-    return lines.join('\n\n');
+    return JSON.stringify({
+        type: 'session',
+        sessionId: session.id,
+        path: sessionPath || '',
+        summary: sessionName || '',
+        messages: formatHistoryAsArray(messages),
+    });
 }
 
 export function formatSessionOffline(sessionId: string, metadata?: SessionMetadata): string {
@@ -194,10 +103,6 @@ export function formatSessionOffline(sessionId: string, metadata?: SessionMetada
 
 export function formatSessionOnline(sessionId: string, metadata?: SessionMetadata): string {
     return `Session came online: ${sessionId}`;
-}
-
-export function formatSessionFocus(sessionId: string, metadata?: SessionMetadata): string {
-    return `Session became focused: ${sessionId}`;
 }
 
 export function formatReadyEvent(sessionId: string): string {

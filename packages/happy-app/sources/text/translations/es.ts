@@ -1118,15 +1118,7 @@ export const es: TranslationStructure = {
     },
 
     settingsVoice: {
-        providerTitle: 'Proveedor de voz',
-        providerDescription: 'Elige qué servicio de voz usar. Los cambios se aplican en la próxima sesión de voz.',
-        providerElevenLabsSubtitle: 'Servicio de voz IA ElevenLabs',
-        providerHappyVoiceSubtitle: 'Servicio de voz IA profundamente optimizado',
 
-        elevenLabsTitle: 'ElevenLabs',
-        elevenLabsDescription: 'Configura tu agente de ElevenLabs. Deja vacío para usar el predeterminado.',
-        agentId: 'ID del agente',
-        agentIdPlaceholder: 'Introduce el ID del agente ElevenLabs',
 
         happyVoiceTitle: 'Happy Next Voice',
         happyVoiceDescription: 'Configura tu pasarela de voz Happy Next Voice autoalojada.',

@@ -3,9 +3,7 @@ import { requireOptionalNativeModule } from 'expo-modules-core';
 
 export interface AppConfig {
     postHogKey?: string;
-    elevenLabsAgentId?: string;
     serverUrl?: string;
-    voiceProvider?: 'elevenlabs' | 'happy-voice';
     voiceBaseUrl?: string;
     voicePublicKey?: string;
 }
@@ -71,17 +69,9 @@ export function loadAppConfig(): AppConfig {
         console.log('[loadAppConfig] Override postHogKey from EXPO_PUBLIC_POSTHOG_KEY');
         config.postHogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY;
     }
-    if (process.env.EXPO_PUBLIC_ELEVENLABS_AGENT_ID && config.elevenLabsAgentId !== process.env.EXPO_PUBLIC_ELEVENLABS_AGENT_ID) {
-        console.log('[loadAppConfig] Override elevenLabsAgentId from EXPO_PUBLIC_ELEVENLABS_AGENT_ID');
-        config.elevenLabsAgentId = process.env.EXPO_PUBLIC_ELEVENLABS_AGENT_ID;
-    }
     if (process.env.EXPO_PUBLIC_SERVER_URL && config.serverUrl !== process.env.EXPO_PUBLIC_SERVER_URL) {
         console.log('[loadAppConfig] Override serverUrl from EXPO_PUBLIC_SERVER_URL');
         config.serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
-    }
-    if (process.env.EXPO_PUBLIC_VOICE_PROVIDER && config.voiceProvider !== process.env.EXPO_PUBLIC_VOICE_PROVIDER) {
-        console.log('[loadAppConfig] Override voiceProvider from EXPO_PUBLIC_VOICE_PROVIDER');
-        config.voiceProvider = process.env.EXPO_PUBLIC_VOICE_PROVIDER as 'elevenlabs' | 'happy-voice';
     }
     if (process.env.EXPO_PUBLIC_VOICE_BASE_URL && config.voiceBaseUrl !== process.env.EXPO_PUBLIC_VOICE_BASE_URL) {
         console.log('[loadAppConfig] Override voiceBaseUrl from EXPO_PUBLIC_VOICE_BASE_URL');

@@ -1129,15 +1129,7 @@ export const ru: TranslationStructure = {
     },
 
     settingsVoice: {
-        providerTitle: 'Голосовой провайдер',
-        providerDescription: 'Выберите голосовой сервис. Изменения вступят в силу при следующей голосовой сессии.',
-        providerElevenLabsSubtitle: 'Голосовой ИИ-сервис ElevenLabs',
-        providerHappyVoiceSubtitle: 'Глубоко оптимизированный голосовой ИИ-сервис',
 
-        elevenLabsTitle: 'ElevenLabs',
-        elevenLabsDescription: 'Настройте агента ElevenLabs. Оставьте пустым для использования значения по умолчанию.',
-        agentId: 'ID агента',
-        agentIdPlaceholder: 'Введите ID агента ElevenLabs',
 
         happyVoiceTitle: 'Happy Next Voice',
         happyVoiceDescription: 'Настройте собственный голосовой шлюз Happy Next Voice.',

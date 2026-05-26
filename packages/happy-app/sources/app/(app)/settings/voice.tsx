@@ -8,12 +8,7 @@ import { useSettingMutable } from '@/sync/storage';
 import { findLanguageByCode, getLanguageDisplayName, LANGUAGES } from '@/constants/Languages';
 import { t } from '@/text';
 import { Switch } from '@/components/Switch';
-import { isVoiceSessionStarted, stopRealtimeSession } from '@/realtime/RealtimeSession';
 import {
-    getVoiceProvider,
-    setVoiceProvider,
-    getElevenLabsAgentId,
-    hasCustomElevenLabsAgentId,
     getHappyVoiceGatewayUrl,
     hasCustomHappyVoiceGatewayUrl,
     getHappyVoicePublicKey,
@@ -37,8 +32,6 @@ export default function VoiceSettingsScreen() {
     const currentLanguage = findLanguageByCode(voiceAssistantLanguage) || LANGUAGES[0];
 
     // Local state that refreshes when returning from sub-pages
-    const [provider, setProvider] = useState(() => getVoiceProvider());
-    const [agentId, setAgentId] = useState(() => getElevenLabsAgentId());
     const [gatewayUrl, setGatewayUrl] = useState(() => getHappyVoiceGatewayUrl());
     const [publicKey, setPublicKey] = useState(() => getHappyVoicePublicKey());
     const [sendConfirmationEnabled, setSendConfirmationEnabled] = useState(() => getSendConfirmation());
@@ -47,8 +40,6 @@ export default function VoiceSettingsScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            setProvider(getVoiceProvider());
-            setAgentId(getElevenLabsAgentId());
             setGatewayUrl(getHappyVoiceGatewayUrl());
             setPublicKey(getHappyVoicePublicKey());
             setSendConfirmationEnabled(getSendConfirmation());
@@ -56,14 +47,6 @@ export default function VoiceSettingsScreen() {
             setWelcomeMessageState(getWelcomeMessage());
         }, []),
     );
-
-    const handleProviderChange = async (value: 'elevenlabs' | 'happy-voice') => {
-        if (isVoiceSessionStarted()) {
-            await stopRealtimeSession();
-        }
-        setVoiceProvider(value);
-        setProvider(value);
-    };
 
     const handleSendConfirmationChange = (value: boolean) => {
         setSendConfirmation(value);
@@ -77,91 +60,40 @@ export default function VoiceSettingsScreen() {
 
     return (
         <ItemList style={{ paddingTop: 0 }}>
-            {/* Provider Selection */}
+            {/* Happy Voice Configuration */}
             <ItemGroup
-                title={t('settingsVoice.providerTitle')}
-                footer={t('settingsVoice.providerDescription')}
+                title={t('settingsVoice.happyVoiceTitle')}
+                footer={t('settingsVoice.happyVoiceDescription')}
             >
                 <Item
-                    title="Happy Voice"
-                    subtitle={t('settingsVoice.providerHappyVoiceSubtitle')}
-                    icon={<Ionicons name="sparkles" size={29} color="#34C759" />}
-                    rightElement={
-                        provider === 'happy-voice'
-                            ? <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
-                            : null
-                    }
-                    onPress={() => handleProviderChange('happy-voice')}
-                    showChevron={false}
+                    title={t('settingsVoice.gatewayUrl')}
+                    icon={<Ionicons name="link-outline" size={29} color="#5856D6" />}
+                    detail={gatewayUrl ? truncate(gatewayUrl, 25) : t('settingsVoice.notConfigured')}
+                    subtitle={hasCustomHappyVoiceGatewayUrl() ? t('settingsVoice.usingCustomConfig') : t('settingsVoice.usingDefaultConfig')}
+                    onPress={() => router.push('/settings/voice/happy-voice')}
                 />
                 <Item
-                    title="ElevenLabs"
-                    subtitle={t('settingsVoice.providerElevenLabsSubtitle')}
-                    icon={<Ionicons name="cloud-outline" size={29} color="#007AFF" />}
-                    rightElement={
-                        provider === 'elevenlabs'
-                            ? <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
-                            : null
-                    }
-                    onPress={() => handleProviderChange('elevenlabs')}
-                    showChevron={false}
+                    title={t('settingsVoice.publicKey')}
+                    icon={<Ionicons name="shield-outline" size={29} color="#FF2D55" />}
+                    detail={publicKey ? '********' : t('settingsVoice.notConfigured')}
+                    subtitle={hasCustomHappyVoicePublicKey() ? t('settingsVoice.usingCustomConfig') : t('settingsVoice.usingDefaultConfig')}
+                    onPress={() => router.push('/settings/voice/happy-voice')}
                 />
             </ItemGroup>
 
-            {/* ElevenLabs Configuration */}
-            {provider === 'elevenlabs' && (
-                <ItemGroup
-                    title={t('settingsVoice.elevenLabsTitle')}
-                    footer={t('settingsVoice.elevenLabsDescription')}
-                >
-                    <Item
-                        title={t('settingsVoice.agentId')}
-                        icon={<Ionicons name="key-outline" size={29} color="#FF9500" />}
-                        detail={agentId ? truncate(agentId, 20) : t('settingsVoice.notConfigured')}
-                        subtitle={hasCustomElevenLabsAgentId() ? t('settingsVoice.usingCustomConfig') : t('settingsVoice.usingDefaultConfig')}
-                        onPress={() => router.push('/settings/voice/elevenlabs')}
-                    />
-                </ItemGroup>
-            )}
-
-            {/* Happy Voice Configuration */}
-            {provider === 'happy-voice' && (
-                <ItemGroup
-                    title={t('settingsVoice.happyVoiceTitle')}
-                    footer={t('settingsVoice.happyVoiceDescription')}
-                >
-                    <Item
-                        title={t('settingsVoice.gatewayUrl')}
-                        icon={<Ionicons name="link-outline" size={29} color="#5856D6" />}
-                        detail={gatewayUrl ? truncate(gatewayUrl, 25) : t('settingsVoice.notConfigured')}
-                        subtitle={hasCustomHappyVoiceGatewayUrl() ? t('settingsVoice.usingCustomConfig') : t('settingsVoice.usingDefaultConfig')}
-                        onPress={() => router.push('/settings/voice/happy-voice')}
-                    />
-                    <Item
-                        title={t('settingsVoice.publicKey')}
-                        icon={<Ionicons name="shield-outline" size={29} color="#FF2D55" />}
-                        detail={publicKey ? '********' : t('settingsVoice.notConfigured')}
-                        subtitle={hasCustomHappyVoicePublicKey() ? t('settingsVoice.usingCustomConfig') : t('settingsVoice.usingDefaultConfig')}
-                        onPress={() => router.push('/settings/voice/happy-voice')}
-                    />
-                </ItemGroup>
-            )}
-
             {/* Welcome Message */}
-            {provider === 'happy-voice' && (
-                <ItemGroup
-                    title={t('settingsVoice.welcomeMessageTitle')}
-                    footer={t('settingsVoice.welcomeMessageDescription')}
-                >
-                    <Item
-                        title={t('settingsVoice.welcomeMessage')}
-                        icon={<Ionicons name="chatbubble-ellipses-outline" size={29} color="#FF9500" />}
-                        detail={welcomeMessage ? truncate(welcomeMessage, 30) : t('settingsVoice.usingDefaultConfig')}
-                        subtitle={hasCustomWelcomeMessage() ? t('settingsVoice.usingCustomConfig') : t('settingsVoice.usingDefaultConfig')}
-                        onPress={() => router.push('/settings/voice/welcome-message')}
-                    />
-                </ItemGroup>
-            )}
+            <ItemGroup
+                title={t('settingsVoice.welcomeMessageTitle')}
+                footer={t('settingsVoice.welcomeMessageDescription')}
+            >
+                <Item
+                    title={t('settingsVoice.welcomeMessage')}
+                    icon={<Ionicons name="chatbubble-ellipses-outline" size={29} color="#FF9500" />}
+                    detail={welcomeMessage ? truncate(welcomeMessage, 30) : t('settingsVoice.usingDefaultConfig')}
+                    subtitle={hasCustomWelcomeMessage() ? t('settingsVoice.usingCustomConfig') : t('settingsVoice.usingDefaultConfig')}
+                    onPress={() => router.push('/settings/voice/welcome-message')}
+                />
+            </ItemGroup>
 
             {/* Language Settings */}
             <ItemGroup

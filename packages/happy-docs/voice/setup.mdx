@@ -28,24 +28,8 @@ In the Happy app, go to **Settings > Voice** and configure:
 Or set via environment variables:
 
 ```bash
-EXPO_PUBLIC_VOICE_PROVIDER=happy-voice
 EXPO_PUBLIC_VOICE_BASE_URL=https://your-voice-server.com
 EXPO_PUBLIC_VOICE_PUBLIC_KEY=your-public-key
 ```
 
 See [Self-Hosting](/advanced/self-hosting) for deployment instructions.
-
-## ElevenLabs (alternative)
-
-[ElevenLabs](https://elevenlabs.io) is a third-party voice AI service with high-quality speech synthesis. It requires a free or paid ElevenLabs account.
-
-1. Create an account at [elevenlabs.io](https://elevenlabs.io) and get an Agent ID
-2. In the Happy app, go to **Settings > Voice**
-3. Select **ElevenLabs** as the provider
-4. Enter your Agent ID
-
-Alternatively, set the Agent ID via environment variable:
-
-```bash
-EXPO_PUBLIC_ELEVENLABS_AGENT_ID=your-agent-id
-```

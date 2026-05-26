@@ -1133,17 +1133,7 @@ export const en = {
     },
 
     settingsVoice: {
-        // Provider selection
-        providerTitle: 'Voice Provider',
-        providerDescription: 'Choose which voice service to use. Changes take effect on the next voice session.',
-        providerElevenLabsSubtitle: 'ElevenLabs AI voice service',
-        providerHappyVoiceSubtitle: 'Deeply optimized AI voice service',
 
-        // ElevenLabs configuration
-        elevenLabsTitle: 'ElevenLabs',
-        elevenLabsDescription: 'Configure your ElevenLabs agent. Leave empty to use the default.',
-        agentId: 'Agent ID',
-        agentIdPlaceholder: 'Enter ElevenLabs Agent ID',
 
         // Happy Voice configuration
         happyVoiceTitle: 'Happy Next Voice',

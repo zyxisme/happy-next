@@ -19,14 +19,10 @@ vi.mock('@/text', () => ({
     t: (key: string) => key,
 }));
 
-vi.mock('@/sync/voiceConfig', () => ({
-    getVoiceProvider: vi.fn(() => 'elevenlabs'),
-    getElevenLabsAgentId: vi.fn(() => 'test-agent-id'),
-}));
-
 vi.mock('@/utils/microphonePermissions', () => ({
     requestMicrophonePermission: vi.fn(async () => ({ granted: true, canAskAgain: true })),
     showMicrophonePermissionDeniedAlert: vi.fn(),
+    setPlaybackAudioMode: vi.fn(async () => {}),
 }));
 
 function createMockVoiceSession(overrides?: Partial<VoiceSession>): VoiceSession {
@@ -59,7 +55,6 @@ describe('RealtimeSession', () => {
             expect(session.startSession).toHaveBeenCalledWith({
                 sessionId: 'session-1',
                 initialContext: 'hello',
-                agentId: 'test-agent-id',
             });
             expect(mod.isVoiceSessionStarted()).toBe(true);
             expect(mod.getCurrentRealtimeSessionId()).toBe('session-1');

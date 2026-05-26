@@ -84,11 +84,11 @@ CLI 繁忙时发送的消息现在会自动排队并投递。
 
 ## 语音助手（Happy Voice）
 
-Happy Next 包含完整的语音网关栈，从简单的 ElevenLabs 单供应商到完整的 LiveKit 流水线。
+Happy Next 包含完整的语音网关栈，基于火山 AI / Happy Voice 网关构建。
 
-- **基于 LiveKit 的语音网关**（`happy-voice`），可插拔供应商
+- **火山 AI 驱动的语音网关**（`happy-voice`），可插拔供应商
 - **按前缀自动切换供应商**：`openai/gpt-4.1-mini` 用于 LLM，`cartesia/sonic-3:voiceId` 用于 TTS，`assemblyai/universal-streaming:en` 用于 STT
-- **麦克风静音**，支持所有语音供应商（ElevenLabs、LiveKit/Happy Voice）
+- **麦克风静音**，支持语音对话（Happy Voice）
 - **语音工具**：会话管理（导航、结束对话）、消息发送
 - **语音消息发送确认**，可配置倒计时
 - **"思考中"指示器**，显示在语音状态栏

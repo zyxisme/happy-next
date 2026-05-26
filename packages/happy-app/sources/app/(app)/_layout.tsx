@@ -194,12 +194,6 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
-                name="settings/voice/elevenlabs"
-                options={{
-                    headerTitle: t('settingsVoice.elevenLabsTitle'),
-                }}
-            />
-            <Stack.Screen
                 name="settings/voice/happy-voice"
                 options={{
                     headerTitle: t('settingsVoice.happyVoiceTitle'),

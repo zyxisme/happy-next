@@ -1120,15 +1120,7 @@ export const zhHans: TranslationStructure = {
     },
 
     settingsVoice: {
-        providerTitle: '语音供应商',
-        providerDescription: '选择使用哪个语音服务。更改将在下次语音会话时生效。',
-        providerElevenLabsSubtitle: 'ElevenLabs AI 语音服务',
-        providerHappyVoiceSubtitle: '深度优化 AI 语音服务',
 
-        elevenLabsTitle: 'ElevenLabs',
-        elevenLabsDescription: '配置 ElevenLabs 代理。留空则使用默认值。',
-        agentId: 'Agent ID',
-        agentIdPlaceholder: '输入 ElevenLabs Agent ID',
 
         happyVoiceTitle: 'Happy Next Voice',
         happyVoiceDescription: '配置自托管的 Happy Next Voice 语音网关。',

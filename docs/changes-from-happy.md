@@ -84,11 +84,11 @@ The original Happy only supported Claude Code. Happy Next treats Claude Code, Co
 
 ## Voice Assistant (Happy Voice)
 
-Happy Next includes a complete voice gateway stack, from a simple ElevenLabs-only setup to a full LiveKit pipeline.
+Happy Next includes a complete voice gateway stack built on the Volcano AI / Happy Voice gateway.
 
-- **LiveKit-based voice gateway** (`happy-voice`) with pluggable providers
+- **Volcano AI–powered voice gateway** (`happy-voice`) with pluggable providers
 - **Provider auto-switching by prefix**: `openai/gpt-4.1-mini` for LLM, `cartesia/sonic-3:voiceId` for TTS, `assemblyai/universal-streaming:en` for STT
-- **Microphone mute** across all voice providers (ElevenLabs, LiveKit/Happy Voice)
+- **Microphone mute** in voice conversations (Happy Voice)
 - **Voice tools**: session management (navigate, end conversation), message sending
 - **Voice message send confirmation** with configurable countdown
 - **"Thinking" indicator** in voice status bar

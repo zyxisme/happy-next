@@ -28,24 +28,8 @@ Happy Voice 使用基于 [LiveKit](https://livekit.io/) 的语音网关，采用
 或通过环境变量设置：
 
 ```bash
-EXPO_PUBLIC_VOICE_PROVIDER=happy-voice
 EXPO_PUBLIC_VOICE_BASE_URL=https://your-voice-server.com
 EXPO_PUBLIC_VOICE_PUBLIC_KEY=your-public-key
 ```
 
 详见[自托管](/zh/advanced/self-hosting)获取部署说明。
-
-## ElevenLabs（备选方案）
-
-[ElevenLabs](https://elevenlabs.io) 是一个第三方语音 AI 服务，提供高质量的语音合成。需要免费或付费的 ElevenLabs 账号。
-
-1. 在 [elevenlabs.io](https://elevenlabs.io) 创建账号并获取 Agent ID
-2. 在 Happy 应用中，前往 **设置 > 语音**
-3. 选择 **ElevenLabs** 作为提供商
-4. 输入你的 Agent ID
-
-或者通过环境变量设置 Agent ID：
-
-```bash
-EXPO_PUBLIC_ELEVENLABS_AGENT_ID=your-agent-id
-```
