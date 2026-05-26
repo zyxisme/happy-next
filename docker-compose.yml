@@ -13,7 +13,7 @@ services:
       - EXPO_PUBLIC_ELEVENLABS_AGENT_ID=${ELEVENLABS_AGENT_ID}
       # Voice Gateway
       - EXPO_PUBLIC_VOICE_PROVIDER=${EXPO_PUBLIC_VOICE_PROVIDER:-happy-voice}
-      - EXPO_PUBLIC_VOICE_BASE_URL=${EXPO_PUBLIC_VOICE_BASE_URL:-http://localhost:3040}
+      - EXPO_PUBLIC_VOICE_BASE_URL=${EXPO_PUBLIC_VOICE_BASE_URL:-http://localhost:3045}
       # For docker-compose, happy-voice must call happy-server by container DNS, not host localhost.
       - EXPO_PUBLIC_VOICE_TOOL_BRIDGE_BASE_URL=${EXPO_PUBLIC_VOICE_TOOL_BRIDGE_BASE_URL:-http://happy-server:3031}
       - EXPO_PUBLIC_VOICE_PUBLIC_KEY=${VOICE_PUBLIC_KEY:-dev-voice-public-key}
@@ -61,44 +61,43 @@ services:
     build:
       context: ./packages/happy-voice
       dockerfile: Dockerfile
-    command: ["yarn", "start:all"]
     ports:
-      - "3040:3040"
+      - "3045:3045"
     restart: unless-stopped
     environment:
       - NODE_ENV=production
       - HOST=0.0.0.0
-      - PORT=3040
+      - PORT=3045
+      # App-facing auth (x-voice-key)
       - VOICE_PUBLIC_KEY=${VOICE_PUBLIC_KEY:-dev-voice-public-key}
-      - LIVEKIT_URL=${LIVEKIT_URL:-http://localhost:7880}
-      - LIVEKIT_WS_URL=${LIVEKIT_WS_URL:-ws://localhost:7880}
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-devsecret}
-      - LIVEKIT_AGENT_NAME=${LIVEKIT_AGENT_NAME:-happy-voice-agent}
-      - LIVEKIT_ROOM_TTL_SECONDS=${LIVEKIT_ROOM_TTL_SECONDS:-3600}
-      - LIVEKIT_TOKEN_TTL_SECONDS=${LIVEKIT_TOKEN_TTL_SECONDS:-600}
-      - AGENT_STT=${AGENT_STT:-assemblyai/universal-streaming:en}
-      - AGENT_LLM=${AGENT_LLM:-openai/gpt-4.1-mini}
-      - AGENT_TTS=${AGENT_TTS:-cartesia/sonic-3:9626c31c-bec5-4cca-baa8-f8ba9e84c8bc}
-      - AGENT_WELCOME_MESSAGE=${AGENT_WELCOME_MESSAGE:-Say hello and ask what the user wants to build.}
-      - AGENT_READY_PLAYOUT_MODE=${AGENT_READY_PLAYOUT_MODE:-best_effort}
-      - AGENT_READY_SUMMARY_MODEL=${AGENT_READY_SUMMARY_MODEL:-}
-      - AGENT_READY_SUMMARY_TIMEOUT_MS=${AGENT_READY_SUMMARY_TIMEOUT_MS:-7000}
-      - AGENT_READY_SUMMARY_INPUT_MAX_CHARS=${AGENT_READY_SUMMARY_INPUT_MAX_CHARS:-2200}
-      - AGENT_MIN_ENDPOINTING_DELAY_MS=${AGENT_MIN_ENDPOINTING_DELAY_MS:-1600}
-      - AGENT_MAX_ENDPOINTING_DELAY_MS=${AGENT_MAX_ENDPOINTING_DELAY_MS:-7000}
-      - AGENT_LOG_LLM_IO=${AGENT_LOG_LLM_IO:-true}
-      - PROMPT_VOICE_MAIN_FILE=${PROMPT_VOICE_MAIN_FILE:-prompts/voice-main.system.txt}
-      - PROMPT_VOICE_TOOL_FOLLOWUP_FILE=${PROMPT_VOICE_TOOL_FOLLOWUP_FILE:-prompts/voice-tool-followup.system.txt}
-      - PROMPT_VOICE_READY_SUMMARY_FILE=${PROMPT_VOICE_READY_SUMMARY_FILE:-prompts/voice-ready-summary.system.txt}
-      - PROMPT_RECENT_VOICE_MESSAGES=${PROMPT_RECENT_VOICE_MESSAGES:-12}
-      - PROMPT_RECENT_APP_CONTEXT_MESSAGES=${PROMPT_RECENT_APP_CONTEXT_MESSAGES:-12}
-      - PROMPT_RECENT_MAX_CHARS=${PROMPT_RECENT_MAX_CHARS:-6000}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - CARTESIA_API_KEY=${CARTESIA_API_KEY}
-      - TOOL_BRIDGE_BASE_URL=${TOOL_BRIDGE_BASE_URL:-http://happy-server:3031}
-      - TOOL_BRIDGE_API_KEY=${VOICE_TOOL_BRIDGE_KEY:-dev-voice-bridge-key}
-      - LOG_LEVEL=${HAPPY_VOICE_WORKER_LOG_LEVEL:-info}
+      # 火山 RTC — MUST be an "AI agent" type RTC app
+      - VOLC_RTC_APP_ID=${VOLC_RTC_APP_ID}
+      - VOLC_RTC_APP_KEY=${VOLC_RTC_APP_KEY}
+      # 火山 OpenAPI signing (IAM access key — StartVoiceChat / StopVoiceChat)
+      - VOLC_ACCESS_KEY_ID=${VOLC_ACCESS_KEY_ID}
+      - VOLC_SECRET_ACCESS_KEY=${VOLC_SECRET_ACCESS_KEY}
+      - VOLC_RTC_REGION=${VOLC_RTC_REGION:-cn-north-1}
+      - VOLC_RTC_API_VERSION=${VOLC_RTC_API_VERSION:-2025-06-01}
+      # ASR (seed big-model streaming; auth bound to the agent RTC app)
+      - VOLC_ASR_RESOURCE_ID=${VOLC_ASR_RESOURCE_ID:-volc.seedasr.sauc.duration}
+      # LLM (Doubao via built-in ArkV3)
+      - DOUBAO_MODEL=${DOUBAO_MODEL:-doubao-seed-2-0-lite-260215}
+      - LLM_THINKING_TYPE=${LLM_THINKING_TYPE:-disabled}
+      # Unified voice/speaker — live agent TTS + message-playback TTS
+      - VOLC_TTS_VOICE=${VOLC_TTS_VOICE:-zh_female_vv_mars_bigtts}
+      # Agent TTS (bidirectional streaming for the live conversation)
+      - VOLC_AGENT_TTS_RESOURCE_ID=${VOLC_AGENT_TTS_RESOURCE_ID:-seed-tts-1.0}
+      # Message-playback TTS (one-shot/streamed REST synthesis)
+      - VOLC_TTS_APP_ID=${VOLC_TTS_APP_ID}
+      - VOLC_TTS_TOKEN=${VOLC_TTS_TOKEN}
+      - VOLC_TTS_CLUSTER=${VOLC_TTS_CLUSTER:-volcano_tts}
+      # Pre-TTS text cleaning (LLM via Ark, regex fallback)
+      - ARK_API_KEY=${ARK_API_KEY}
+      - TTS_CLEAN_LLM=${TTS_CLEAN_LLM:-true}
+      - TTS_CLEAN_MODEL=${TTS_CLEAN_MODEL:-doubao-seed-2-0-lite-260215}
+      # Defaults
+      - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-zh}
+      - AGENT_WELCOME_MESSAGE=${AGENT_WELCOME_MESSAGE:-你好，需要我做点什么？}
 
   minio:
     image: minio/minio
