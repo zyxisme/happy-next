@@ -58,6 +58,8 @@ const envSchema = z.object({
         }),
     TTS_CLEAN_MODEL: z.string().default('doubao-seed-2-0-lite-260428'),
     TTS_CLEAN_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
+    // 纯文本(无代码/URL/表格结构)清洗后长度 ≤ 此值时跳过 LLM,直接念 regex 结果。
+    TTS_CLEAN_SKIP_MAX_CHARS: z.coerce.number().int().positive().default(120),
 
     DEFAULT_LANGUAGE: z.string().default('zh'),
     AGENT_WELCOME_MESSAGE: z.string().default('你好，需要我做点什么？'),

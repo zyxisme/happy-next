@@ -8,7 +8,8 @@ import { sessionStore } from '../runtime/sessionStore';
 import { buildRtcToken } from '../runtime/rtcToken';
 import { startVoiceChat, stopVoiceChat } from '../runtime/rtcOpenApi';
 import { synthesize } from '../runtime/tts';
-import { streamCleanForSpeech, regexCleanForSpeech, cleanForSpeechOnce } from '../runtime/ark';
+import { cleanForSpeech } from '../runtime/cleanForSpeech';
+import { regexCleanForSpeech } from '../runtime/textClean';
 import { renderPrompt } from '../runtime/prompts';
 import type { VoiceSessionRecord } from '../types/voice';
 
@@ -223,7 +224,6 @@ export function registerRoutes(app: FastifyInstance) {
         reply.raw.on('close', () => controller.abort());
 
         let seq = 0;
-        let sentAny = false;
         const sendSentence = async (raw: string) => {
             const s = raw.trim();
             if (!s || controller.signal.aborted) return;
@@ -231,7 +231,6 @@ export function registerRoutes(app: FastifyInstance) {
                 const { audioBase64, mimeType } = await synthesize(s);
                 if (!reply.raw.writableEnded) {
                     reply.raw.write(`data: ${JSON.stringify({ seq: seq++, text: s, audioBase64, mimeType })}\n\n`);
-                    sentAny = true;
                 }
             } catch (error) {
                 logError('TTS sentence failed', { error, preview: s.slice(0, 40) });
@@ -263,35 +262,13 @@ export function registerRoutes(app: FastifyInstance) {
             }
         };
 
-        let idleTimer: ReturnType<typeof setTimeout> | undefined;
-        const resetIdle = () => {
-            if (idleTimer) clearTimeout(idleTimer);
-            idleTimer = setTimeout(() => controller.abort(), env.TTS_CLEAN_TIMEOUT_MS);
-        };
-
         try {
-            if (env.TTS_CLEAN_LLM && env.ARK_API_KEY) {
-                try {
-                    resetIdle();
-                    await streamCleanForSpeech(text, async (piece) => {
-                        resetIdle();
-                        buf += piece;
-                        await drain(false);
-                    }, controller.signal);
-                    await drain(true);
-                } catch (error) {
-                    logError('LLM clean failed; regex fallback', { error });
-                    if (!sentAny && !controller.signal.aborted) {
-                        buf = regexCleanForSpeech(text);
-                        await drain(true);
-                    }
-                }
-            } else {
-                buf = regexCleanForSpeech(text);
-                await drain(true);
-            }
+            await cleanForSpeech(text, async (piece) => {
+                buf += piece;
+                await drain(false);
+            }, controller.signal);
+            await drain(true);
         } finally {
-            if (idleTimer) clearTimeout(idleTimer);
             if (!reply.raw.writableEnded) {
                 reply.raw.write('data: [DONE]\n\n');
                 reply.raw.end();
@@ -312,19 +289,9 @@ export function registerRoutes(app: FastifyInstance) {
     }, async (request, reply) => {
         if (!isAuthorized(request)) return rejectUnauthorized(reply);
         const { text } = ttsSchema.parse(request.body);
-        if (env.TTS_CLEAN_LLM && env.ARK_API_KEY) {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), env.TTS_CLEAN_TIMEOUT_MS);
-            try {
-                const cleaned = await cleanForSpeechOnce(text, controller.signal);
-                return reply.send({ text: cleaned || regexCleanForSpeech(text) });
-            } catch (error) {
-                logError('LLM clean failed; regex fallback', { error, chars: text.length });
-                return reply.send({ text: regexCleanForSpeech(text) });
-            } finally {
-                clearTimeout(timer);
-            }
-        }
-        return reply.send({ text: regexCleanForSpeech(text) });
+        let out = '';
+        const ok = await cleanForSpeech(text, (piece) => { out += piece; });
+        const speech = ok ? out.trim() : '';
+        return reply.send({ text: speech || regexCleanForSpeech(text) });
     });
 }

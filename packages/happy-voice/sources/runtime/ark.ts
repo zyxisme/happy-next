@@ -62,22 +62,3 @@ export async function streamCleanForSpeech(
     }
 }
 
-/** Non-streaming LLM clean: accumulates the streamed deltas into the full text. */
-export async function cleanForSpeechOnce(text: string, signal: AbortSignal): Promise<string> {
-    let out = '';
-    await streamCleanForSpeech(text, (piece) => { out += piece; }, signal);
-    return out.trim();
-}
-
-/** Regex-only TTS cleanup — instant fallback when the LLM is unavailable. */
-export function regexCleanForSpeech(text: string): string {
-    return text
-        .replace(/```[\s\S]*?```/g, ' ')
-        .replace(/`[^`]*`/g, ' ')
-        .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
-        .replace(/https?:\/\/\S+/g, ' ')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/[*#_>~|]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
