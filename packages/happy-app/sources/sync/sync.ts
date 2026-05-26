@@ -39,6 +39,7 @@ import { gitStatusSync } from './gitStatusSync';
 import { projectManager } from './projectManager';
 import { AsyncLock } from '@/utils/lock';
 import { voiceHooks } from '@/realtime/hooks/voiceHooks';
+import { migrateVoiceConfigToSettings } from './voiceConfig';
 import { Message } from './typesMessage';
 import { EncryptionCache } from './encryption/encryptionCache';
 import { systemPrompt, buildDootaskSystemPrompt } from './prompt/systemPrompt';
@@ -323,6 +324,9 @@ class Sync {
         // Await profile sync to have fresh profile
         await this.profileSync.awaitQueue();
 
+        // Migrate legacy local voice config into synced settings (idempotent).
+        migrateVoiceConfigToSettings();
+
         // Upload content public key for direct sharing (fire-and-forget)
         this.#uploadContentPublicKey().catch(() => {});
     }
@@ -335,6 +339,9 @@ class Sync {
         this.anonID = encryption.anonID;
         this.serverID = parseToken(credentials.token);
         await this.#init();
+
+        // Migrate legacy local voice config into synced settings once settings are ready (idempotent).
+        this.settingsSync.awaitQueue().then(() => migrateVoiceConfigToSettings()).catch(() => {});
 
         // Upload content public key for direct sharing (fire-and-forget)
         this.#uploadContentPublicKey().catch(() => {});
