@@ -82,8 +82,9 @@ services:
       - LLM_THINKING_TYPE=${LLM_THINKING_TYPE:-disabled}
       # Unified voice/speaker — live agent TTS + message-playback TTS
       - VOLC_TTS_VOICE=${VOLC_TTS_VOICE:-zh_female_vv_uranus_bigtts}
-      # Agent TTS (bidirectional streaming for the live conversation)
-      - VOLC_AGENT_TTS_RESOURCE_ID=${VOLC_AGENT_TTS_RESOURCE_ID:-seed-tts-1.0}
+      # Agent TTS (bidirectional streaming for the live conversation). seed-tts-2.0
+      # is required for the multilingual voices (uranus).
+      - VOLC_AGENT_TTS_RESOURCE_ID=${VOLC_AGENT_TTS_RESOURCE_ID:-seed-tts-2.0}
       # Message-playback TTS (one-shot/streamed REST synthesis)
       - VOLC_TTS_APP_ID=${VOLC_TTS_APP_ID}
       - VOLC_TTS_TOKEN=${VOLC_TTS_TOKEN}

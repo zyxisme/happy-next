@@ -36,8 +36,9 @@ const envSchema = z.object({
     // Unified voice/speaker — used by BOTH the live agent TTS and message-playback TTS.
     VOLC_TTS_VOICE: z.string().default('zh_female_vv_uranus_bigtts'),
 
-    // Agent TTS (bidirectional streaming, for the live conversation).
-    VOLC_AGENT_TTS_RESOURCE_ID: z.string().default('seed-tts-1.0'),
+    // Agent TTS (bidirectional streaming, for the live conversation). seed-tts-2.0 is
+    // required for the multilingual bigmodel voices (e.g. zh_female_vv_uranus_bigtts).
+    VOLC_AGENT_TTS_RESOURCE_ID: z.string().default('seed-tts-2.0'),
 
     // Message-playback TTS (one-shot REST, for the app's "read message aloud" feature).
     VOLC_TTS_APP_ID: z.string().min(1, 'VOLC_TTS_APP_ID is required'),
