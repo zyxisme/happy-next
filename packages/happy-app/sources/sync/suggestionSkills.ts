@@ -1,5 +1,5 @@
 import Fuse from 'fuse.js';
-import { getSession } from './storage';
+import { getSession, storage } from './storage';
 
 export type SkillScope = 'REPO' | 'USER' | 'ADMIN' | 'SYSTEM';
 
@@ -18,6 +18,11 @@ interface SearchOptions {
 }
 
 function getSkillsFromSession(sessionId: string): SkillItem[] {
+    const capabilities = storage.getState().sessionCapabilities[sessionId]?.capabilities;
+    if (capabilities?.skills) {
+        return capabilities.skills;
+    }
+
     const session = getSession(sessionId);
     if (!session?.metadata?.skills) {
         return [];

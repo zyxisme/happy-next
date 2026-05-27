@@ -4,7 +4,7 @@
  */
 
 import Fuse from 'fuse.js';
-import { getSession } from './storage';
+import { getSession, storage } from './storage';
 
 export type CommandScope = 'REPO' | 'USER' | 'PLUGIN' | 'SYSTEM';
 export type CommandKind = 'command' | 'skill';
@@ -129,9 +129,13 @@ function getCommandsFromSession(sessionId: string): CommandItem[] {
         commands.push(...FORKABLE_COMMANDS);
     }
 
+    const capabilities = storage.getState().sessionCapabilities[sessionId]?.capabilities;
+
+    const slashCommandMetadata = capabilities?.slashCommandMetadata || session.metadata.slashCommandMetadata;
+
     // Prefer structured command metadata when available so autocomplete can display scope labels.
-    if (session.metadata.slashCommandMetadata) {
-        for (const cmd of session.metadata.slashCommandMetadata) {
+    if (slashCommandMetadata) {
+        for (const cmd of slashCommandMetadata) {
             mergeCommand(commands, {
                 command: cmd.name,
                 description: cmd.description || COMMAND_DESCRIPTIONS[cmd.name],
@@ -143,8 +147,9 @@ function getCommandsFromSession(sessionId: string): CommandItem[] {
     
     // Add commands from metadata.slashCommands (filter with ignore list). This remains as a
     // backward-compatible fallback for older CLIs and non-Claude backends.
-    if (session.metadata.slashCommands) {
-        for (const cmd of session.metadata.slashCommands) {
+    const slashCommands = capabilities?.slashCommands || session.metadata.slashCommands;
+    if (slashCommands) {
+        for (const cmd of slashCommands) {
             mergeCommand(commands, {
                 command: cmd,
                 description: COMMAND_DESCRIPTIONS[cmd],

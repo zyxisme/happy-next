@@ -3,6 +3,33 @@ import * as React from 'react';
 import { searchFiles, FileItem } from '@/sync/suggestionFile';
 import { searchCommands, CommandItem } from '@/sync/suggestionCommands';
 import { searchSkills, SkillItem } from '@/sync/suggestionSkills';
+import { sync } from '@/sync/sync';
+import { storage } from '@/sync/storage';
+
+
+const capabilitiesFetches = new Map<string, Promise<void>>();
+
+async function ensureSessionCapabilities(sessionId: string): Promise<void> {
+    if (storage.getState().sessionCapabilities[sessionId]) {
+        return;
+    }
+
+    const existing = capabilitiesFetches.get(sessionId);
+    if (existing) {
+        return existing;
+    }
+
+    const fetchPromise = sync.fetchSessionCapabilities(sessionId)
+        .then(() => undefined)
+        .catch((error) => {
+            console.error('Error fetching session capabilities:', error);
+        })
+        .finally(() => {
+            capabilitiesFetches.delete(sessionId);
+        });
+    capabilitiesFetches.set(sessionId, fetchPromise);
+    return fetchPromise;
+}
 
 export async function getCommandSuggestions(sessionId: string, query: string): Promise<{
     key: string;
@@ -12,6 +39,7 @@ export async function getCommandSuggestions(sessionId: string, query: string): P
     const searchTerm = query.slice(1);
 
     try {
+        await ensureSessionCapabilities(sessionId);
         const commands = await searchCommands(sessionId, searchTerm);
 
         return commands.map((cmd: CommandItem) => ({
@@ -38,6 +66,7 @@ export async function getSkillSuggestions(sessionId: string, query: string): Pro
     const searchTerm = query.slice(1);
 
     try {
+        await ensureSessionCapabilities(sessionId);
         const skills = searchSkills(sessionId, searchTerm);
 
         return skills.map((skill: SkillItem) => ({

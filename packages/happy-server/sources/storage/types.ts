@@ -56,6 +56,10 @@ declare global {
                 value: string | null;
                 version: number;
             } | null | undefined
+            capabilities?: {
+                value: string;
+                version: number;
+            } | null | undefined
         } | {
             t: 'update-account';
             id: string;

@@ -232,13 +232,20 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
                 if (toolsChanged) currentSyncedToolsSig = toolsSig;
                 if (slashCommandsChanged) currentSyncedSlashCommandsSig = slashCommandsSig;
                 if (slashCommandMetadataChanged) currentSyncedSlashCommandMetadataSig = slashCommandMetadataSig;
-                session.client.updateMetadata((m) => ({
-                    ...m,
-                    ...(nextModel ? { model: nextModel } : {}),
-                    ...(toolsChanged ? { tools: init.tools } : {}),
-                    ...(slashCommandsChanged ? { slashCommands: init.slash_commands } : {}),
-                    ...(slashCommandMetadataChanged ? { slashCommandMetadata } : {}),
-                }));
+                if (nextModel) {
+                    session.client.updateMetadata((m) => ({
+                        ...m,
+                        model: nextModel,
+                    }));
+                }
+                if (toolsChanged || slashCommandsChanged || slashCommandMetadataChanged) {
+                    session.client.updateCapabilities((currentCapabilities) => ({
+                        ...currentCapabilities,
+                        ...(toolsChanged ? { tools: init.tools } : {}),
+                        ...(slashCommandsChanged ? { slashCommands: init.slash_commands } : {}),
+                        ...(slashCommandMetadataChanged ? { slashCommandMetadata } : {}),
+                    }));
+                }
             }
         }
 

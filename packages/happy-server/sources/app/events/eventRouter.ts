@@ -76,6 +76,10 @@ export type UpdateEvent = {
         value: string | null;
         version: number;
     } | null | undefined;
+    capabilities?: {
+        value: string;
+        version: number;
+    } | null | undefined;
 } | {
     type: 'update-account';
     userId: string;
@@ -601,7 +605,14 @@ export function buildNewMessageUpdate(message: {
     };
 }
 
-export function buildUpdateSessionUpdate(sessionId: string, updateSeq: number, updateId: string, metadata?: { value: string; version: number }, agentState?: { value: string; version: number }): UpdatePayload {
+export function buildUpdateSessionUpdate(
+    sessionId: string,
+    updateSeq: number,
+    updateId: string,
+    metadata?: { value: string; version: number },
+    agentState?: { value: string; version: number },
+    capabilities?: { value: string; version: number }
+): UpdatePayload {
     return {
         id: updateId,
         seq: updateSeq,
@@ -609,7 +620,8 @@ export function buildUpdateSessionUpdate(sessionId: string, updateSeq: number, u
             t: 'update-session',
             id: sessionId,
             metadata,
-            agentState
+            agentState,
+            capabilities
         },
         createdAt: Date.now()
     };

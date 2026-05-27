@@ -245,16 +245,16 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
     extractSDKMetadataAsync(async (sdkMetadata) => {
         logger.debug('[start] SDK metadata extracted, updating session:', sdkMetadata);
         try {
-            // Update session metadata with tools and slash commands
-            api.sessionSyncClient(response).updateMetadata((currentMetadata) => ({
-                ...currentMetadata,
+            // Update large autocomplete/capability data separately from session metadata.
+            api.sessionSyncClient(response).updateCapabilities((currentCapabilities) => ({
+                ...currentCapabilities,
                 tools: sdkMetadata.tools,
                 slashCommands: sdkMetadata.slashCommands,
                 slashCommandMetadata: sdkMetadata.slashCommandMetadata
             }));
-            logger.debug('[start] Session metadata updated with SDK capabilities');
+            logger.debug('[start] Session capabilities updated with SDK capabilities');
         } catch (error) {
-            logger.debug('[start] Failed to update session metadata:', error);
+            logger.debug('[start] Failed to update session capabilities:', error);
         }
     });
 

@@ -124,6 +124,17 @@ export interface ClientToServerEvents {
     version: number,
     metadata: string
   }) => void) => void,
+  'update-capabilities': (data: { sid: string, expectedVersion: number, payload: string }, cb: (answer: {
+    result: 'error'
+  } | {
+    result: 'version-mismatch'
+    version: number,
+    payload: string | null
+  } | {
+    result: 'success',
+    version: number,
+    payload: string
+  }) => void) => void,
   'update-state': (data: { sid: string, expectedVersion: number, agentState: string | null }, cb: (answer: {
     result: 'error'
   } | {
@@ -303,6 +314,27 @@ export type AgentMessage = z.infer<typeof AgentMessageSchema>
 export const MessageContentSchema = z.union([UserMessageSchema, AgentMessageSchema])
 
 export type MessageContent = z.infer<typeof MessageContentSchema>
+
+export const SessionCapabilitiesSchema = z.object({
+  tools: z.array(z.string()).optional(),
+  slashCommands: z.array(z.string()).optional(),
+  slashCommandMetadata: z.array(z.object({
+    name: z.string(),
+    description: z.string().optional(),
+    kind: z.enum(['command', 'skill']),
+    scope: z.enum(['REPO', 'USER', 'PLUGIN', 'SYSTEM']),
+  })).optional(),
+  skills: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    scope: z.enum(['REPO', 'USER', 'ADMIN', 'SYSTEM']),
+    path: z.string(),
+    displayName: z.string().optional(),
+    shortDescription: z.string().optional(),
+  })).optional(),
+})
+
+export type SessionCapabilities = z.infer<typeof SessionCapabilitiesSchema>
 
 export type Metadata = {
   path: string,

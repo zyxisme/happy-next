@@ -123,6 +123,7 @@ model Session {
   accessKeys        AccessKey[]
   shares            SessionShare[]
   publicShare       PublicSessionShare?
+  capabilities      SessionCapabilities?
   controllerRuns    OrchestratorRun[]       @relation("ControllerRuns")
   workerExecutions  OrchestratorExecution[] @relation("WorkerExecutions")
 
@@ -237,6 +238,15 @@ model OrchestratorExecution {
   @@index([taskId, status, createdAt])
   @@index([machineId, status, createdAt])
   @@index([workerSessionId])
+}
+
+model SessionCapabilities {
+  sessionId String   @id
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  payload   String
+  version   Int      @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
 
 model SessionMessage {

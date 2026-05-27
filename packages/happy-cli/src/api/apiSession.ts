@@ -1,7 +1,7 @@
 import { logger } from '@/ui/logger'
 import { EventEmitter } from 'node:events'
 import { io, Socket } from 'socket.io-client'
-import { AgentState, ClientToServerEvents, MessageContent, Metadata, ServerToClientEvents, Session, Update, UserMessage, UserMessageSchema, Usage } from './types'
+import { AgentState, ClientToServerEvents, MessageContent, Metadata, ServerToClientEvents, Session, SessionCapabilities, SessionCapabilitiesSchema, Update, UserMessage, UserMessageSchema, Usage } from './types'
 import { decodeBase64, decrypt, encodeBase64, encrypt } from './encryption';
 import { backoff } from '@/utils/time';
 import { configuration } from '@/configuration';
@@ -16,6 +16,12 @@ import { RpcHandlerManager } from './rpc/RpcHandlerManager';
 import { registerCommonHandlers } from '../modules/common/registerCommonHandlers';
 import { calculateCost } from '@/utils/pricing';
 import { isDebug } from '@/utils/env';
+
+
+function stripCapabilitiesFromMetadata(metadata: Metadata): Metadata {
+    const { tools, slashCommands, slashCommandMetadata, skills, ...rest } = metadata;
+    return rest;
+}
 
 /** Tools whose tool_use.input should be trimmed and saved to diffStore */
 const INPUT_TRIMMABLE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
@@ -104,6 +110,10 @@ export class ApiSessionClient extends EventEmitter {
     readonly sessionId: string;
     private metadata: Metadata | null;
     private metadataVersion: number;
+    private capabilities: SessionCapabilities = {};
+    private capabilitiesVersion: number = 0;
+    private capabilitiesSeedPromise: Promise<void> | null = null;
+    private capabilitiesSeeded = false;
 
     get isTitlePinned(): boolean {
         return this.metadata?.summaryPinned === true;
@@ -116,6 +126,7 @@ export class ApiSessionClient extends EventEmitter {
     readonly rpcHandlerManager: RpcHandlerManager;
     private agentStateLock = new AsyncLock();
     private metadataLock = new AsyncLock();
+    private capabilitiesLock = new AsyncLock();
     private syncedModel: string | null;
     private encryptionKey: Uint8Array;
     private encryptionVariant: 'legacy' | 'dataKey';
@@ -285,6 +296,11 @@ export class ApiSessionClient extends EventEmitter {
                         this.agentState = data.body.agentState.value ? decrypt(this.encryptionKey, this.encryptionVariant, decodeBase64(data.body.agentState.value)) : null;
                         this.agentStateVersion = data.body.agentState.version;
                     }
+                    if (data.body.capabilities && data.body.capabilities.version > this.capabilitiesVersion) {
+                        this.capabilities = this.decodeCapabilitiesPayload(data.body.capabilities.value);
+                        this.capabilitiesVersion = data.body.capabilities.version;
+                        this.capabilitiesSeeded = true;
+                    }
                 } else if (data.body.t === 'update-machine') {
                     // Session clients shouldn't receive machine updates - log warning
                     logger.debug(`[SOCKET] WARNING: Session client received unexpected machine update - ignoring`);
@@ -324,6 +340,50 @@ export class ApiSessionClient extends EventEmitter {
             'Authorization': `Bearer ${this.token}`,
             'Content-Type': 'application/json'
         } as const;
+    }
+
+    private decodeCapabilitiesPayload(payload: string): SessionCapabilities {
+        const decrypted = decrypt(this.encryptionKey, this.encryptionVariant, decodeBase64(payload));
+        const parsed = SessionCapabilitiesSchema.safeParse(decrypted);
+        if (!parsed.success) {
+            throw new Error(`Invalid session capabilities payload: ${parsed.error.message}`);
+        }
+        return parsed.data;
+    }
+
+    private async ensureCapabilitiesSeeded() {
+        if (this.capabilitiesSeeded) {
+            return;
+        }
+        if (this.capabilitiesSeedPromise) {
+            return this.capabilitiesSeedPromise;
+        }
+
+        this.capabilitiesSeedPromise = (async () => {
+            try {
+                const response = await axios.get(
+                    `${configuration.serverUrl}/v1/sessions/${encodeURIComponent(this.sessionId)}/capabilities`,
+                    {
+                        headers: this.orchestratorHeaders(),
+                        timeout: 30_000,
+                    }
+                );
+                const capabilities = response.data?.capabilities;
+                if (capabilities?.payload && typeof capabilities.version === 'number') {
+                    this.capabilities = this.decodeCapabilitiesPayload(capabilities.payload);
+                    this.capabilitiesVersion = capabilities.version;
+                }
+            } catch (error: any) {
+                if (error?.response?.status !== 404) {
+                    logger.debug('[API] Failed to seed session capabilities', { error });
+                }
+            } finally {
+                this.capabilitiesSeeded = true;
+                this.capabilitiesSeedPromise = null;
+            }
+        })();
+
+        return this.capabilitiesSeedPromise;
     }
 
     getMetadataSnapshot(): Metadata | null {
@@ -1008,7 +1068,7 @@ export class ApiSessionClient extends EventEmitter {
     updateMetadata(handler: (metadata: Metadata) => Metadata) {
         this.metadataLock.inLock(async () => {
             await backoff(async () => {
-                let updated = handler(this.metadata!); // Weird state if metadata is null - should never happen but here we are
+                let updated = stripCapabilitiesFromMetadata(handler(this.metadata!)); // Weird state if metadata is null - should never happen but here we are
                 const answer = await this.socket.emitWithAck('update-metadata', { sid: this.sessionId, expectedVersion: this.metadataVersion, metadata: encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, updated)) });
                 if (answer.result === 'success') {
                     this.metadata = decrypt(this.encryptionKey, this.encryptionVariant, decodeBase64(answer.metadata));
@@ -1023,6 +1083,36 @@ export class ApiSessionClient extends EventEmitter {
                     throw new Error('Metadata version mismatch');
                 } else if (answer.result === 'error') {
                     // Hard error - ignore
+                }
+            });
+        });
+    }
+
+
+    /**
+     * Update large session capability/autocomplete data stored separately from metadata.
+     */
+    updateCapabilities(handler: (capabilities: SessionCapabilities) => SessionCapabilities) {
+        this.capabilitiesLock.inLock(async () => {
+            await this.ensureCapabilitiesSeeded();
+            await backoff(async () => {
+                const updated = SessionCapabilitiesSchema.parse(handler(this.capabilities || {}));
+                const answer = await this.socket.emitWithAck('update-capabilities', {
+                    sid: this.sessionId,
+                    expectedVersion: this.capabilitiesVersion,
+                    payload: encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, updated))
+                });
+                if (answer.result === 'success') {
+                    this.capabilities = this.decodeCapabilitiesPayload(answer.payload);
+                    this.capabilitiesVersion = answer.version;
+                } else if (answer.result === 'version-mismatch') {
+                    if (answer.version > this.capabilitiesVersion && answer.payload) {
+                        this.capabilitiesVersion = answer.version;
+                        this.capabilities = this.decodeCapabilitiesPayload(answer.payload);
+                    }
+                    throw new Error('Capabilities version mismatch');
+                } else if (answer.result === 'error') {
+                    throw new Error('Capabilities update failed');
                 }
             });
         });

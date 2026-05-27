@@ -167,12 +167,11 @@ export async function runCodex(opts: {
     // Create session
     //
 
-    const skills = discoverCodexSkills();
+    let skills = discoverCodexSkills();
     const { state, metadata } = createSessionMetadata({
         flavor: 'codex',
         machineId,
         startedBy: opts.startedBy,
-        skills,
     });
     const response = await api.getOrCreateSession({ tag: sessionTag, metadata, state });
 
@@ -187,12 +186,23 @@ export async function runCodex(opts: {
         response,
         onSessionSwap: (newSession) => {
             session = newSession;
+            const currentSkills = skills;
+            session.updateCapabilities((currentCapabilities) => ({
+                ...currentCapabilities,
+                skills: currentSkills,
+            }));
             if (permissionHandler) {
                 permissionHandler.updateSession(newSession);
             }
         }
     });
     session = initialSession;
+
+    const initialSkills = skills;
+    session.updateCapabilities((currentCapabilities) => ({
+        ...currentCapabilities,
+        skills: initialSkills,
+    }));
 
     let lastSkillsSignature = getCodexSkillsSignature(skills);
     const skillRefreshInterval = setInterval(() => {
@@ -203,13 +213,14 @@ export async function runCodex(opts: {
                 return;
             }
 
+            skills = nextSkills;
             lastSkillsSignature = nextSignature;
-            session.updateMetadata((currentMetadata) => ({
-                ...currentMetadata,
+            session.updateCapabilities((currentCapabilities) => ({
+                ...currentCapabilities,
                 skills: nextSkills,
             }));
         } catch (error) {
-            logger.debug('[codex] Failed to refresh skills metadata:', error);
+            logger.debug('[codex] Failed to refresh skills capabilities:', error);
         }
     }, 30_000);
     skillRefreshInterval.unref();
@@ -827,7 +838,7 @@ export async function runCodex(opts: {
 
             case 'event': {
                 // Handle ACP config metadata events (mode, model, thought level switching)
-                if (handleConfigMetadataEvent(msg.name, msg.payload, session.updateMetadata.bind(session))) {
+                if (handleConfigMetadataEvent(msg.name, msg.payload, session.updateMetadata.bind(session), session.updateCapabilities.bind(session))) {
                     break;
                 }
                 // Handle reasoning events through processors

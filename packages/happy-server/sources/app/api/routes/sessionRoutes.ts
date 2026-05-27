@@ -8,6 +8,8 @@ import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { allocateUserSeq } from "@/storage/seq";
 import { sessionDelete } from "@/app/session/sessionDelete";
 import { invokeUserRpc } from "@/app/api/socket/rpcRegistry";
+import { canViewSession } from "@/app/share/accessControl";
+import { emitSessionCapabilitiesUpdate, updateSessionCapabilitiesAtomic } from "@/app/session/sessionCapabilities";
 
 type SessionListRow = {
     id: string;
@@ -517,6 +519,101 @@ export function sessionRoutes(app: Fastify) {
                 }
             });
         }
+    });
+
+
+    app.get('/v1/sessions/:sessionId/capabilities', {
+        preHandler: app.authenticate,
+        schema: {
+            params: z.object({
+                sessionId: z.string(),
+            })
+        }
+    }, async (request, reply) => {
+        const userId = request.userId;
+        const { sessionId } = request.params;
+
+        if (!await canViewSession(userId, sessionId)) {
+            return reply.code(404).send({ error: 'Session not found' });
+        }
+
+        const capabilities = await db.sessionCapabilities.findUnique({
+            where: { sessionId },
+            select: { payload: true, version: true, updatedAt: true }
+        });
+
+        return reply.send({
+            capabilities: capabilities ? {
+                payload: capabilities.payload,
+                version: capabilities.version,
+                updatedAt: capabilities.updatedAt.getTime(),
+            } : null
+        });
+    });
+
+    app.put('/v1/sessions/:sessionId/capabilities', {
+        preHandler: app.authenticate,
+        schema: {
+            params: z.object({
+                sessionId: z.string(),
+            }),
+            body: z.object({
+                payload: z.string(),
+                expectedVersion: z.number().int().nonnegative().optional(),
+            })
+        }
+    }, async (request, reply) => {
+        const userId = request.userId;
+        const { sessionId } = request.params;
+        const { payload, expectedVersion } = request.body;
+
+        const session = await db.session.findUnique({
+            where: { id: sessionId, accountId: userId },
+            select: { id: true }
+        });
+        if (!session) {
+            return reply.code(404).send({ error: 'Session not found' });
+        }
+
+        const existing = await db.sessionCapabilities.findUnique({
+            where: { sessionId },
+            select: { version: true, payload: true }
+        });
+
+        const versionToUpdate = expectedVersion ?? (existing?.version ?? 0);
+        if (typeof expectedVersion === 'number' && (existing?.version ?? 0) !== expectedVersion) {
+            return reply.code(409).send({
+                result: 'version-mismatch',
+                version: existing?.version ?? 0,
+                payload: existing?.payload ?? null,
+            });
+        }
+
+        const result = await updateSessionCapabilitiesAtomic(sessionId, payload, versionToUpdate);
+        if (result.result === 'version-mismatch') {
+            return reply.code(409).send(result);
+        }
+
+        await emitSessionCapabilitiesUpdate({
+            ownerId: userId,
+            sessionId,
+            payload,
+            version: result.version
+        });
+
+        const capabilities = await db.sessionCapabilities.findUniqueOrThrow({
+            where: { sessionId },
+            select: { payload: true, version: true, updatedAt: true }
+        });
+
+        return reply.send({
+            result: 'success',
+            capabilities: {
+                payload: capabilities.payload,
+                version: capabilities.version,
+                updatedAt: capabilities.updatedAt.getTime(),
+            }
+        });
     });
 
     // @deprecated Use GET /v3/sessions/:sessionId/messages instead.

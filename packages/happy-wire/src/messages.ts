@@ -59,6 +59,7 @@ export const UpdateSessionBodySchema = z.object({
   id: z.string(),
   metadata: VersionedEncryptedValueSchema.nullish(),
   agentState: VersionedNullableEncryptedValueSchema.nullish(),
+  capabilities: VersionedEncryptedValueSchema.nullish(),
 });
 export type UpdateSessionBody = z.infer<typeof UpdateSessionBodySchema>;
 

@@ -105,6 +105,10 @@ export const ApiUpdateSessionStateSchema = z.object({
         version: z.number(),
         value: z.string()
     }).nullish(),
+    capabilities: z.object({
+        version: z.number(),
+        value: z.string()
+    }).nullish(),
 });
 
 export const ApiUpdateAccountSchema = z.object({

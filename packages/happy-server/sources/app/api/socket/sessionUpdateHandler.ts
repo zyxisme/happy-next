@@ -10,6 +10,7 @@ import { log } from "@/utils/log";
 import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { Socket } from "socket.io";
 import { delay } from "@/utils/delay";
+import { emitSessionCapabilitiesUpdate, updateSessionCapabilitiesAtomic } from "@/app/session/sessionCapabilities";
 
 /**
  * Check if there's an active CLI (session-scoped) connection for a session.
@@ -101,6 +102,45 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
             if (callback) {
                 callback({ result: 'error' });
             }
+        }
+    });
+
+
+    socket.on('update-capabilities', async (data: any, callback: (response: any) => void) => {
+        try {
+            const { sid, payload, expectedVersion } = data;
+
+            if (!sid || typeof payload !== 'string' || typeof expectedVersion !== 'number') {
+                callback?.({ result: 'error' });
+                return;
+            }
+
+            const session = await db.session.findUnique({
+                where: { id: sid, accountId: userId },
+                select: { id: true }
+            });
+            if (!session) {
+                callback?.({ result: 'error' });
+                return;
+            }
+
+            const result = await updateSessionCapabilitiesAtomic(sid, payload, expectedVersion);
+            if (result.result === 'version-mismatch') {
+                callback?.(result);
+                return;
+            }
+
+            await emitSessionCapabilitiesUpdate({
+                ownerId: userId,
+                sessionId: sid,
+                payload,
+                version: result.version
+            });
+
+            callback?.({ result: 'success', version: result.version, payload });
+        } catch (error) {
+            log({ module: 'websocket', level: 'error' }, `Error in update-capabilities: ${error}`);
+            callback?.({ result: 'error' });
         }
     });
 

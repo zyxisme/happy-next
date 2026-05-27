@@ -89,6 +89,28 @@ export const MetadataSchema = z.object({
 
 export type Metadata = z.infer<typeof MetadataSchema>;
 
+export const SessionCapabilitiesSchema = z.object({
+    tools: z.array(z.string()).optional(),
+    slashCommands: z.array(z.string()).optional(),
+    slashCommandMetadata: z.array(z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        kind: z.enum(['command', 'skill']),
+        scope: z.enum(['REPO', 'USER', 'PLUGIN', 'SYSTEM']),
+    })).optional(),
+    skills: z.array(z.object({
+        name: z.string(),
+        description: z.string(),
+        scope: z.enum(['REPO', 'USER', 'ADMIN', 'SYSTEM']),
+        path: z.string(),
+        displayName: z.string().optional(),
+        shortDescription: z.string().optional(),
+    })).optional(),
+});
+
+export type SessionCapabilities = z.infer<typeof SessionCapabilitiesSchema>;
+
+
 export const AgentStateSchema = z.object({
     controlledByUser: z.boolean().nullish(),
     taskCompleted: z.number().nullish(),

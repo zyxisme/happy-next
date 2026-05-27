@@ -978,7 +978,7 @@ export async function runGemini(opts: {
 
       case 'event':
         // Handle ACP config metadata events (mode, model, thought level switching)
-        if (handleConfigMetadataEvent(msg.name, msg.payload, session.updateMetadata.bind(session))) {
+        if (handleConfigMetadataEvent(msg.name, msg.payload, session.updateMetadata.bind(session), session.updateCapabilities.bind(session))) {
           break;
         }
         // Handle thinking events - process through ReasoningProcessor like Codex

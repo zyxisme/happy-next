@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from 'zustand/react/shallow'
-import { Session, SessionDraft, Machine, GitStatus, PendingMessage } from "./storageTypes";
+import { Session, SessionDraft, Machine, GitStatus, PendingMessage, SessionCapabilities } from "./storageTypes";
 import { createReducer, reducer, ReducerState } from "./reducer/reducer";
 import { Message } from "./typesMessage";
 import { NormalizedMessage } from "./typesRaw";
@@ -101,6 +101,7 @@ interface StorageState {
     localSettings: LocalSettings;
     profile: Profile;
     sessions: Record<string, Session>;
+    sessionCapabilities: Record<string, { capabilities: SessionCapabilities; version: number; updatedAt?: number }>;
     sessionsData: SessionListItem[] | null;  // Legacy - to be removed
     sessionListViewData: SessionListViewItem[] | null;
     sessionMessages: Record<string, SessionMessages>;
@@ -154,6 +155,7 @@ interface StorageState {
     dootaskColumns: Record<number, DooTaskColumn[]>;
     dootaskColumnsFetchedAt: Record<number, number>;
     applySessions: (sessions: (Omit<Session, 'presence'> & { presence?: "online" | number })[]) => void;
+    applySessionCapabilities: (sessionId: string, capabilities: SessionCapabilities, version: number, updatedAt?: number) => void;
     applyMachines: (machines: Machine[], replace?: boolean) => void;
     applyOpenClawMachines: (machines: OpenClawMachine[], replace?: boolean) => void;
     removeOpenClawMachine: (machineId: string) => void;
@@ -411,6 +413,7 @@ export const storage = create<StorageState>()((set, get) => {
         localSettings,
         profile,
         sessions: {},
+        sessionCapabilities: {},
         machines: {},
         openClawMachines: {},  // Initialize OpenClaw machines
         openClawDirectStatus: {},  // Initialize direct OpenClaw machine status
@@ -528,6 +531,19 @@ export const storage = create<StorageState>()((set, get) => {
                     normalizedSharedSessions as Record<string, Session>
                 ),
                 isDataReady: true,
+            };
+        }),
+        applySessionCapabilities: (sessionId, capabilities, version, updatedAt) => set((state) => {
+            const existing = state.sessionCapabilities[sessionId];
+            if (existing && existing.version >= version) {
+                return state;
+            }
+            return {
+                ...state,
+                sessionCapabilities: {
+                    ...state.sessionCapabilities,
+                    [sessionId]: { capabilities, version, updatedAt },
+                }
             };
         }),
         applySessions: (sessions: (Omit<Session, 'presence'> & { presence?: "online" | number })[]) => set((state) => {

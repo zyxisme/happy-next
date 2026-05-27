@@ -15,7 +15,7 @@ import {
     ApiUpdateContainerSchema
 } from './apiTypes';
 import type { ApiEphemeralActivityUpdate, ApiUpdateContainer } from './apiTypes';
-import { Session, Machine, PendingMessage } from './storageTypes';
+import { Session, Machine, PendingMessage, SessionCapabilitiesSchema } from './storageTypes';
 import { InvalidateSync } from '@/utils/sync';
 import { ActivityUpdateAccumulator } from './reducer/activityUpdateAccumulator';
 import { randomUUID, getRandomBytes } from 'expo-crypto';
@@ -1399,6 +1399,49 @@ class Sync {
         storage.getState().applySharedSessions(decryptedSessions);
         this.scheduleSessionsCacheSave();
         log.log(`📥 fetchSharedSessions completed - processed ${decryptedSessions.length} shared sessions`);
+    }
+
+
+    public fetchSessionCapabilities = async (sessionId: string) => {
+        if (!this.credentials || !this.encryption) return null;
+
+        const sessionEncryption = this.encryption.getSessionEncryption(sessionId);
+        if (!sessionEncryption) {
+            return null;
+        }
+
+        const response = await fetch(`${getServerUrl()}/v1/sessions/${encodeURIComponent(sessionId)}/capabilities`, {
+            headers: {
+                'Authorization': `Bearer ${this.credentials.token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.status === 404) {
+            return null;
+        }
+        if (!response.ok) {
+            throw new Error(`Failed to fetch session capabilities: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.capabilities?.payload) {
+            return null;
+        }
+
+        const decrypted = await sessionEncryption.decryptRaw(data.capabilities.payload);
+        const parsed = SessionCapabilitiesSchema.safeParse(decrypted);
+        if (!parsed.success) {
+            return null;
+        }
+
+        storage.getState().applySessionCapabilities(
+            sessionId,
+            parsed.data,
+            data.capabilities.version,
+            data.capabilities.updatedAt
+        );
+        return parsed.data;
     }
 
     public refreshMachines = async () => {
@@ -3025,6 +3068,25 @@ class Sync {
                 const metadata = updateData.body.metadata && sessionEncryption
                     ? await sessionEncryption.decryptMetadata(updateData.body.metadata.version, updateData.body.metadata.value)
                     : session.metadata;
+
+                if (updateData.body.capabilities) {
+                    try {
+                        const decryptedCapabilities = await sessionEncryption.decryptRaw(updateData.body.capabilities.value);
+                        const parsedCapabilities = SessionCapabilitiesSchema.safeParse(decryptedCapabilities);
+                        if (parsedCapabilities.success) {
+                            storage.getState().applySessionCapabilities(
+                                sessionId,
+                                parsedCapabilities.data,
+                                updateData.body.capabilities.version,
+                                updateData.createdAt
+                            );
+                        } else {
+                            console.error('❌ Failed to parse session capabilities update:', parsedCapabilities.error);
+                        }
+                    } catch (error) {
+                        console.error('❌ Failed to decrypt session capabilities update:', error);
+                    }
+                }
 
                 const updatedSession = {
                     ...session,

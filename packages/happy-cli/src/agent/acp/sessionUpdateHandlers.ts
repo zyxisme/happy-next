@@ -587,6 +587,7 @@ export function handleConfigMetadataEvent(
     eventName: string,
     payload: unknown,
     updateMetadata: (handler: (metadata: any) => any) => void,
+    updateCapabilities?: (handler: (capabilities: any) => any) => void,
 ): boolean {
     if (eventName === 'config_options_update') {
         const configOptions = extractConfigOptionsFromPayload(payload);
@@ -619,7 +620,12 @@ export function handleConfigMetadataEvent(
     if (eventName === 'available_commands') {
         const commands = payload as { name: string; description?: string }[] | undefined;
         if (Array.isArray(commands)) {
-            updateMetadata((m) => ({ ...m, slashCommands: commands.map(c => c.name) }));
+            const slashCommands = commands.map(c => c.name);
+            if (updateCapabilities) {
+                updateCapabilities((c) => ({ ...c, slashCommands }));
+            } else {
+                updateMetadata((m) => ({ ...m, slashCommands }));
+            }
         }
         return true;
     }
