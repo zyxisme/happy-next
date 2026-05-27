@@ -1147,6 +1147,7 @@ export const ru: TranslationStructure = {
 
         notConfigured: 'Не задано',
         usingCustomConfig: 'Пользовательский',
+        alreadyUsingDefaultConfig: 'Уже используются настройки по умолчанию',
         usingDefaultConfig: 'По умолчанию',
         saved: 'Сохранено',
         resetToDefault: 'Сбросить по умолчанию',

@@ -1166,6 +1166,7 @@ export const it: TranslationStructure = {
 
         notConfigured: 'Non impostato',
         usingCustomConfig: 'Personalizzato',
+        alreadyUsingDefaultConfig: 'Stai già usando il valore predefinito',
         usingDefaultConfig: 'Predefinito',
         saved: 'Salvato',
         resetToDefault: 'Ripristina predefinito',

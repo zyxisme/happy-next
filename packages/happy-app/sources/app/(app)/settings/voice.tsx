@@ -33,6 +33,11 @@ function truncate(s: string, maxLen: number): string {
     return s.length > maxLen ? s.slice(0, maxLen) + '...' : s;
 }
 
+function configStatusLabel(value: string | undefined, isCustom: boolean): string {
+    if (isCustom) return t('settingsVoice.usingCustomConfig');
+    return value ? t('settingsVoice.usingDefaultConfig') : t('settingsVoice.notConfigured');
+}
+
 // On web, keep switch taps from bubbling to the row's onPress (which opens the speed picker).
 const stopPropagation = (e: { stopPropagation: () => void }) => e.stopPropagation();
 const switchWebStopHandlers = Platform.OS === 'web'
@@ -103,14 +108,14 @@ export default function VoiceSettingsScreen() {
                     title={t('settingsVoice.gatewayUrl')}
                     icon={<Ionicons name="link-outline" size={29} color="#5856D6" />}
                     detail={gatewayUrl ? truncate(gatewayUrl, 25) : t('settingsVoice.notConfigured')}
-                    subtitle={hasCustomHappyVoiceGatewayUrl() ? t('settingsVoice.usingCustomConfig') : t('settingsVoice.usingDefaultConfig')}
+                    subtitle={configStatusLabel(gatewayUrl, hasCustomHappyVoiceGatewayUrl())}
                     onPress={() => router.push('/settings/voice/happy-voice')}
                 />
                 <Item
                     title={t('settingsVoice.publicKey')}
                     icon={<Ionicons name="shield-outline" size={29} color="#FF2D55" />}
                     detail={publicKey ? '********' : t('settingsVoice.notConfigured')}
-                    subtitle={hasCustomHappyVoicePublicKey() ? t('settingsVoice.usingCustomConfig') : t('settingsVoice.usingDefaultConfig')}
+                    subtitle={configStatusLabel(publicKey, hasCustomHappyVoicePublicKey())}
                     onPress={() => router.push('/settings/voice/happy-voice')}
                 />
             </ItemGroup>

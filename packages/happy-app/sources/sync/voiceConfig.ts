@@ -1,29 +1,8 @@
-import { MMKV } from 'react-native-mmkv';
 import type { AppConfig } from './appConfig';
 import type { Settings } from './settings';
 import { storage } from './storage';
 import { sync } from './sync';
-import {
-    buildVoiceConfigMigrationDelta,
-    type LegacyVoiceConfig,
-    type SendConfirmationSpeed,
-} from './voiceConfigMigration';
-
-// Re-export so existing consumers (e.g. settings/voice.tsx) keep importing the type from here.
-export type { SendConfirmationSpeed } from './voiceConfigMigration';
-
-// Legacy MMKV instance — retained read-only for the one-time migration (added in Task 4).
-const legacyStorage = new MMKV({ id: 'voice-config' });
-
-const LEGACY_KEYS = {
-    happyVoiceGatewayUrl: 'voice-happy-voice-gateway-url',
-    happyVoicePublicKey: 'voice-happy-voice-public-key',
-    sendConfirmation: 'voice-send-confirmation',
-    sendConfirmationSpeed: 'voice-send-confirmation-speed',
-    welcomeMessage: 'voice-welcome-message',
-} as const;
-
-const MIGRATION_DONE_KEY = 'voice-config-migrated-to-settings';
+export type SendConfirmationSpeed = 'fast' | 'normal' | 'slow';
 
 // Reference to app config for fallback defaults (set in initVoiceConfig).
 let configRef: AppConfig | undefined;
@@ -33,6 +12,12 @@ let configRef: AppConfig | undefined;
 // so any import cycle resolves cleanly. Matches the existing pattern in profileSync.ts.
 function applyVoiceSetting(delta: Partial<Settings>): void {
     sync.applySettings(delta);
+}
+
+function normalizeCustomValue(value: string | null, defaultValue: string | undefined): string | null {
+    const normalized = value?.trim();
+    if (!normalized) return null;
+    return normalized === defaultValue?.trim() ? null : normalized;
 }
 
 function settings(): Settings {
@@ -46,7 +31,7 @@ export function getHappyVoiceGatewayUrl(): string | undefined {
 }
 
 export function setHappyVoiceGatewayUrl(value: string | null): void {
-    applyVoiceSetting({ voiceAssistantGatewayUrl: value && value.trim() ? value.trim() : null });
+    applyVoiceSetting({ voiceAssistantGatewayUrl: normalizeCustomValue(value, configRef?.voiceBaseUrl) });
 }
 
 export function hasCustomHappyVoiceGatewayUrl(): boolean {
@@ -58,7 +43,14 @@ export function getHappyVoicePublicKey(): string | undefined {
 }
 
 export function setHappyVoicePublicKey(value: string | null): void {
-    applyVoiceSetting({ voiceAssistantPublicKey: value && value.trim() ? value.trim() : null });
+    applyVoiceSetting({ voiceAssistantPublicKey: normalizeCustomValue(value, configRef?.voicePublicKey) });
+}
+
+export function setHappyVoiceConfig(gatewayUrl: string | null, publicKey: string | null): void {
+    applyVoiceSetting({
+        voiceAssistantGatewayUrl: normalizeCustomValue(gatewayUrl, configRef?.voiceBaseUrl),
+        voiceAssistantPublicKey: normalizeCustomValue(publicKey, configRef?.voicePublicKey),
+    });
 }
 
 export function hasCustomHappyVoicePublicKey(): boolean {
@@ -136,54 +128,6 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
     } catch {
         return { valid: false, error: 'Invalid URL format' };
     }
-}
-
-// ── Migration ───────────────────────────────────────────────────────
-
-/** A legacy string value counts as customized only if it is non-empty after trimming. */
-function readLegacyString(key: string): string | undefined {
-    const raw = legacyStorage.getString(key);
-    const trimmed = raw?.trim();
-    return trimmed ? trimmed : undefined;
-}
-
-/**
- * One-time migration of the legacy `voice-config` MMKV values into synced settings.
- * Idempotent: guarded by a MMKV flag. Only migrates keys the user actually customized,
- * so it never overwrites a synced-settings value with a default. Empty/whitespace-only
- * legacy strings are treated as "not customized" (matches the old getter semantics).
- */
-export function migrateVoiceConfigToSettings(): void {
-    if (legacyStorage.getBoolean(MIGRATION_DONE_KEY)) return;
-
-    const old: LegacyVoiceConfig = {};
-
-    const gatewayUrl = readLegacyString(LEGACY_KEYS.happyVoiceGatewayUrl);
-    if (gatewayUrl !== undefined) old.gatewayUrl = gatewayUrl;
-
-    const publicKey = readLegacyString(LEGACY_KEYS.happyVoicePublicKey);
-    if (publicKey !== undefined) old.publicKey = publicKey;
-
-    if (legacyStorage.contains(LEGACY_KEYS.sendConfirmation)) {
-        old.sendConfirmation = legacyStorage.getBoolean(LEGACY_KEYS.sendConfirmation);
-    }
-
-    if (legacyStorage.contains(LEGACY_KEYS.sendConfirmationSpeed)) {
-        const s = legacyStorage.getString(LEGACY_KEYS.sendConfirmationSpeed);
-        if (s === 'fast' || s === 'normal' || s === 'slow') old.sendConfirmationSpeed = s;
-    }
-
-    const welcomeMessage = readLegacyString(LEGACY_KEYS.welcomeMessage);
-    if (welcomeMessage !== undefined) old.welcomeMessage = welcomeMessage;
-
-    const delta = buildVoiceConfigMigrationDelta(old);
-    if (Object.keys(delta).length > 0) {
-        applyVoiceSetting(delta);
-    }
-
-    // Mark done and drop legacy keys regardless (nothing to migrate is also "done").
-    legacyStorage.set(MIGRATION_DONE_KEY, true);
-    for (const key of Object.values(LEGACY_KEYS)) legacyStorage.delete(key);
 }
 
 // ── Init ────────────────────────────────────────────────────────────

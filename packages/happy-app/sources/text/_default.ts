@@ -1153,6 +1153,7 @@ export const en = {
         // Common
         notConfigured: 'Not set',
         usingCustomConfig: 'Custom',
+        alreadyUsingDefaultConfig: 'Already using default',
         usingDefaultConfig: 'Default',
         saved: 'Saved',
         resetToDefault: 'Reset to Default',

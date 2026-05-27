@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Text } from '@/components/StyledText';
 import { Typography } from '@/constants/Typography';
 import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { RoundButton } from '@/components/RoundButton';
+import { showToast } from '@/components/Toast';
+import { hapticsLight } from '@/components/haptics';
 import { layout } from '@/components/layout';
 import { t } from '@/text';
 import {
@@ -13,6 +15,7 @@ import {
     setHappyVoiceGatewayUrl,
     getHappyVoicePublicKey,
     setHappyVoicePublicKey,
+    setHappyVoiceConfig,
     hasCustomHappyVoiceGatewayUrl,
     hasCustomHappyVoicePublicKey,
     validateUrl,
@@ -73,9 +76,17 @@ export default function HappyVoiceConfigScreen() {
     const isCustomUrl = hasCustomHappyVoiceGatewayUrl();
     const isCustomKey = hasCustomHappyVoicePublicKey();
 
-    const [urlInput, setUrlInput] = useState(isCustomUrl ? (getHappyVoiceGatewayUrl() ?? '') : '');
-    const [keyInput, setKeyInput] = useState(isCustomKey ? (getHappyVoicePublicKey() ?? '') : '');
+    const [urlInput, setUrlInput] = useState(() => isCustomUrl ? (getHappyVoiceGatewayUrl() ?? '') : '');
+    const [keyInput, setKeyInput] = useState(() => isCustomKey ? (getHappyVoicePublicKey() ?? '') : '');
     const [urlError, setUrlError] = useState<string | null>(null);
+
+    useFocusEffect(
+        useCallback(() => {
+            setUrlInput(hasCustomHappyVoiceGatewayUrl() ? (getHappyVoiceGatewayUrl() ?? '') : '');
+            setKeyInput(hasCustomHappyVoicePublicKey() ? (getHappyVoicePublicKey() ?? '') : '');
+            setUrlError(null);
+        }, []),
+    );
 
     const handleSave = () => {
         // Validate URL if provided
@@ -87,12 +98,17 @@ export default function HappyVoiceConfigScreen() {
             }
         }
 
-        setHappyVoiceGatewayUrl(urlInput.trim() || null);
-        setHappyVoicePublicKey(keyInput.trim() || null);
+        setHappyVoiceConfig(urlInput.trim() || null, keyInput.trim() || null);
         router.back();
     };
 
     const handleReset = () => {
+        if (!isCustomUrl && !isCustomKey && !urlInput.trim() && !keyInput.trim()) {
+            hapticsLight();
+            showToast(t('settingsVoice.alreadyUsingDefaultConfig'), { icon: null });
+            return;
+        }
+
         setHappyVoiceGatewayUrl(null);
         setHappyVoicePublicKey(null);
         setUrlInput('');

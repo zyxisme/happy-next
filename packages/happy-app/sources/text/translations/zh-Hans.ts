@@ -1138,6 +1138,7 @@ export const zhHans: TranslationStructure = {
 
         notConfigured: '未设置',
         usingCustomConfig: '自定义',
+        alreadyUsingDefaultConfig: '当前已经是使用默认',
         usingDefaultConfig: '默认',
         saved: '已保存',
         resetToDefault: '恢复默认',

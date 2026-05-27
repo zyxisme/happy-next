@@ -1138,6 +1138,7 @@ export const zhHant: TranslationStructure = {
 
         notConfigured: '未設定',
         usingCustomConfig: '自訂',
+        alreadyUsingDefaultConfig: '目前已經使用預設',
         usingDefaultConfig: '預設',
         saved: '已儲存',
         resetToDefault: '恢復預設',

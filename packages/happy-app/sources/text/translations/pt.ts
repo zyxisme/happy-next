@@ -1136,6 +1136,7 @@ export const pt: TranslationStructure = {
 
         notConfigured: 'Não configurado',
         usingCustomConfig: 'Personalizado',
+        alreadyUsingDefaultConfig: 'Já está usando o padrão',
         usingDefaultConfig: 'Padrão',
         saved: 'Salvo',
         resetToDefault: 'Redefinir para padrão',

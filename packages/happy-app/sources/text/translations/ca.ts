@@ -1136,6 +1136,7 @@ export const ca: TranslationStructure = {
 
         notConfigured: 'No configurat',
         usingCustomConfig: 'Personalitzat',
+        alreadyUsingDefaultConfig: 'Ja s’està utilitzant el valor predeterminat',
         usingDefaultConfig: 'Predeterminat',
         saved: 'Desat',
         resetToDefault: 'Restablir predeterminat',

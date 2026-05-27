@@ -1147,6 +1147,7 @@ export const pl: TranslationStructure = {
 
         notConfigured: 'Nie ustawiono',
         usingCustomConfig: 'Niestandardowy',
+        alreadyUsingDefaultConfig: 'Już używasz ustawień domyślnych',
         usingDefaultConfig: 'Domyślny',
         saved: 'Zapisano',
         resetToDefault: 'Przywróć domyślne',

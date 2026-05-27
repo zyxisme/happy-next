@@ -1168,6 +1168,7 @@ export const ja: TranslationStructure = {
 
         notConfigured: '未設定',
         usingCustomConfig: 'カスタム',
+        alreadyUsingDefaultConfig: 'すでにデフォルトを使用しています',
         usingDefaultConfig: 'デフォルト',
         saved: '保存済み',
         resetToDefault: 'デフォルトに戻す',
