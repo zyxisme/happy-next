@@ -145,6 +145,7 @@ type StoredPermission = {
     mode?: string;
     allowedTools?: string[];
     decision?: 'approved' | 'approved_for_session' | 'denied' | 'abort';
+    answers?: Record<string, string>;
 };
 
 export type ReducerState = {
@@ -526,7 +527,8 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                             reason: completed.reason || undefined,
                             mode: completed.mode || undefined,
                             allowedTools: completed.allowedTools || undefined,
-                            decision: completed.decision || undefined
+                            decision: completed.decision || undefined,
+                            answers: completed.answers || undefined
                         });
 
                         if (hasChanged) {
@@ -546,57 +548,18 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                             createdAt: completed.createdAt || Date.now(),
                             completedAt: completed.completedAt || undefined,
                             status: completed.status,
-                            reason: completed.reason || undefined
+                            reason: completed.reason || undefined,
+                            answers: completed.answers || undefined
                         });
                         continue;
                     }
 
-                    // Skip if already processed as pending
-                    if (agentState.requests && agentState.requests[permId]) {
-                        continue;
-                    }
-
-                    // Skip if this tool will be converted to an event by Phase 0.5
-                    if (shouldSuppressPermission(completed.tool, completed.arguments)) {
-                        continue;
-                    }
-
-                    // Create a new message for completed permission without tool
-                    let mid = allocateId();
-                    let toolCall: ToolCall = {
-                        name: completed.tool,
-                        state: completed.status === 'approved' ? 'completed' : 'error',
-                        input: completed.arguments,
-                        createdAt: completed.createdAt || Date.now(),
-                        startedAt: null,
-                        completedAt: completed.completedAt || Date.now(),
-                        description: null,
-                        result: completed.status === 'approved'
-                            ? 'Approved'
-                            : (completed.reason ? { error: completed.reason } : undefined),
-                        permission: {
-                            id: permId,
-                            status: completed.status,
-                            reason: completed.reason || undefined,
-                            mode: completed.mode || undefined,
-                            allowedTools: completed.allowedTools || undefined,
-                            decision: completed.decision || undefined
-                        }
-                    };
-
-                    state.messages.set(mid, {
-                        id: mid,
-                        realID: null,
-                        role: 'agent',
-                        createdAt: completed.createdAt || Date.now(),
-                        text: null,
-                        tool: toolCall,
-                        event: null,
-                    });
-
-                    state.toolIdToMessageId.set(permId, mid);
-
-                    // Store permission details
+                    // No concrete tool message is currently loaded for this completed
+                    // request. Keep the permission details so a matching tool call can be
+                    // annotated if/when its page is loaded later, but do not synthesize a
+                    // standalone historical tool message. Synthesized completed messages
+                    // have no real message ID/seq and can jump into paginated history out
+                    // of order (notably for old AskUserQuestion requests).
                     state.permissions.set(permId, {
                         tool: completed.tool,
                         arguments: completed.arguments,
@@ -606,10 +569,9 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                         reason: completed.reason || undefined,
                         mode: completed.mode || undefined,
                         allowedTools: completed.allowedTools || undefined,
-                        decision: completed.decision || undefined
+                        decision: completed.decision || undefined,
+                        answers: completed.answers || undefined
                     });
-
-                    changed.add(mid);
                 }
             }
         }
@@ -766,7 +728,8 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                                 reason: permission.reason,
                                 mode: permission.mode,
                                 allowedTools: permission.allowedTools,
-                                decision: permission.decision
+                                decision: permission.decision,
+                                answers: permission.answers
                             };
 
                             // Update state based on permission status

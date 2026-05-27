@@ -482,7 +482,10 @@ describe('reducer', () => {
             };
             
             const result1 = reducer(state, [], agentState);
-            expect(result1.messages).toHaveLength(1);
+            // Completed requests without a loaded concrete tool message are
+            // stored for later matching, but no standalone history message is
+            // synthesized.
+            expect(result1.messages).toHaveLength(0);
             
             // Then receive the actual tool call from the agent
             const messages: NormalizedMessage[] = [
@@ -516,9 +519,61 @@ describe('reducer', () => {
             }
         });
 
+        it('should restore answers when a tool call later matches a stored completed permission', () => {
+            const state = createReducer();
+
+            // A completed AskUserQuestion permission arrives via agentState before
+            // its concrete tool-call message is loaded (paginated history). The
+            // answers live only in completedRequests, never in the tool result.
+            const agentState: AgentState = {
+                completedRequests: {
+                    'tool-q': {
+                        tool: 'AskUserQuestion',
+                        arguments: { questions: [{ question: 'Pick one', header: 'Pick', options: [] }] },
+                        createdAt: 1000,
+                        completedAt: 2000,
+                        status: 'approved',
+                        answers: { 'Pick one': 'Option A' }
+                    }
+                }
+            };
+
+            const result1 = reducer(state, [], agentState);
+            // No standalone message synthesized; permission stored for later matching.
+            expect(result1.messages).toHaveLength(0);
+
+            // Later the concrete tool-call is paginated in.
+            const messages: NormalizedMessage[] = [
+                {
+                    id: 'msg-q',
+                    localId: null,
+                    createdAt: 3000,
+                    role: 'agent',
+                    isSidechain: false,
+                    content: [{
+                        type: 'tool-call',
+                        id: 'tool-q',
+                        name: 'AskUserQuestion',
+                        input: { questions: [{ question: 'Pick one', header: 'Pick', options: [] }] },
+                        description: null,
+                        uuid: 'msg-q-uuid',
+                        parentUUID: null
+                    }]
+                }
+            ];
+
+            const result2 = reducer(state, messages, agentState);
+            expect(result2.messages).toHaveLength(1);
+            if (result2.messages[0].kind === 'tool-call') {
+                expect(result2.messages[0].tool.permission?.status).toBe('approved');
+                // The answers from completedRequests must survive onto the matched message.
+                expect(result2.messages[0].tool.permission?.answers).toEqual({ 'Pick one': 'Option A' });
+            }
+        });
+
         it('should match tool calls by ID regardless of arguments', () => {
             const state = createReducer();
-            
+
             // Create multiple pending permission requests
             const agentState1: AgentState = {
                 requests: {
@@ -621,11 +676,9 @@ describe('reducer', () => {
             };
             
             const result1 = reducer(state, [], agentState);
-            expect(result1.messages).toHaveLength(2);
-            
-            // Store the message IDs
-            const oldMessageId = state.toolIdToMessageId.get('tool-old');
-            const newMessageId = state.toolIdToMessageId.get('tool-new');
+            expect(result1.messages).toHaveLength(0);
+            expect(state.permissions.has('tool-old')).toBe(true);
+            expect(state.permissions.has('tool-new')).toBe(true);
             
             // Now receive a tool call that matches both
             const messages: NormalizedMessage[] = [
@@ -659,15 +712,8 @@ describe('reducer', () => {
             
             // With new design, tool-1 creates a new message since it doesn't match tool-old or tool-new
             expect(state.toolIdToMessageId.has('tool-1')).toBe(true);
-            expect(state.toolIdToMessageId.has('tool-old')).toBe(true);
-            expect(state.toolIdToMessageId.has('tool-new')).toBe(true);
-            
-            // Verify that old messages were not updated (tool-1 is different ID)
-            const newMessage = state.messages.get(newMessageId!);
-            expect(newMessage?.tool?.startedAt).toBeNull();
-            
-            const oldMessage = state.messages.get(oldMessageId!);
-            expect(oldMessage?.tool?.startedAt).toBeNull();
+            expect(state.toolIdToMessageId.has('tool-old')).toBe(false);
+            expect(state.toolIdToMessageId.has('tool-new')).toBe(false);
         });
 
         it('should not create duplicate messages when called twice with same AgentState', () => {
@@ -693,20 +739,22 @@ describe('reducer', () => {
                 }
             };
             
-            // First call - should create messages
+            // First call - should create the pending message only. The completed
+            // request is retained as permission metadata for future matching.
             const result1 = reducer(state, [], agentState);
-            expect(result1.messages).toHaveLength(2);
+            expect(result1.messages).toHaveLength(1);
             
-            // Verify the messages were created
+            // Verify only the pending message was created
             expect(state.toolIdToMessageId.has('tool-pending')).toBe(true);
-            expect(state.toolIdToMessageId.has('tool-completed')).toBe(true);
+            expect(state.toolIdToMessageId.has('tool-completed')).toBe(false);
+            expect(state.permissions.has('tool-completed')).toBe(true);
             
             // Second call with same AgentState - should not create duplicates
             const result2 = reducer(state, [], agentState);
             expect(result2.messages).toHaveLength(0); // No new messages
             
             // Verify the mappings still exist and haven't changed
-            expect(state.toolIdToMessageId.size).toBe(2);
+            expect(state.toolIdToMessageId.size).toBe(1);
             
             // Third call with a message and same AgentState - still no duplicates
             const messages: NormalizedMessage[] = [
@@ -725,7 +773,7 @@ describe('reducer', () => {
             expect(result3.messages[0].kind).toBe('user-text');
             
             // Verify permission messages weren't duplicated
-            expect(state.toolIdToMessageId.size).toBe(2);
+            expect(state.toolIdToMessageId.size).toBe(1);
         });
 
         it('should prioritize tool call over permission request when both provided simultaneously', () => {
@@ -890,22 +938,13 @@ describe('reducer', () => {
                 }
             };
             
-            // Process permissions
+            // Process permissions. Completed requests are not rendered until
+            // their concrete tool messages are loaded.
             const result1 = reducer(state, [], agentState);
-            expect(result1.messages).toHaveLength(2);
+            expect(result1.messages).toHaveLength(0);
             
-            // Both should be separate messages
-            const lsMessageId = state.toolIdToMessageId.get('tool-ls');
-            const pwdMessageId = state.toolIdToMessageId.get('tool-pwd');
-            expect(lsMessageId).toBeDefined();
-            expect(pwdMessageId).toBeDefined();
-            expect(lsMessageId).not.toBe(pwdMessageId);
-            
-            // Verify the messages have correct arguments
-            const lsMessage = state.messages.get(lsMessageId!);
-            const pwdMessage = state.messages.get(pwdMessageId!);
-            expect(lsMessage?.tool?.input).toEqual({ command: 'ls -la' });
-            expect(pwdMessage?.tool?.input).toEqual({ command: 'pwd' });
+            expect(state.permissions.has('tool-ls')).toBe(true);
+            expect(state.permissions.has('tool-pwd')).toBe(true);
             
             // Now receive the first tool call (pwd)
             const messages1: NormalizedMessage[] = [
@@ -929,11 +968,13 @@ describe('reducer', () => {
             
             const result2 = reducer(state, messages1, agentState);
             expect(result2.messages).toHaveLength(1);
+            const pwdMessageId = state.toolIdToMessageId.get('tool-pwd');
+            expect(pwdMessageId).toBeDefined();
             
             // Should match to the pwd permission (newer one, matching arguments)
             expect(state.toolIdToMessageId.get('tool-pwd')).toBe(pwdMessageId);
-            // ls permission should have its own message
-            expect(state.toolIdToMessageId.has('tool-ls')).toBe(true);
+            // ls permission should not have a message until its tool loads
+            expect(state.toolIdToMessageId.has('tool-ls')).toBe(false);
             
             // Now receive the second tool call (ls)
             const messages2: NormalizedMessage[] = [
@@ -957,6 +998,8 @@ describe('reducer', () => {
             
             const result3 = reducer(state, messages2, agentState);
             expect(result3.messages).toHaveLength(1);
+            const lsMessageId = state.toolIdToMessageId.get('tool-ls');
+            expect(lsMessageId).toBeDefined();
             
             // Should match to the ls permission
             expect(state.toolIdToMessageId.get('tool-ls')).toBe(lsMessageId);
@@ -1397,11 +1440,12 @@ describe('reducer', () => {
             const result = reducer(state, messages, agentState);
             
             // Should create: 1 user, 1 agent text, 1 tool from permission request,
-            // 1 tool from completed permission, 1 new tool call
-            expect(result.messages).toHaveLength(5);
+            // and 1 new tool call. The completed permission is stored but not
+            // rendered without a concrete tool message.
+            expect(result.messages).toHaveLength(4);
             
             const types = result.messages.map(m => m.kind).sort();
-            expect(types).toEqual(['agent-text', 'tool-call', 'tool-call', 'tool-call', 'user-text']);
+            expect(types).toEqual(['agent-text', 'tool-call', 'tool-call', 'user-text']);
             
             // Verify each has correct properties
             const userMsg = result.messages.find(m => m.kind === 'user-text');
@@ -1412,10 +1456,10 @@ describe('reducer', () => {
             );
             expect(pendingPerm).toBeDefined();
             
-            const approvedPerm = result.messages.find(m => 
+            const approvedPerm = result.messages.find(m =>
                 m.kind === 'tool-call' && m.tool.permission?.status === 'approved'
             );
-            expect(approvedPerm).toBeDefined();
+            expect(approvedPerm).toBeUndefined();
         });
 
         it('should not allow multiple tool results for the same tool ID', () => {
