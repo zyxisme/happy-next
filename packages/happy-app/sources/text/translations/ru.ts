@@ -970,6 +970,7 @@ export const ru: TranslationStructure = {
             folderLabel: 'ПАПКА',
             skillScopeRepo: 'РЕПО',
             skillScopePersonal: 'ПОЛЬЗ',
+            skillScopePlugin: 'ПЛАГИН',
             skillScopeSystem: 'СИСТ',
         },
         noMachinesAvailable: 'Нет машин',

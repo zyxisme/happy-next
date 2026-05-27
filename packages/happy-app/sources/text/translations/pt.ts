@@ -959,6 +959,7 @@ export const pt: TranslationStructure = {
             folderLabel: 'PASTA',
             skillScopeRepo: 'REPO',
             skillScopePersonal: 'USUÁRIO',
+            skillScopePlugin: 'PLUGIN',
             skillScopeSystem: 'SISTEMA',
         },
         noMachinesAvailable: 'Sem máquinas',

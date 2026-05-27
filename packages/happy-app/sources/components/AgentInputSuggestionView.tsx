@@ -5,25 +5,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { Typography } from '@/constants/Typography';
 import { t } from '@/text';
 
+type SuggestionScope = 'REPO' | 'USER' | 'PLUGIN' | 'SYSTEM';
+
+function getScopeLabel(scope: SuggestionScope): string {
+    return scope === 'REPO' ? t('agentInput.suggestion.skillScopeRepo')
+        : scope === 'USER' ? t('agentInput.suggestion.skillScopePersonal')
+        : scope === 'PLUGIN' ? t('agentInput.suggestion.skillScopePlugin')
+        : t('agentInput.suggestion.skillScopeSystem');
+}
+
 interface CommandSuggestionProps {
     command: string;
     description?: string;
+    scope?: SuggestionScope;
+    kind?: 'command' | 'skill';
 }
 
-export const CommandSuggestion = React.memo(({ command, description }: CommandSuggestionProps) => {
+export const CommandSuggestion = React.memo(({ command, description, scope }: CommandSuggestionProps) => {
     return (
         <View style={styles.suggestionContainer}>
             <Text 
-                style={[styles.commandText, { marginRight: description ? 12 : 0 }]}
+                style={[styles.commandText, { marginRight: (description || scope) ? 12 : 0 }]}
+                numberOfLines={1}
             >
                 /{command}
             </Text>
-            {description && (
+            {description ? (
                 <Text
                     style={styles.descriptionText}
                     numberOfLines={1}
                 >
                     {description}
+                </Text>
+            ) : scope ? (
+                <View style={styles.descriptionSpacer} />
+            ) : null}
+            {scope && (
+                <Text style={styles.labelText}>
+                    {getScopeLabel(scope)}
                 </Text>
             )}
         </View>
@@ -38,9 +57,7 @@ interface SkillSuggestionProps {
 }
 
 export const SkillSuggestion = React.memo(({ name, description, scope, displayName }: SkillSuggestionProps) => {
-    const scopeLabel = scope === 'REPO' ? t('agentInput.suggestion.skillScopeRepo')
-        : scope === 'USER' ? t('agentInput.suggestion.skillScopePersonal')
-        : t('agentInput.suggestion.skillScopeSystem');
+    const scopeLabel = getScopeLabel(scope === 'ADMIN' ? 'SYSTEM' : scope);
 
     return (
         <View style={styles.suggestionContainer}>
@@ -57,13 +74,15 @@ export const SkillSuggestion = React.memo(({ name, description, scope, displayNa
             >
                 {displayName || name}
             </Text>
-            {description && (
+            {description ? (
                 <Text
                     style={styles.descriptionText}
                     numberOfLines={1}
                 >
                     {description}
                 </Text>
+            ) : (
+                <View style={styles.descriptionSpacer} />
             )}
             <Text style={styles.labelText}>
                 {scopeLabel}
@@ -110,6 +129,7 @@ const styles = StyleSheet.create((theme) => ({
         height: 48,
     },
     commandText: {
+        flexShrink: 1,
         fontSize: 14,
         color: theme.colors.text,
         fontWeight: '600',
@@ -120,6 +140,9 @@ const styles = StyleSheet.create((theme) => ({
         fontSize: 13,
         color: theme.colors.textSecondary,
         ...Typography.default(),
+    },
+    descriptionSpacer: {
+        flex: 1,
     },
     iconContainer: {
         width: 32,
@@ -140,6 +163,7 @@ const styles = StyleSheet.create((theme) => ({
         ...Typography.default(),
     },
     labelText: {
+        flexShrink: 0,
         fontSize: 12,
         color: theme.colors.textSecondary,
         marginLeft: 8,

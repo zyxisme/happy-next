@@ -41,6 +41,12 @@ export const MetadataSchema = z.object({
     codexSessionId: z.string().optional(), // Codex CLI conversation ID
     tools: z.array(z.string()).optional(),
     slashCommands: z.array(z.string()).optional(),
+    slashCommandMetadata: z.array(z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        kind: z.enum(['command', 'skill']),
+        scope: z.enum(['REPO', 'USER', 'PLUGIN', 'SYSTEM']),
+    })).optional(),
     skills: z.array(z.object({
         name: z.string(),
         description: z.string(),

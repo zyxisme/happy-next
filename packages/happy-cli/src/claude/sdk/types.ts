@@ -52,6 +52,13 @@ export interface SDKSystemMessage extends SDKMessage {
     cwd?: string
     tools?: string[]
     slash_commands?: string[]
+    skills?: string[]
+    plugins?: Array<{
+        name: string
+        path?: string
+        source?: string
+        [key: string]: unknown
+    }>
 }
 
 export interface SDKResultMessage extends SDKMessage {

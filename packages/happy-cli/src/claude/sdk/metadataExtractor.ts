@@ -6,10 +6,12 @@
 import { query } from './query'
 import type { SDKSystemMessage } from './types'
 import { logger } from '@/ui/logger'
+import { buildClaudeSlashCommandMetadata, type ClaudeSlashCommandMetadata } from '../utils/slashCommandMetadata'
 
 export interface SDKMetadata {
     tools?: string[]
     slashCommands?: string[]
+    slashCommandMetadata?: ClaudeSlashCommandMetadata[]
 }
 
 /**
@@ -39,7 +41,13 @@ export async function extractSDKMetadata(): Promise<SDKMetadata> {
                 
                 const metadata: SDKMetadata = {
                     tools: systemMessage.tools,
-                    slashCommands: systemMessage.slash_commands
+                    slashCommands: systemMessage.slash_commands,
+                    slashCommandMetadata: buildClaudeSlashCommandMetadata({
+                        slashCommands: systemMessage.slash_commands,
+                        skills: systemMessage.skills,
+                        plugins: systemMessage.plugins,
+                        cwd: systemMessage.cwd,
+                    })
                 }
                 
                 logger.debug('[metadataExtractor] Captured SDK metadata:', metadata)
@@ -72,7 +80,7 @@ export async function extractSDKMetadata(): Promise<SDKMetadata> {
 export function extractSDKMetadataAsync(onComplete: (metadata: SDKMetadata) => void): void {
     extractSDKMetadata()
         .then(metadata => {
-            if (metadata.tools || metadata.slashCommands) {
+            if (metadata.tools || metadata.slashCommands || metadata.slashCommandMetadata) {
                 onComplete(metadata)
             }
         })

@@ -6,9 +6,14 @@
 import Fuse from 'fuse.js';
 import { getSession } from './storage';
 
+export type CommandScope = 'REPO' | 'USER' | 'PLUGIN' | 'SYSTEM';
+export type CommandKind = 'command' | 'skill';
+
 export interface CommandItem {
     command: string;        // The command without slash (e.g., "compact")
     description?: string;   // Optional description of what the command does
+    scope?: CommandScope;   // Where the command/skill came from
+    kind?: CommandKind;     // Whether this is a plain slash command or a Claude skill
 }
 
 interface SearchOptions {
@@ -54,17 +59,17 @@ export const IGNORED_COMMANDS = [
 
 // Default commands always available for all session types
 const DEFAULT_COMMANDS: CommandItem[] = [
-    { command: 'clear', description: 'Clear the conversation' },
+    { command: 'clear', description: 'Clear the conversation', scope: 'SYSTEM', kind: 'command' },
 ];
 
 // Commands only available for Claude sessions
 const CLAUDE_COMMANDS: CommandItem[] = [
-    { command: 'compact', description: 'Compact the conversation history' },
+    { command: 'compact', description: 'Compact the conversation history', scope: 'SYSTEM', kind: 'command' },
 ];
 
 // Commands available for sessions with forkable history (Claude, Gemini, Codex)
 const FORKABLE_COMMANDS: CommandItem[] = [
-    { command: 'duplicate', description: 'Duplicate conversation from a specific point' },
+    { command: 'duplicate', description: 'Duplicate conversation from a specific point', scope: 'SYSTEM', kind: 'command' },
 ];
 
 // Command descriptions for known tools/commands
@@ -87,6 +92,24 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
     // Add more descriptions as needed
 };
 
+function shouldIgnoreCommand(item: CommandItem): boolean {
+    return IGNORED_COMMANDS.includes(item.command) && (!item.scope || item.scope === 'SYSTEM');
+}
+
+function mergeCommand(commands: CommandItem[], item: CommandItem): void {
+    if (shouldIgnoreCommand(item)) return;
+
+    const existing = commands.find(c => c.command === item.command);
+    if (!existing) {
+        commands.push(item);
+        return;
+    }
+
+    existing.description = existing.description || item.description;
+    existing.scope = existing.scope || item.scope;
+    existing.kind = existing.kind || item.kind;
+}
+
 // Get commands from session metadata
 function getCommandsFromSession(sessionId: string): CommandItem[] {
     const session = getSession(sessionId);
@@ -105,20 +128,29 @@ function getCommandsFromSession(sessionId: string): CommandItem[] {
     if (session.metadata.claudeSessionId || session.metadata.flavor === 'gemini' || session.metadata.codexSessionId) {
         commands.push(...FORKABLE_COMMANDS);
     }
+
+    // Prefer structured command metadata when available so autocomplete can display scope labels.
+    if (session.metadata.slashCommandMetadata) {
+        for (const cmd of session.metadata.slashCommandMetadata) {
+            mergeCommand(commands, {
+                command: cmd.name,
+                description: cmd.description || COMMAND_DESCRIPTIONS[cmd.name],
+                scope: cmd.scope,
+                kind: cmd.kind,
+            });
+        }
+    }
     
-    // Add commands from metadata.slashCommands (filter with ignore list)
+    // Add commands from metadata.slashCommands (filter with ignore list). This remains as a
+    // backward-compatible fallback for older CLIs and non-Claude backends.
     if (session.metadata.slashCommands) {
         for (const cmd of session.metadata.slashCommands) {
-            // Skip if in ignore list
-            if (IGNORED_COMMANDS.includes(cmd)) continue;
-            
-            // Check if it's already in default commands
-            if (!commands.find(c => c.command === cmd)) {
-                commands.push({
-                    command: cmd,
-                    description: COMMAND_DESCRIPTIONS[cmd]  // Optional description
-                });
-            }
+            mergeCommand(commands, {
+                command: cmd,
+                description: COMMAND_DESCRIPTIONS[cmd],
+                scope: session.metadata.claudeSessionId ? 'SYSTEM' : undefined,
+                kind: session.metadata.claudeSessionId ? 'command' : undefined,
+            });
         }
     }
     

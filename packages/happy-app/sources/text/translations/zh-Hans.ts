@@ -961,6 +961,7 @@ export const zhHans: TranslationStructure = {
             folderLabel: '文件夹',
             skillScopeRepo: '项目',
             skillScopePersonal: '个人',
+            skillScopePlugin: '插件',
             skillScopeSystem: '系统',
         },
         noMachinesAvailable: '无设备',

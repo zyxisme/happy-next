@@ -973,6 +973,7 @@ export const en = {
             folderLabel: 'FOLDER',
             skillScopeRepo: 'REPO',
             skillScopePersonal: 'USER',
+            skillScopePlugin: 'PLUGIN',
             skillScopeSystem: 'SYSTEM',
         },
         noMachinesAvailable: 'No machines',

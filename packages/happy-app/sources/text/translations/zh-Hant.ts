@@ -961,6 +961,7 @@ export const zhHant: TranslationStructure = {
             folderLabel: '資料夾',
             skillScopeRepo: '專案',
             skillScopePersonal: '個人',
+            skillScopePlugin: '外掛',
             skillScopeSystem: '系統',
         },
         noMachinesAvailable: '無裝置',

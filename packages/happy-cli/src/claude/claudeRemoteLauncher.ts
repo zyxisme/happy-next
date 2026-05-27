@@ -18,6 +18,7 @@ import { OutgoingMessageQueue } from "./utils/OutgoingMessageQueue";
 import { getToolName } from "./utils/getToolName";
 import type { PermissionMode } from "@/api/types";
 import type { QueueMessageContent } from "./runClaude";
+import { buildClaudeSlashCommandMetadata } from "./utils/slashCommandMetadata";
 
 interface PermissionsField {
     date: number;
@@ -177,6 +178,7 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
     // Tracks tools/slash commands already synced from system/init so we skip redundant updates
     let currentSyncedToolsSig: string | undefined;
     let currentSyncedSlashCommandsSig: string | undefined;
+    let currentSyncedSlashCommandMetadataSig: string | undefined;
     function syncModelMetadata(mode: EnhancedMode) {
         const model = mode.model;
         const effort = mode.reasoningEffort;
@@ -215,17 +217,27 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
             const nextModel = init.model && init.model !== currentSyncedModel ? init.model : undefined;
             const toolsSig = init.tools ? JSON.stringify(init.tools) : undefined;
             const slashCommandsSig = init.slash_commands ? JSON.stringify(init.slash_commands) : undefined;
+            const slashCommandMetadata = buildClaudeSlashCommandMetadata({
+                slashCommands: init.slash_commands,
+                skills: init.skills,
+                plugins: init.plugins,
+                cwd: init.cwd,
+            });
+            const slashCommandMetadataSig = slashCommandMetadata ? JSON.stringify(slashCommandMetadata) : undefined;
             const toolsChanged = toolsSig !== undefined && toolsSig !== currentSyncedToolsSig;
             const slashCommandsChanged = slashCommandsSig !== undefined && slashCommandsSig !== currentSyncedSlashCommandsSig;
-            if (nextModel || toolsChanged || slashCommandsChanged) {
+            const slashCommandMetadataChanged = slashCommandMetadataSig !== undefined && slashCommandMetadataSig !== currentSyncedSlashCommandMetadataSig;
+            if (nextModel || toolsChanged || slashCommandsChanged || slashCommandMetadataChanged) {
                 if (nextModel) currentSyncedModel = nextModel;
                 if (toolsChanged) currentSyncedToolsSig = toolsSig;
                 if (slashCommandsChanged) currentSyncedSlashCommandsSig = slashCommandsSig;
+                if (slashCommandMetadataChanged) currentSyncedSlashCommandMetadataSig = slashCommandMetadataSig;
                 session.client.updateMetadata((m) => ({
                     ...m,
                     ...(nextModel ? { model: nextModel } : {}),
                     ...(toolsChanged ? { tools: init.tools } : {}),
                     ...(slashCommandsChanged ? { slashCommands: init.slash_commands } : {}),
+                    ...(slashCommandMetadataChanged ? { slashCommandMetadata } : {}),
                 }));
             }
         }

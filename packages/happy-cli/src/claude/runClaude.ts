@@ -249,7 +249,8 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
             api.sessionSyncClient(response).updateMetadata((currentMetadata) => ({
                 ...currentMetadata,
                 tools: sdkMetadata.tools,
-                slashCommands: sdkMetadata.slashCommands
+                slashCommands: sdkMetadata.slashCommands,
+                slashCommandMetadata: sdkMetadata.slashCommandMetadata
             }));
             logger.debug('[start] Session metadata updated with SDK capabilities');
         } catch (error) {

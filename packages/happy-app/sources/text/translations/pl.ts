@@ -970,6 +970,7 @@ export const pl: TranslationStructure = {
             folderLabel: 'FOLDER',
             skillScopeRepo: 'REPO',
             skillScopePersonal: 'UŻYTK',
+            skillScopePlugin: 'PLUGIN',
             skillScopeSystem: 'SYSTEM',
         },
         noMachinesAvailable: 'Brak maszyn',

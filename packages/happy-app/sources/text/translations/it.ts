@@ -989,6 +989,7 @@ export const it: TranslationStructure = {
             folderLabel: 'CARTELLA',
             skillScopeRepo: 'REPO',
             skillScopePersonal: 'UTENTE',
+            skillScopePlugin: 'PLUGIN',
             skillScopeSystem: 'SISTEMA',
         },
         noMachinesAvailable: 'Nessuna macchina',

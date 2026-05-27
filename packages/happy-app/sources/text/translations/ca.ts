@@ -959,6 +959,7 @@ export const ca: TranslationStructure = {
             folderLabel: 'CARPETA',
             skillScopeRepo: 'REPO',
             skillScopePersonal: 'USUARI',
+            skillScopePlugin: 'PLUGIN',
             skillScopeSystem: 'SISTEMA',
         },
         noMachinesAvailable: 'Sense màquines',

@@ -991,6 +991,7 @@ export const ja: TranslationStructure = {
             folderLabel: 'フォルダ',
             skillScopeRepo: 'リポジトリ',
             skillScopePersonal: '個人',
+            skillScopePlugin: 'プラグイン',
             skillScopeSystem: 'システム',
         },
         noMachinesAvailable: 'マシンなし',

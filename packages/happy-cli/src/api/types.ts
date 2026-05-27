@@ -340,6 +340,12 @@ export type Metadata = {
   claudeSessionId?: string, // Claude Code session ID
   tools?: string[],
   slashCommands?: string[],
+  slashCommandMetadata?: Array<{
+    name: string,
+    description?: string,
+    kind: 'command' | 'skill',
+    scope: 'REPO' | 'USER' | 'PLUGIN' | 'SYSTEM',
+  }>,
   skills?: Array<{
     name: string,
     description: string,
