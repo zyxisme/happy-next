@@ -69,7 +69,7 @@ Running `happy` prints a QR code for device pairing.
 - ⚡ **Instant device handoff** - Take back control with a single keypress
 - 🔔 **Push notifications** - Know when your agent needs attention
 - 🔐 **E2EE + self-host option** - Encrypted by default, one-command Docker deployment
-- 🎙️ **Voice assistant** - LiveKit-based voice gateway with pluggable STT/LLM/TTS providers
+- 🎙️ **Voice assistant** - Volcano (Doubao) real-time gateway with streaming speech, native iOS voice calls, and selectable voice timbre / speech rate
 - 🧰 **Multi-repo workspaces** - Worktree-based multi-repo flows with branch selection and PR creation
 - 📁 **Code browser & git management** - Browse files, view diffs, stage/commit/discard from your phone
 - 📋 **DooTask integration** - Task management with real-time chat and one-click AI sessions
@@ -107,11 +107,14 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Gemini 3.1 Pro and Gemini 3 Flash (GA) in the model catalog; wizard handles flash model variants
 
 ### Voice Assistant (Happy Voice)
-- LiveKit-based voice gateway with pluggable STT/LLM/TTS providers
+- Volcano (火山引擎 / Doubao) real-time gateway powering speech-to-text, LLM, and text-to-speech, replacing the earlier LiveKit / ElevenLabs stack
+- Native in-call voice on iOS with streaming text-to-speech, connection state gated on room-state changes, and the microphone guarded during a call
+- Selectable voice timbre and speech rate; multilingual replies default to the seed-tts-2.0 voice
+- Smarter LLM text cleaning before speech — trivial short text skips cleaning to cut latency, with localized in-call announcements
+- Voice assistant configuration syncs across devices via end-to-end-encrypted user settings
 - Microphone mute, voice message send confirmation, "thinking" indicator
 - Context-aware voice: app state is injected into the voice LLM automatically
-- Auto-switch providers by prefix (e.g. `openai/gpt-4.1-mini`, `cartesia/sonic-3`)
-- Read any AI reply aloud with a one-tap voice button in the message footer (one-shot text-to-speech via the voice gateway, reusing the configured TTS provider)
+- Read any AI reply aloud with a one-tap voice button in the message footer (one-shot text-to-speech via the voice gateway)
 
 ### Multi-Repo Worktree Workspaces
 - Create, switch, and archive multi-repo workspaces from the app
@@ -163,11 +166,13 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - HTTP outbox for reliable delivery when WebSocket is unavailable
 - Server-confirmed message sending with retry and message receipt tracking
 - Fixes for cursor skip, outbox race, message duplication/loss
+- Chat reducer no longer synthesizes out-of-order completed-permission messages and preserves AskUserQuestion answers
 
 ### Chat & Session UX
 - Image attachment and clipboard paste (web), image support in drafts, high-quality pass-through up to 1568px preserving text sharpness in code/UI screenshots
 - Session titles seeded from the first user message for new sessions (until an AI summary takes over)
 - Slash command results surface even when the agent emits no assistant message (e.g. unknown commands no longer blank out)
+- Slash-command autocomplete shows each command's source scope (repo / user / plugin / system) and kind; session capabilities are stored separately from metadata and sync live so command and skill lists stay fresh
 - `/duplicate` command to fork a session from any message
 - Message pagination, unread blue dot indicator, compact list view
 - Active/Inactive tab filter, session preview expand/collapse, metadata caching

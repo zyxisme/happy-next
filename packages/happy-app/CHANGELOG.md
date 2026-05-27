@@ -1,5 +1,19 @@
 # Changelog
 
+## Version 12 - 2026-05-27
+
+Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming speech and native iOS voice calls, selectable voice timbre and speech rate, end-to-end-encrypted voice settings sync, and richer slash-command autocomplete with live capability sync.
+
+- Voice: migrated Happy Voice to a new Volcano (火山引擎 / Doubao) real-time gateway, replacing the previous LiveKit / ElevenLabs stack — lower latency and a curated multilingual voice set
+- Voice calls: streaming message text-to-speech and native in-call voice on iOS, with connection state gated on room-state changes and the microphone guarded during a call
+- Voice personalization: choose your assistant's voice timbre and speech rate; multilingual replies default to the seed-tts-2.0 voice
+- Voice quality: smarter LLM text cleaning before speech — trivial short text skips cleaning to cut latency, in-call announcements are localized, and reply length caps were raised
+- Voice settings: voice assistant configuration now syncs across devices via end-to-end-encrypted user settings; refreshed language-search header and layout
+- Autocomplete: slash-command suggestions now show their source scope (repo / user / plugin / system) and kind; session capabilities are stored separately from metadata and sync live so command and skill lists stay fresh
+- Reliability: the chat reducer no longer synthesizes out-of-order completed-permission messages and now preserves AskUserQuestion answers
+- Deploy: docker-compose Happy Voice service points at the Volcano gateway, with the gateway port standardized to 3040
+- CLI: Happy CLI updated to v0.5.0
+
 ## Version 11 - 2026-05-25
 
 Voice playback for AI replies, a per-message action bar, richer chat formatting, DooTask project autofill, session reliability fixes, and updated model catalogs.

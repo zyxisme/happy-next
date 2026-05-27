@@ -11,7 +11,7 @@ This document summarizes what changed in Happy Next compared to the original Hap
 | Orchestrator | Multi-agent DAG task scheduling with per-task model, working directory, and real-time monitoring |
 | Pending queue | Server-side message queue with auto-dispatch, queue panel UI, and send-now option |
 | Multi-agent | Claude Code, Codex, and Gemini are all first-class agents |
-| Voice | LiveKit-based voice gateway with pluggable STT/LLM/TTS providers, plus read-aloud (TTS) of AI replies |
+| Voice | Volcano (Doubao) real-time voice gateway with streaming speech, native iOS voice calls, selectable timbre/speech rate, E2E-encrypted settings sync, plus read-aloud (TTS) of AI replies |
 | Workspaces | Multi-repo worktree creation, switching, archiving, and PR flows |
 | Code browser | File browser, Monaco editor, commit history, git stage/commit/discard, image preview |
 | Session sharing | Direct invite and public link sharing with E2E encryption and access control |
@@ -84,10 +84,13 @@ The original Happy only supported Claude Code. Happy Next treats Claude Code, Co
 
 ## Voice Assistant (Happy Voice)
 
-Happy Next includes a complete voice gateway stack built on the Volcano AI / Happy Voice gateway.
+Happy Next includes a complete voice gateway stack built on the Volcano (火山引擎 / Doubao) real-time gateway, which replaced the earlier LiveKit / ElevenLabs stack.
 
-- **Volcano AI–powered voice gateway** (`happy-voice`) with pluggable providers
-- **Provider auto-switching by prefix**: `openai/gpt-4.1-mini` for LLM, `cartesia/sonic-3:voiceId` for TTS, `assemblyai/universal-streaming:en` for STT
+- **Volcano (Doubao) real-time gateway** (`happy-voice`) driving speech-to-text, LLM, and text-to-speech through Volcano RTC AIGC + a custom-LLM bridge
+- **Native in-call voice on iOS**: streaming text-to-speech during a live call, connection state gated on room-state changes, and the microphone guarded while the call is active
+- **Selectable voice timbre and speech rate**, with multilingual replies defaulting to the seed-tts-2.0 voice
+- **LLM text cleaning before speech** tuned for latency: trivial short text skips cleaning, in-call announcements are localized (i18n framings), capped token budget
+- **Voice settings sync** across devices via end-to-end-encrypted user settings
 - **Microphone mute** in voice conversations (Happy Voice)
 - **Voice tools**: session management (navigate, end conversation), message sending
 - **Voice message send confirmation** with configurable countdown
@@ -208,7 +211,7 @@ Major reliability improvements to the real-time sync layer.
 - **v3 messages API** with seq-based sync, batch writes, and cursor pagination
 - **HTTP outbox** for reliable message delivery when WebSocket is unavailable
 - **Server-confirmed message sending** with retry on failure
-- **Fixes**: cursor skip on first push, outbox concurrent flush race, message duplication, seq gap message loss, syncing cursor reset, outbox drain on close
+- **Fixes**: cursor skip on first push, outbox concurrent flush race, message duplication, seq gap message loss, syncing cursor reset, outbox drain on close, out-of-order completed-permission synthesis (now preserves AskUserQuestion answers)
 - **Message loss prevention** when CLI is offline
 - **Message receipt tracking**: CLI confirms message receipt with legacy compatibility
 - **happy-wire** shared protocol types package to deduplicate schemas across CLI/app/server
@@ -226,6 +229,7 @@ Extensive improvements to the chat and session management experience.
 - **Session rename** with lock to prevent AI auto-update
 - **Session preview** on history page
 - **`/duplicate` command** in chat input to fork a session from any message (with DuplicateSheet picker)
+- **Slash-command autocomplete** shows each command's source scope (repo / user / plugin / system) and kind; session capabilities are stored separately from metadata and sync live (atomic CAS write + socket broadcast) so command and skill lists stay fresh
 - **Per-message action bar**: copy, fork-from-here (with progress spinner), read-aloud (TTS), and full timestamp on web hover / native tap
 - **Options**: click-to-send and long-press-to-fill
 - **Context menu** improvements (web backdrop blur, mobile action sheets)
@@ -359,6 +363,8 @@ Over 250 bug fixes landed. The following are grouped by area.
 - Unify voice language setting across providers
 - Report "cancelled" instead of "sent" when user cancels message
 - Allow closing voice session from error state
+- Align language-search box height on Android; center the language-search header with a max-width layout
+- Default the agent TTS resource to seed-tts-2.0 for multilingual voices
 - Escape double quotes in tool name XML attributes
 
 ### DooTask
