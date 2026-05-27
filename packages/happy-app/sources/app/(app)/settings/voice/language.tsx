@@ -69,6 +69,8 @@ export default function LanguageSelectionScreen() {
                                 flex: 1,
                                 fontSize: 16,
                                 color: theme.colors.input.text,
+                                padding: 0,
+                                ...(Platform.OS === 'android' ? { includeFontPadding: false } : null),
                             }}
                             placeholder={t('settingsVoice.language.searchPlaceholder')}
                             placeholderTextColor={theme.colors.input.placeholder}
