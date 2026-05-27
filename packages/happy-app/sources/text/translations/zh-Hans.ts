@@ -175,6 +175,12 @@ export const zhHans: TranslationStructure = {
         enterSecretKey: '请输入密钥',
         invalidSecretKey: '无效的密钥，请检查后重试。',
         enterUrlManually: '手动输入 URL',
+        restoreWithSecretKey: '改用密钥恢复',
+        enterSecretKeyToRestore: '输入您的密钥以恢复账户访问权限。',
+        linkDeviceStep1: '在您的移动设备上打开 Happy Next',
+        linkDeviceStep2: '前往 设置 → 账户',
+        linkDeviceStep3: '点击"关联新设备"',
+        linkDeviceStep4: '扫描此二维码',
     },
 
     settings: {

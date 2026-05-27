@@ -173,6 +173,12 @@ export const ca: TranslationStructure = {
         enterSecretKey: 'Introdueix la teva clau secreta',
         invalidSecretKey: 'Clau secreta no vàlida. Comprova-ho i torna-ho a provar.',
         enterUrlManually: 'Introdueix l\'URL manualment',
+        restoreWithSecretKey: 'Restaura amb la clau secreta',
+        enterSecretKeyToRestore: 'Introdueix la teva clau secreta per restaurar l\'accés al teu compte.',
+        linkDeviceStep1: 'Obre Happy Next al teu dispositiu mòbil',
+        linkDeviceStep2: 'Ves a Configuració → Compte',
+        linkDeviceStep3: 'Toca "Vincula un dispositiu nou"',
+        linkDeviceStep4: 'Escaneja aquest codi QR',
     },
 
     settings: {

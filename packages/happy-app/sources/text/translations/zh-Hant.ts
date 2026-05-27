@@ -174,6 +174,12 @@ export const zhHant: TranslationStructure = {
         enterSecretKey: '請輸入金鑰',
         invalidSecretKey: '無效的金鑰，請檢查後重試。',
         enterUrlManually: '手動輸入 URL',
+        restoreWithSecretKey: '改用金鑰還原',
+        enterSecretKeyToRestore: '輸入您的金鑰以還原帳戶存取權限。',
+        linkDeviceStep1: '在您的行動裝置上開啟 Happy Next',
+        linkDeviceStep2: '前往 設定 → 帳戶',
+        linkDeviceStep3: '點擊「連結新裝置」',
+        linkDeviceStep4: '掃描此 QR code',
     },
 
     settings: {

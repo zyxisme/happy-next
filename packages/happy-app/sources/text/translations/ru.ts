@@ -137,6 +137,12 @@ export const ru: TranslationStructure = {
         enterSecretKey: 'Пожалуйста, введите секретный ключ',
         invalidSecretKey: 'Неверный секретный ключ. Проверьте и попробуйте снова.',
         enterUrlManually: 'Ввести URL вручную',
+        restoreWithSecretKey: 'Восстановить с помощью секретного ключа',
+        enterSecretKeyToRestore: 'Введите секретный ключ, чтобы восстановить доступ к вашему аккаунту.',
+        linkDeviceStep1: 'Откройте Happy Next на вашем мобильном устройстве',
+        linkDeviceStep2: 'Перейдите в Настройки → Аккаунт',
+        linkDeviceStep3: 'Нажмите «Привязать новое устройство»',
+        linkDeviceStep4: 'Отсканируйте этот QR-код',
     },
 
     settings: {

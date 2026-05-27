@@ -36,9 +36,11 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
     secondInstructionText: {
         fontSize: 16,
+        lineHeight: 30,
         color: theme.colors.textSecondary,
-        marginBottom: 20,
-        marginTop: 30,
+        marginBottom: 32,
+        marginTop: 24,
+        alignSelf: 'stretch',
         ...Typography.default(),
     },
     qrInstructions: {
@@ -135,12 +137,12 @@ export default function Restore() {
         <ScrollView style={styles.scrollView} contentContainerStyle={{ flexGrow: 1 }}>
             <View style={styles.container}>
 
-                <View style={{justifyContent: 'flex-end' }}>
+                <View style={{ width: '100%', maxWidth: layout.maxWidth }}>
                     <Text style={styles.secondInstructionText}>
-                        1. Open Happy Next on your mobile device{'\n'}
-                        2. Go to Settings → Account{'\n'}
-                        3. Tap "Link New Device"{'\n'}
-                        4. Scan this QR code
+                        1. {t('connect.linkDeviceStep1')}{'\n'}
+                        2. {t('connect.linkDeviceStep2')}{'\n'}
+                        3. {t('connect.linkDeviceStep3')}{'\n'}
+                        4. {t('connect.linkDeviceStep4')}
                     </Text>
                 </View>
                 {!authReady && (
@@ -156,8 +158,8 @@ export default function Restore() {
                         backgroundColor={'white'}
                     />
                 )}
-                <View style={{ flexGrow: 4, paddingTop: 30 }}>
-                    <RoundButton title="Restore with Secret Key Instead" display='inverted' onPress={() => {
+                <View style={{ width: '100%', maxWidth: 280, paddingTop: 40, paddingBottom: 24 }}>
+                    <RoundButton title={t('connect.restoreWithSecretKey')} onPress={() => {
                         router.push('/restore/manual');
                     }} />
                 </View>

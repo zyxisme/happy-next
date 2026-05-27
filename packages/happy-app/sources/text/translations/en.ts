@@ -189,6 +189,12 @@ export const en: TranslationStructure = {
         enterSecretKey: 'Please enter a secret key',
         invalidSecretKey: 'Invalid secret key. Please check and try again.',
         enterUrlManually: 'Enter URL manually',
+        restoreWithSecretKey: 'Restore with Secret Key Instead',
+        enterSecretKeyToRestore: 'Enter your secret key to restore access to your account.',
+        linkDeviceStep1: 'Open Happy Next on your mobile device',
+        linkDeviceStep2: 'Go to Settings → Account',
+        linkDeviceStep3: 'Tap "Link New Device"',
+        linkDeviceStep4: 'Scan this QR code',
     },
 
     settings: {

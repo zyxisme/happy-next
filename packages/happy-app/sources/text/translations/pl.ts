@@ -184,6 +184,12 @@ export const pl: TranslationStructure = {
         enterSecretKey: 'Proszę wprowadzić klucz tajny',
         invalidSecretKey: 'Nieprawidłowy klucz tajny. Sprawdź i spróbuj ponownie.',
         enterUrlManually: 'Wprowadź URL ręcznie',
+        restoreWithSecretKey: 'Przywróć za pomocą klucza tajnego',
+        enterSecretKeyToRestore: 'Wprowadź swój klucz tajny, aby przywrócić dostęp do konta.',
+        linkDeviceStep1: 'Otwórz Happy Next na swoim urządzeniu mobilnym',
+        linkDeviceStep2: 'Przejdź do Ustawienia → Konto',
+        linkDeviceStep3: 'Dotknij „Połącz nowe urządzenie”',
+        linkDeviceStep4: 'Zeskanuj ten kod QR',
     },
 
     settings: {

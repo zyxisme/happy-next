@@ -205,6 +205,12 @@ export const ja: TranslationStructure = {
         enterSecretKey: 'シークレットキーを入力してください',
         invalidSecretKey: 'シークレットキーが無効です。確認して再試行してください。',
         enterUrlManually: 'URLを手動で入力',
+        restoreWithSecretKey: '代わりにシークレットキーで復元',
+        enterSecretKeyToRestore: 'アカウントへのアクセスを復元するには、シークレットキーを入力してください。',
+        linkDeviceStep1: 'モバイルデバイスで Happy Next を開く',
+        linkDeviceStep2: '設定 → アカウントに移動',
+        linkDeviceStep3: '「新しいデバイスをリンク」をタップ',
+        linkDeviceStep4: 'この QR コードをスキャン',
     },
 
     settings: {
