@@ -211,7 +211,7 @@ Major reliability improvements to the real-time sync layer.
 - **v3 messages API** with seq-based sync, batch writes, and cursor pagination
 - **HTTP outbox** for reliable message delivery when WebSocket is unavailable
 - **Server-confirmed message sending** with retry on failure
-- **Fixes**: cursor skip on first push, outbox concurrent flush race, message duplication, seq gap message loss, syncing cursor reset, outbox drain on close, out-of-order completed-permission synthesis (now preserves AskUserQuestion answers)
+- **Fixes**: cursor skip on first push, outbox concurrent flush race, message duplication, seq gap message loss, syncing cursor reset, outbox drain on close, out-of-order completed-permission synthesis
 - **Message loss prevention** when CLI is offline
 - **Message receipt tracking**: CLI confirms message receipt with legacy compatibility
 - **happy-wire** shared protocol types package to deduplicate schemas across CLI/app/server

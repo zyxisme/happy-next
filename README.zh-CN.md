@@ -166,7 +166,7 @@ Happy Next 是原版 Happy 的重大演进，以下是亮点：
 - WebSocket 不可用时的 HTTP 发件箱可靠投递
 - 服务端确认消息发送，支持重试和消息接收追踪
 - 修复游标跳过、发件箱竞争、消息重复/丢失
-- 聊天 reducer 不再合成乱序的 completed-permission 消息，并保留 AskUserQuestion 回答
+- 聊天 reducer 不再合成乱序的 completed-permission 消息
 
 ### 聊天和会话体验
 - 图片附件和剪贴板粘贴（Web），草稿支持图片；上传最大尺寸提升到 1568px 并跳过冗余压缩，保留代码截图和 UI 截图的文字清晰度

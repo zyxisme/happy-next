@@ -10,9 +10,9 @@ Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming spe
 - Voice quality: smarter LLM text cleaning before speech — trivial short text skips cleaning to cut latency, in-call announcements are localized, and reply length caps were raised
 - Voice settings: voice assistant configuration now syncs across devices via end-to-end-encrypted user settings; refreshed language-search header and layout
 - Autocomplete: slash-command suggestions now show their source scope (repo / user / plugin / system) and kind; session capabilities are stored separately from metadata and sync live so command and skill lists stay fresh
-- Reliability: the chat reducer no longer synthesizes out-of-order completed-permission messages and now preserves AskUserQuestion answers
+- Reliability: the chat reducer no longer synthesizes out-of-order completed-permission messages
 - Deploy: docker-compose Happy Voice service points at the Volcano gateway, with the gateway port standardized to 3040
-- CLI: Happy CLI updated to v0.5.0
+- CLI: Happy CLI updated to v0.5.1
 
 ## Version 11 - 2026-05-25
 

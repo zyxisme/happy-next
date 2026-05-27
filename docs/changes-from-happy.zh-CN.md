@@ -211,7 +211,7 @@ Happy Next 添加了一等自托管路径。
 - **v3 消息 API**，基于 seq 的同步、批量写入和游标分页
 - **HTTP 发件箱**，WebSocket 不可用时的可靠消息投递
 - **服务端确认消息发送**，失败时重试
-- **修复**：首次推送游标跳过、发件箱并发刷新竞争、消息重复、seq 间隙消息丢失、同步游标重置、关闭时发件箱排空、乱序 completed-permission 合成（现保留 AskUserQuestion 回答）
+- **修复**：首次推送游标跳过、发件箱并发刷新竞争、消息重复、seq 间隙消息丢失、同步游标重置、关闭时发件箱排空、乱序 completed-permission 合成
 - **消息丢失防护**，CLI 离线时
 - **消息接收追踪**：CLI 确认消息接收，兼容旧版本
 - **happy-wire** 共享协议类型包，去重 CLI/app/server 中的 schema

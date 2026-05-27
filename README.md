@@ -166,7 +166,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - HTTP outbox for reliable delivery when WebSocket is unavailable
 - Server-confirmed message sending with retry and message receipt tracking
 - Fixes for cursor skip, outbox race, message duplication/loss
-- Chat reducer no longer synthesizes out-of-order completed-permission messages and preserves AskUserQuestion answers
+- Chat reducer no longer synthesizes out-of-order completed-permission messages
 
 ### Chat & Session UX
 - Image attachment and clipboard paste (web), image support in drafts, high-quality pass-through up to 1568px preserving text sharpness in code/UI screenshots
