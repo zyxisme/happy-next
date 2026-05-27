@@ -113,7 +113,8 @@ export abstract class BasePermissionHandler {
                         completedRequests: {
                             ...currentState.completedRequests,
                             [response.id]: {
-                                ...request,
+                                tool: request.tool,
+                                createdAt: request.createdAt,
                                 completedAt: Date.now(),
                                 status: response.approved ? 'approved' : 'denied',
                                 decision: result.decision
@@ -191,7 +192,8 @@ export abstract class BasePermissionHandler {
                 // Move all pending to completed as canceled
                 for (const [id, request] of Object.entries(pendingRequests)) {
                     completedRequests[id] = {
-                        ...request,
+                        tool: request.tool,
+                        createdAt: request.createdAt,
                         completedAt: Date.now(),
                         status: 'canceled',
                         reason: 'Session reset'

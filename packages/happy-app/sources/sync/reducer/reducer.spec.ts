@@ -519,12 +519,12 @@ describe('reducer', () => {
             }
         });
 
-        it('should restore answers when a tool call later matches a stored completed permission', () => {
+        it('should use AskUserQuestion answers from the tool result instead of completedRequests', () => {
             const state = createReducer();
 
             // A completed AskUserQuestion permission arrives via agentState before
             // its concrete tool-call message is loaded (paginated history). The
-            // answers live only in completedRequests, never in the tool result.
+            // reducer should not depend on completedRequests for the answers.
             const agentState: AgentState = {
                 completedRequests: {
                     'tool-q': {
@@ -566,8 +566,33 @@ describe('reducer', () => {
             expect(result2.messages).toHaveLength(1);
             if (result2.messages[0].kind === 'tool-call') {
                 expect(result2.messages[0].tool.permission?.status).toBe('approved');
-                // The answers from completedRequests must survive onto the matched message.
-                expect(result2.messages[0].tool.permission?.answers).toEqual({ 'Pick one': 'Option A' });
+                expect(result2.messages[0].tool.permission?.answers).toBeUndefined();
+            }
+
+            // The tool result itself carries the persisted answer payload.
+            const resultMessages: NormalizedMessage[] = [
+                {
+                    id: 'msg-q-result',
+                    localId: null,
+                    createdAt: 4000,
+                    role: 'agent',
+                    isSidechain: false,
+                    content: [{
+                        type: 'tool-result',
+                        tool_use_id: 'tool-q',
+                        content: { answers: { 'Pick one': 'Option A' } },
+                        is_error: false,
+                        uuid: 'msg-q-result-uuid',
+                        parentUUID: null
+                    }]
+                }
+            ];
+
+            const result3 = reducer(state, resultMessages, agentState);
+            expect(result3.messages).toHaveLength(1);
+            if (result3.messages[0].kind === 'tool-call') {
+                expect(result3.messages[0].tool.state).toBe('completed');
+                expect(result3.messages[0].tool.result).toEqual({ answers: { 'Pick one': 'Option A' } });
             }
         });
 
@@ -1677,8 +1702,8 @@ describe('reducer', () => {
             expect(toolMessage.kind).toBe('tool-call');
             if (toolMessage.kind === 'tool-call') {
                 expect(toolMessage.tool.name).toBe('Bash');
-                // Keeps original permission arguments
-                expect(toolMessage.tool.input).toEqual({ command: 'ls' });
+                // Uses the tool call's own input; permission no longer carries arguments
+                expect(toolMessage.tool.input).toEqual({ command: 'pwd' });
                 expect(toolMessage.tool.permission?.status).toBe('approved');
             }
         });

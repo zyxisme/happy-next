@@ -493,13 +493,13 @@ export class PermissionHandler {
                     completedRequests: {
                         ...currentState.completedRequests,
                         [id]: {
-                            ...request,
+                            tool: request.tool,
+                            createdAt: request.createdAt,
                             completedAt: Date.now(),
                             status: message.approved ? 'approved' : 'denied',
                             reason: message.reason,
                             mode: message.mode,
-                            allowTools: message.allowTools,
-                            answers: message.answers
+                            allowTools: message.allowTools
                         }
                     }
                 };

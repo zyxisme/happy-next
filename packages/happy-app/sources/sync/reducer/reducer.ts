@@ -440,21 +440,14 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                 if (messageId) {
                     const message = state.messages.get(messageId);
                     if (message?.tool) {
-                        // Skip if tool has already started actual execution with approval
-                        // But still apply answers from completedRequests (not available in tool results)
+                        // Skip if tool has already started actual execution with approval.
+                        // AskUserQuestion answers should come from the tool result itself, not AgentState.
                         if (message.tool.startedAt && message.tool.permission?.status === 'approved') {
-                            if (completed.answers && message.tool.permission && !message.tool.permission.answers) {
-                                message.tool.permission.answers = completed.answers;
-                            }
                             continue;
                         }
 
-                        // Skip if permission already has date (came from tool result - preferred over agentState)
-                        // But still apply answers from completedRequests (not available in tool results)
+                        // Skip if permission already has date (came from tool result - preferred over agentState).
                         if (message.tool.permission?.date) {
-                            if (completed.answers && !message.tool.permission.answers) {
-                                message.tool.permission.answers = completed.answers;
-                            }
                             continue;
                         }
 
@@ -480,8 +473,7 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                                 mode: completed.mode || undefined,
                                 allowedTools: completed.allowedTools || undefined,
                                 decision: completed.decision || undefined,
-                                reason: completed.reason || undefined,
-                                answers: completed.answers || undefined
+                                reason: completed.reason || undefined
                             };
                             hasChanged = true;
                         } else {
@@ -492,9 +484,6 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                             message.tool.permission.decision = completed.decision || undefined;
                             if (completed.reason) {
                                 message.tool.permission.reason = completed.reason;
-                            }
-                            if (completed.answers) {
-                                message.tool.permission.answers = completed.answers;
                             }
                             hasChanged = true;
                         }
@@ -527,8 +516,7 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                             reason: completed.reason || undefined,
                             mode: completed.mode || undefined,
                             allowedTools: completed.allowedTools || undefined,
-                            decision: completed.decision || undefined,
-                            answers: completed.answers || undefined
+                            decision: completed.decision || undefined
                         });
 
                         if (hasChanged) {
@@ -548,8 +536,7 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                             createdAt: completed.createdAt || Date.now(),
                             completedAt: completed.completedAt || undefined,
                             status: completed.status,
-                            reason: completed.reason || undefined,
-                            answers: completed.answers || undefined
+                            reason: completed.reason || undefined
                         });
                         continue;
                     }
@@ -569,8 +556,7 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                         reason: completed.reason || undefined,
                         mode: completed.mode || undefined,
                         allowedTools: completed.allowedTools || undefined,
-                        decision: completed.decision || undefined,
-                        answers: completed.answers || undefined
+                        decision: completed.decision || undefined
                     });
                 }
             }
@@ -709,7 +695,7 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                         let toolCall: ToolCall = {
                             name: c.name,
                             state: 'running' as const,
-                            input: permission ? permission.arguments : c.input,  // Use permission args if available
+                            input: c.input ?? (permission ? permission.arguments : undefined),  // Prefer the tool call's own input; permission args are a legacy fallback
                             createdAt: permission ? permission.createdAt : msg.createdAt,  // Use permission timestamp if available
                             startedAt: msg.createdAt,
                             completedAt: null,

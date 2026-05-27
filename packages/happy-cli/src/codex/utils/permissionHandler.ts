@@ -88,7 +88,6 @@ export class CodexPermissionHandler extends BasePermissionHandler {
                     ...currentState.completedRequests,
                     [toolCallId]: {
                         tool: toolName,
-                        arguments: input,
                         createdAt: Date.now(),
                         completedAt: Date.now(),
                         status: 'approved',

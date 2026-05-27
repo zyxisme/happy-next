@@ -430,7 +430,6 @@ export type AgentState = {
   completedRequests?: {
     [id: string]: {
       tool: string,
-      arguments: any,
       createdAt: number,
       completedAt: number,
       status: 'canceled' | 'denied' | 'approved',
