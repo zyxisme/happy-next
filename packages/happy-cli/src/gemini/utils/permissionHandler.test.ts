@@ -76,9 +76,10 @@ describe('GeminiPermissionHandler', () => {
     expect(agentState.requests?.['tool-2']).toBeUndefined();
     expect(agentState.completedRequests?.['tool-2']).toMatchObject({
       tool: 'Bash',
-      arguments: { command: 'pwd' },
       status: 'approved',
       decision: 'approved',
     });
+    // arguments are no longer persisted in completedRequests (refactor: read from the message stream)
+    expect(agentState.completedRequests?.['tool-2']).not.toHaveProperty('arguments');
   });
 });
