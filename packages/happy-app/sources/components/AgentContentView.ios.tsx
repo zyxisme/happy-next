@@ -1,8 +1,7 @@
-import { useHeaderHeight } from '@/utils/responsive';
 import * as React from 'react';
 import { View } from 'react-native';
-import { KeyboardStickyView } from 'react-native-keyboard-controller';
-import Animated from 'react-native-reanimated';
+import { KeyboardStickyView, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AgentContentViewProps {
@@ -14,7 +13,12 @@ interface AgentContentViewProps {
 
 export const AgentContentView: React.FC<AgentContentViewProps> = React.memo(({ input, content, placeholder, betweenContentAndInput }) => {
     const safeArea = useSafeAreaInsets();
-    const headerHeight = useHeaderHeight();
+    const { height } = useReanimatedKeyboardAnimation();
+    const placeholderVisibleAreaStyle = useAnimatedStyle(() => ({
+        // Keyboard controller reports iOS keyboard height as a negative offset here.
+        // Use the inverse so the placeholder is centered in the visible area above the keyboard.
+        bottom: Math.max(0, -height.value),
+    }), []);
     return (
         <View style={{ flexBasis:0, flexGrow:1 }}>
             <View style={{ flexBasis:0, flexGrow:1 }}>
@@ -27,9 +31,12 @@ export const AgentContentView: React.FC<AgentContentViewProps> = React.memo(({ i
                     </KeyboardStickyView>
                 )}
                 {placeholder && (
-                    <Animated.ScrollView 
-                        style={{ position: 'absolute', top: safeArea.top + headerHeight, left: 0, right: 0, bottom: 0 }}
-                        contentContainerStyle={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}
+                    <Animated.ScrollView
+                        style={[
+                            { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+                            placeholderVisibleAreaStyle,
+                        ]}
+                        contentContainerStyle={{ alignItems: 'center', justifyContent: 'center', flexGrow: 1 }}
                         keyboardShouldPersistTaps="handled"
                         alwaysBounceVertical={false}
                     >
