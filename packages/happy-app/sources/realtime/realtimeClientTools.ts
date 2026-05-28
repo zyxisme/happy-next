@@ -11,7 +11,7 @@ import {
     deleteSessionParametersSchema,
     getLatestAssistantReplyParametersSchema,
     listSessionsParametersSchema,
-    messageClaudeCodeParametersSchema,
+    messageHappyCodeParametersSchema,
     processPermissionRequestParametersSchema,
     switchSessionParametersSchema,
 } from './voiceToolContracts';
@@ -54,9 +54,9 @@ export const realtimeClientTools = {
     /**
      * Send a message to the active coding agent
      */
-    messageClaudeCode: async (parameters: unknown) => {
+    messageHappyCode: async (parameters: unknown) => {
         // Parse and validate the message parameter using Zod
-        const parsedMessage = messageClaudeCodeParametersSchema.safeParse(parameters);
+        const parsedMessage = messageHappyCodeParametersSchema.safeParse(parameters);
 
         if (!parsedMessage.success) {
             console.error('❌ Invalid message parameter:', parsedMessage.error);
@@ -71,7 +71,7 @@ export const realtimeClientTools = {
             return "error (no active session)";
         }
         
-        console.log('🔍 messageClaudeCode called with:', message);
+        console.log('🔍 messageHappyCode called with:', message);
         console.log('📤 Sending message to session:', sessionId);
 
         if (getSendConfirmation()) {

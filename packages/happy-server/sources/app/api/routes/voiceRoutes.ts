@@ -4,7 +4,7 @@ import { log } from "@/utils/log";
 import { invokeUserRpc } from "../socket/rpcRegistry";
 
 const bridgedVoiceToolNameSchema = z.enum([
-    'messageClaudeCode',
+    'messageHappyCode',
     'processPermissionRequest',
     'listSessions',
     'switchSession',

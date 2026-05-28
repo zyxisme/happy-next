@@ -24,7 +24,7 @@ export const TOOL_DEFINITIONS: OpenAiTool[] = [
     {
         type: 'function',
         function: {
-            name: 'messageClaudeCode',
+            name: 'messageHappyCode',
             description:
                 'Forward a message to the coding agent. Use when the user explicitly asks to send something to Happy, or for code/project tasks. For app operations (sessions, settings, navigation) use the dedicated tools instead.',
             parameters: {
