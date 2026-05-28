@@ -1188,11 +1188,11 @@ export const it: TranslationStructure = {
         welcomeMessageDescription: 'Personalizza il messaggio dell\'assistente vocale all\'inizio di una sessione. Lascia vuoto per usare il saluto predefinito.',
         welcomeMessagePlaceholder: 'Saluta e chiedi cosa vuole creare l\'utente.',
 
-        sendConfirmationTitle: 'Conferma invio',
-        sendConfirmationDescription: 'Mostra una finestra di conferma con conto alla rovescia prima che l\'assistente vocale invii messaggi all\'agente di codifica.',
-        sendConfirmationLabel: 'Conferma invio',
-        sendConfirmationSubtitle: 'Rivedi i messaggi prima dell\'invio',
-        sendConfirmationSpeedTitle: 'Velocità del conto alla rovescia',
+        actionConfirmationTitle: 'Conferma azione vocale',
+        actionConfirmationDescription: 'Mostra un conto alla rovescia prima di eseguire azioni vocali (invio/creazione/eliminazione).',
+        actionConfirmationLabel: 'Conferma azione',
+        actionConfirmationSubtitle: 'Rivedi le azioni prima dell\'esecuzione',
+        actionConfirmationSpeedTitle: 'Velocità del conto alla rovescia',
         speedFast: 'Veloce (3s)',
         speedNormal: 'Normale (5s)',
         speedSlow: 'Lento (8s)',
@@ -1211,11 +1211,19 @@ export const it: TranslationStructure = {
         speechRateNormal: 'Normale (0)',
     },
 
-    voiceSendConfirmation: {
-        title: 'Invio messaggio',
+    voiceActionConfirmation: {
         cancel: 'Annulla',
-        sendNow: 'Invia ora',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}s`,
+        sendTitle: 'Invio messaggio',
+        sendConfirm: 'Invia ora',
+        createTitle: 'Creazione sessione',
+        createConfirm: 'Crea ora',
+        deleteTitle: 'Eliminazione sessione',
+        deleteConfirm: 'Elimina ora',
+        pickerTitle: 'Seleziona una sessione',
+        pickerSwitchTitle: 'Cambia sessione',
+        pickerDeleteTitle: 'Elimina sessione',
+        emptyState: 'Nessuna sessione ancora.',
     },
 
     settingsAccount: {

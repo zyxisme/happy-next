@@ -15,6 +15,7 @@ const bridgedVoiceToolNameSchema = z.enum([
     'deleteSessionTool',
     'navigateHome',
     'endVoiceConversation',
+    'cancelPendingAction',
 ] as const);
 
 export function voiceRoutes(app: Fastify) {

@@ -20,13 +20,13 @@ import {
     hasCustomHappyVoiceGatewayUrl,
     getHappyVoicePublicKey,
     hasCustomHappyVoicePublicKey,
-    getSendConfirmation,
-    setSendConfirmation,
-    getSendConfirmationSpeed,
-    setSendConfirmationSpeed,
+    getActionConfirmation,
+    setActionConfirmation,
+    getActionConfirmationSpeed,
+    setActionConfirmationSpeed,
     getWelcomeMessage,
     hasCustomWelcomeMessage,
-    type SendConfirmationSpeed,
+    type ActionConfirmationSpeed,
 } from '@/sync/voiceConfig';
 
 function truncate(s: string, maxLen: number): string {
@@ -58,8 +58,8 @@ export default function VoiceSettingsScreen() {
     // Local state that refreshes when returning from sub-pages
     const [gatewayUrl, setGatewayUrl] = useState(() => getHappyVoiceGatewayUrl());
     const [publicKey, setPublicKey] = useState(() => getHappyVoicePublicKey());
-    const [sendConfirmationEnabled, setSendConfirmationEnabled] = useState(() => getSendConfirmation());
-    const [confirmationSpeed, setConfirmationSpeed] = useState<SendConfirmationSpeed>(() => getSendConfirmationSpeed());
+    const [sendConfirmationEnabled, setSendConfirmationEnabled] = useState(() => getActionConfirmation());
+    const [confirmationSpeed, setConfirmationSpeed] = useState<ActionConfirmationSpeed>(() => getActionConfirmationSpeed());
     const [speedMenuVisible, setSpeedMenuVisible] = useState(false);
     const [welcomeMessage, setWelcomeMessageState] = useState(() => getWelcomeMessage());
 
@@ -67,26 +67,26 @@ export default function VoiceSettingsScreen() {
         useCallback(() => {
             setGatewayUrl(getHappyVoiceGatewayUrl());
             setPublicKey(getHappyVoicePublicKey());
-            setSendConfirmationEnabled(getSendConfirmation());
-            setConfirmationSpeed(getSendConfirmationSpeed());
+            setSendConfirmationEnabled(getActionConfirmation());
+            setConfirmationSpeed(getActionConfirmationSpeed());
             setWelcomeMessageState(getWelcomeMessage());
         }, []),
     );
 
     const handleSendConfirmationChange = (value: boolean) => {
-        setSendConfirmation(value);
+        setActionConfirmation(value);
         setSendConfirmationEnabled(value);
         // Picking the countdown speed is now part of enabling confirmation.
         if (value) setSpeedMenuVisible(true);
     };
 
-    const handleSpeedChange = (value: SendConfirmationSpeed) => {
-        setSendConfirmationSpeed(value);
+    const handleSpeedChange = (value: ActionConfirmationSpeed) => {
+        setActionConfirmationSpeed(value);
         setConfirmationSpeed(value);
     };
 
-    const SPEED_SECONDS: Record<SendConfirmationSpeed, number> = { fast: 3, normal: 5, slow: 8 };
-    const speedLabel: Record<SendConfirmationSpeed, string> = {
+    const SPEED_SECONDS: Record<ActionConfirmationSpeed, number> = { fast: 3, normal: 5, slow: 8 };
+    const speedLabel: Record<ActionConfirmationSpeed, string> = {
         fast: t('settingsVoice.speedFast'),
         normal: t('settingsVoice.speedNormal'),
         slow: t('settingsVoice.speedSlow'),
@@ -190,12 +190,12 @@ export default function VoiceSettingsScreen() {
 
             {/* Send Confirmation (with countdown speed picker) */}
             <ItemGroup
-                title={t('settingsVoice.sendConfirmationTitle')}
-                footer={t('settingsVoice.sendConfirmationDescription')}
+                title={t('settingsVoice.actionConfirmationTitle')}
+                footer={t('settingsVoice.actionConfirmationDescription')}
             >
                 <Item
-                    title={t('settingsVoice.sendConfirmationLabel')}
-                    subtitle={t('settingsVoice.sendConfirmationSubtitle')}
+                    title={t('settingsVoice.actionConfirmationLabel')}
+                    subtitle={t('settingsVoice.actionConfirmationSubtitle')}
                     icon={<Ionicons name="shield-checkmark-outline" size={29} color="#34C759" />}
                     rightElement={
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -219,7 +219,7 @@ export default function VoiceSettingsScreen() {
 
             <ActionMenuModal
                 visible={speedMenuVisible}
-                title={t('settingsVoice.sendConfirmationSpeedTitle')}
+                title={t('settingsVoice.actionConfirmationSpeedTitle')}
                 items={speedMenuItems}
                 onClose={() => setSpeedMenuVisible(false)}
             />

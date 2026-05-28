@@ -1158,11 +1158,11 @@ export const ca: TranslationStructure = {
         welcomeMessageDescription: 'Personalitza el que diu l\'assistent de veu en iniciar una sessió. Deixa\'l buit per usar la salutació predeterminada.',
         welcomeMessagePlaceholder: 'Saluda i pregunta què vol construir l\'usuari.',
 
-        sendConfirmationTitle: 'Confirmació d\'enviament',
-        sendConfirmationDescription: 'Mostra un diàleg de confirmació amb compte enrere abans que l\'assistent de veu enviï missatges a l\'agent de codificació.',
-        sendConfirmationLabel: 'Confirmació d\'enviament',
-        sendConfirmationSubtitle: 'Revisa els missatges abans d\'enviar',
-        sendConfirmationSpeedTitle: 'Velocitat del compte enrere',
+        actionConfirmationTitle: 'Confirmació d\'acció per veu',
+        actionConfirmationDescription: 'Mostra un compte enrere abans d\'executar accions de veu (enviar/crear/eliminar).',
+        actionConfirmationLabel: 'Confirmació d\'acció',
+        actionConfirmationSubtitle: 'Revisa les accions abans d\'executar-les',
+        actionConfirmationSpeedTitle: 'Velocitat del compte enrere',
         speedFast: 'Ràpid (3s)',
         speedNormal: 'Normal (5s)',
         speedSlow: 'Lent (8s)',
@@ -1181,11 +1181,19 @@ export const ca: TranslationStructure = {
         speechRateNormal: 'Normal (0)',
     },
 
-    voiceSendConfirmation: {
-        title: 'Enviant missatge',
+    voiceActionConfirmation: {
         cancel: 'Cancel·la',
-        sendNow: 'Envia ara',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}s`,
+        sendTitle: 'Enviant missatge',
+        sendConfirm: 'Envia ara',
+        createTitle: 'Creant la sessió',
+        createConfirm: 'Crear ara',
+        deleteTitle: 'Eliminant la sessió',
+        deleteConfirm: 'Eliminar ara',
+        pickerTitle: 'Selecciona una sessió',
+        pickerSwitchTitle: 'Canviar de sessió',
+        pickerDeleteTitle: 'Eliminar sessió',
+        emptyState: 'Encara no hi ha sessions.',
     },
 
     settingsAccount: {

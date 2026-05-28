@@ -1190,11 +1190,11 @@ export const ja: TranslationStructure = {
         welcomeMessageDescription: '音声アシスタントのセッション開始時の挨拶をカスタマイズします。空にするとデフォルトの挨拶が使用されます。',
         welcomeMessagePlaceholder: '挨拶をして、何を作りたいか聞いてください。',
 
-        sendConfirmationTitle: '送信確認',
-        sendConfirmationDescription: '音声アシスタントがコーディングエージェントにメッセージを送信する前に、カウントダウン付きの確認ダイアログを表示します。',
-        sendConfirmationLabel: '送信確認',
-        sendConfirmationSubtitle: '送信前にメッセージを確認',
-        sendConfirmationSpeedTitle: 'カウントダウン速度',
+        actionConfirmationTitle: '音声アクション確認',
+        actionConfirmationDescription: '送信・作成・削除などの操作を実行する前にカウントダウン付きの確認を表示します。',
+        actionConfirmationLabel: 'アクション確認',
+        actionConfirmationSubtitle: '実行前に確認できます',
+        actionConfirmationSpeedTitle: 'カウントダウン速度',
         speedFast: '速い (3秒)',
         speedNormal: '普通 (5秒)',
         speedSlow: '遅い (8秒)',
@@ -1213,11 +1213,19 @@ export const ja: TranslationStructure = {
         speechRateNormal: '標準 (0)',
     },
 
-    voiceSendConfirmation: {
-        title: 'メッセージ送信',
+    voiceActionConfirmation: {
         cancel: 'キャンセル',
-        sendNow: '今すぐ送信',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}秒`,
+        sendTitle: 'メッセージ送信',
+        sendConfirm: '今すぐ送信',
+        createTitle: 'セッションを作成中',
+        createConfirm: '今すぐ作成',
+        deleteTitle: 'セッションを削除中',
+        deleteConfirm: '今すぐ削除',
+        pickerTitle: 'セッションを選択',
+        pickerSwitchTitle: 'セッションを切り替え',
+        pickerDeleteTitle: 'セッションを削除',
+        emptyState: 'まだセッションがありません。',
     },
 
     settingsAccount: {

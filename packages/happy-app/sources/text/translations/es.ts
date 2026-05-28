@@ -1158,11 +1158,11 @@ export const es: TranslationStructure = {
         welcomeMessageDescription: 'Personaliza lo que dice el asistente de voz al iniciar una sesión. Déjalo vacío para usar el saludo predeterminado.',
         welcomeMessagePlaceholder: 'Saluda y pregunta qué quiere construir el usuario.',
 
-        sendConfirmationTitle: 'Confirmación de envío',
-        sendConfirmationDescription: 'Mostrar un diálogo de confirmación con cuenta regresiva antes de que el asistente de voz envíe mensajes al agente de codificación.',
-        sendConfirmationLabel: 'Confirmación de envío',
-        sendConfirmationSubtitle: 'Revisar mensajes antes de enviar',
-        sendConfirmationSpeedTitle: 'Velocidad de cuenta regresiva',
+        actionConfirmationTitle: 'Confirmación de acción por voz',
+        actionConfirmationDescription: 'Muestra una cuenta regresiva antes de ejecutar acciones de voz (enviar/crear/eliminar).',
+        actionConfirmationLabel: 'Confirmación de acción',
+        actionConfirmationSubtitle: 'Revisa las acciones antes de ejecutarlas',
+        actionConfirmationSpeedTitle: 'Velocidad de cuenta regresiva',
         speedFast: 'Rápido (3s)',
         speedNormal: 'Normal (5s)',
         speedSlow: 'Lento (8s)',
@@ -1181,11 +1181,19 @@ export const es: TranslationStructure = {
         speechRateNormal: 'Normal (0)',
     },
 
-    voiceSendConfirmation: {
-        title: 'Enviando mensaje',
+    voiceActionConfirmation: {
         cancel: 'Cancelar',
-        sendNow: 'Enviar ahora',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}s`,
+        sendTitle: 'Enviando mensaje',
+        sendConfirm: 'Enviar ahora',
+        createTitle: 'Creando sesión',
+        createConfirm: 'Crear ahora',
+        deleteTitle: 'Eliminando sesión',
+        deleteConfirm: 'Eliminar ahora',
+        pickerTitle: 'Seleccionar sesión',
+        pickerSwitchTitle: 'Cambiar de sesión',
+        pickerDeleteTitle: 'Eliminar sesión',
+        emptyState: 'Aún no hay sesiones.',
     },
 
     settingsAccount: {

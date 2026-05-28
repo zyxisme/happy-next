@@ -1158,11 +1158,11 @@ export const pt: TranslationStructure = {
         welcomeMessageDescription: 'Personalize o que o assistente de voz diz ao iniciar uma sessão. Deixe vazio para usar a saudação padrão.',
         welcomeMessagePlaceholder: 'Diga olá e pergunte o que o usuário quer construir.',
 
-        sendConfirmationTitle: 'Confirmação de envio',
-        sendConfirmationDescription: 'Mostrar um diálogo de confirmação com contagem regressiva antes do assistente de voz enviar mensagens ao agente de codificação.',
-        sendConfirmationLabel: 'Confirmação de envio',
-        sendConfirmationSubtitle: 'Revisar mensagens antes de enviar',
-        sendConfirmationSpeedTitle: 'Velocidade da contagem',
+        actionConfirmationTitle: 'Confirmação de ação por voz',
+        actionConfirmationDescription: 'Mostra uma contagem regressiva antes de executar ações de voz (enviar/criar/excluir).',
+        actionConfirmationLabel: 'Confirmação de ação',
+        actionConfirmationSubtitle: 'Reveja as ações antes de executar',
+        actionConfirmationSpeedTitle: 'Velocidade da contagem',
         speedFast: 'Rápido (3s)',
         speedNormal: 'Normal (5s)',
         speedSlow: 'Lento (8s)',
@@ -1181,11 +1181,19 @@ export const pt: TranslationStructure = {
         speechRateNormal: 'Normal (0)',
     },
 
-    voiceSendConfirmation: {
-        title: 'Enviando mensagem',
+    voiceActionConfirmation: {
         cancel: 'Cancelar',
-        sendNow: 'Enviar agora',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}s`,
+        sendTitle: 'Enviando mensagem',
+        sendConfirm: 'Enviar agora',
+        createTitle: 'Criando sessão',
+        createConfirm: 'Criar agora',
+        deleteTitle: 'Excluindo sessão',
+        deleteConfirm: 'Excluir agora',
+        pickerTitle: 'Selecionar sessão',
+        pickerSwitchTitle: 'Mudar de sessão',
+        pickerDeleteTitle: 'Excluir sessão',
+        emptyState: 'Ainda não há sessões.',
     },
 
     settingsAccount: {

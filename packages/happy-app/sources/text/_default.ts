@@ -1176,11 +1176,11 @@ export const en = {
         welcomeMessageDescription: 'Customize what the voice assistant says when a session starts. Leave empty to use the default greeting.',
         welcomeMessagePlaceholder: 'Say hello and ask what the user wants to build.',
 
-        sendConfirmationTitle: 'Send Confirmation',
-        sendConfirmationDescription: 'Show a confirmation dialog with a countdown before the voice assistant sends messages to the coding agent.',
-        sendConfirmationLabel: 'Send Confirmation',
-        sendConfirmationSubtitle: 'Review messages before sending',
-        sendConfirmationSpeedTitle: 'Countdown Speed',
+        actionConfirmationTitle: 'Voice Action Confirmation',
+        actionConfirmationDescription: 'Show a countdown confirmation before the voice assistant executes send/create/delete actions.',
+        actionConfirmationLabel: 'Action Confirmation',
+        actionConfirmationSubtitle: 'Review actions before they execute',
+        actionConfirmationSpeedTitle: 'Countdown Speed',
         speedFast: 'Fast (3s)',
         speedNormal: 'Normal (5s)',
         speedSlow: 'Slow (8s)',
@@ -1199,11 +1199,19 @@ export const en = {
         speechRateNormal: 'Normal (0)',
     },
 
-    voiceSendConfirmation: {
-        title: 'Sending Message',
+    voiceActionConfirmation: {
         cancel: 'Cancel',
-        sendNow: 'Send Now',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}s`,
+        sendTitle: 'Sending Message',
+        sendConfirm: 'Send Now',
+        createTitle: 'Creating Session',
+        createConfirm: 'Create Now',
+        deleteTitle: 'Deleting Session',
+        deleteConfirm: 'Delete Now',
+        pickerTitle: 'Select a Session',
+        pickerSwitchTitle: 'Switch Session',
+        pickerDeleteTitle: 'Delete Session',
+        emptyState: 'No sessions yet.',
     },
 
     settingsAccount: {

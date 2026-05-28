@@ -14,10 +14,11 @@ import {
     processPermissionRequestParametersSchema,
     switchSessionParametersSchema,
 } from './voiceToolContracts';
-import { getSendConfirmation } from '@/sync/voiceConfig';
-import { showSendConfirmation } from './SendConfirmationModal';
+import { getActionConfirmation } from '@/sync/voiceConfig';
+import { showSendConfirmation, showCreateConfirmation, showDeleteConfirmation } from './ActionConfirmationModal';
+import { showSessionPicker } from './SessionPickerModal';
+import { ModalRegistry } from './voiceModalRegistry';
 import { MODEL_MODES } from 'happy-wire';
-import { Modal } from '@/modal';
 import { t } from '@/text';
 import type { Session } from '@/sync/storageTypes';
 
@@ -40,6 +41,25 @@ function resolveSessionRef(ref: string): SessionRefResult {
     if (matches.length === 1) return { kind: 'found', session: matches[0] };
     if (matches.length > 1) return { kind: 'ambiguous', matches };
     return { kind: 'not-found' };
+}
+
+function formatPickerList(sessions: Session[], intent: 'switch' | 'delete'): string {
+    const machines = storage.getState().machines;
+    const lines = sessions.map((s, i) => {
+        const name = getSessionName(s);
+        const machineId = s.metadata?.machineId;
+        const machine = machineId ? machines[machineId] : null;
+        const homeDir = machine?.metadata?.homeDir;
+        const path = formatPathRelativeToHome(s.metadata?.path ?? '', homeDir);
+        const isCurrent = s.id === getCurrentRealtimeSessionId();
+        const tag = isCurrent ? ' (current)' : '';
+        return `${i + 1}. ${name}${tag}${path ? ` [${path}]` : ''} (id: ${s.id})`;
+    });
+    const header = intent === 'switch'
+        ? `You have ${sessions.length} sessions — switch to which one?`
+        : `You have ${sessions.length} sessions — delete which one?`;
+    const footer = 'Reply with "the Nth one" or the session name; say "cancel" to back out.';
+    return `${header}\n${lines.join('\n')}\n${footer}`;
 }
 
 function getLatestAssistantReplyFromCurrentSession(maxChars: number): string | null {
@@ -97,7 +117,7 @@ export const realtimeClientTools = {
         console.log('🔍 messageHappyCode called with:', message);
         console.log('📤 Sending message to session:', sessionId);
 
-        if (getSendConfirmation()) {
+        if (getActionConfirmation()) {
             // Happy Voice supports async tool results via RPC, so we await the
             // confirmation and report the real outcome back to the assistant.
             const result = await showSendConfirmation(message);
@@ -162,104 +182,72 @@ export const realtimeClientTools = {
     },
 
     /**
-     * List all sessions
+     * List all sessions: opens the picker modal AND returns the ordered list
+     * text so the LLM can read out the first few entries.
      */
     listSessions: async (parameters: unknown) => {
         const parsed = listSessionsParametersSchema.safeParse(parameters ?? {});
-
         if (!parsed.success) {
             console.error('❌ Invalid listSessions parameters:', parsed.error);
             return "error (invalid parameters)";
         }
-
         const { includeOffline } = parsed.data;
-        const allSessions = Object.values(storage.getState().sessions);
-        const sessions = includeOffline ? allSessions : allSessions.filter(s => isSessionOnline(s));
 
-        if (sessions.length === 0) {
-            return includeOffline ? "No sessions found." : "No online sessions found. Try again with includeOffline: true to see all sessions.";
-        }
-
-        // Group sessions by project path, then by machine — matching home screen order
-        const projectGroups = new Map<string, {
-            displayPath: string;
-            machines: Map<string, { machineName: string; sessions: typeof sessions }>;
-        }>();
-
-        const machines = storage.getState().machines;
-
-        sessions.forEach(s => {
-            const projectPath = s.metadata?.path || '';
-            const machineId = s.metadata?.machineId || 'unknown';
-            const machine = machineId !== 'unknown' ? machines[machineId] : null;
-            const machineName = machine?.metadata?.displayName ||
-                machine?.metadata?.host ||
-                (machineId !== 'unknown' ? machineId : '<unknown>');
-
-            let projectGroup = projectGroups.get(projectPath);
-            if (!projectGroup) {
-                const displayPath = formatPathRelativeToHome(projectPath, s.metadata?.homeDir);
-                projectGroup = { displayPath, machines: new Map() };
-                projectGroups.set(projectPath, projectGroup);
-            }
-
-            let machineGroup = projectGroup.machines.get(machineId);
-            if (!machineGroup) {
-                machineGroup = { machineName, sessions: [] };
-                projectGroup.machines.set(machineId, machineGroup);
-            }
-
-            machineGroup.sessions.push(s);
+        const { orderedSessions } = showSessionPicker({
+            title: t('voiceActionConfirmation.pickerTitle'),
+            intent: 'switch',
+            includeOffline,
+            onSelect: async (s) => {
+                setCurrentRealtimeSessionId(s.id);
+                router.navigate(`/session/${s.id}`);
+            },
         });
 
-        // Sort: projects by displayPath, machines by name, sessions by createdAt desc
-        const sortedProjects = Array.from(projectGroups.entries())
-            .sort(([, a], [, b]) => a.displayPath.localeCompare(b.displayPath));
-
-        const lines: string[] = [];
-        let index = 1;
-
-        for (const [, projectGroup] of sortedProjects) {
-            const sortedMachines = Array.from(projectGroup.machines.entries())
-                .sort(([, a], [, b]) => a.machineName.localeCompare(b.machineName));
-
-            for (const [, machineGroup] of sortedMachines) {
-                machineGroup.sessions.sort((a, b) => b.createdAt - a.createdAt);
-
-                lines.push(`[${projectGroup.displayPath}] (${machineGroup.machineName})`);
-                for (const s of machineGroup.sessions) {
-                    const name = getSessionName(s);
-                    const active = s.id === getCurrentRealtimeSessionId() ? ' (current)' : '';
-                    lines.push(`  ${index}. "${name}"${active} (id: ${s.id})`);
-                    index++;
-                }
-            }
+        if (orderedSessions.length === 0) {
+            return t('voiceActionConfirmation.emptyState');
         }
 
-        const label = includeOffline ? '' : ' online';
-        return `Found ${sessions.length}${label} sessions:\n${lines.join('\n')}`;
+        return formatPickerList(orderedSessions, 'switch');
     },
 
     /**
-     * Switch to a different session
+     * Switch to a different session. No args → opens picker. With sessionId →
+     * resolves picker (if open) and performs the switch.
      */
     switchSession: async (parameters: unknown) => {
-        const parsed = switchSessionParametersSchema.safeParse(parameters);
-
+        const parsed = switchSessionParametersSchema.safeParse(parameters ?? {});
         if (!parsed.success) {
             console.error('❌ Invalid switchSession parameters:', parsed.error);
-            return "error (invalid parameters, sessionId is required)";
+            return "error (invalid parameters)";
+        }
+        const { sessionId } = parsed.data;
+
+        if (!sessionId) {
+            const { orderedSessions } = showSessionPicker({
+                title: t('voiceActionConfirmation.pickerSwitchTitle'),
+                intent: 'switch',
+                onSelect: async (s) => {
+                    setCurrentRealtimeSessionId(s.id);
+                    router.navigate(`/session/${s.id}`);
+                },
+            });
+            if (orderedSessions.length === 0) {
+                return t('voiceActionConfirmation.emptyState');
+            }
+            return formatPickerList(orderedSessions, 'switch');
         }
 
-        const { sessionId } = parsed.data;
         const ref = resolveSessionRef(sessionId);
         if (ref.kind === 'not-found') {
-            return "error (session not found — use listSessions to see available sessions and ids)";
+            return "error (session not found — call switchSession with no args to see available sessions)";
         }
         if (ref.kind === 'ambiguous') {
-            return `error (multiple sessions named "${sessionId}", call with the exact session id from listSessions)`;
+            return `error (multiple sessions named "${sessionId}", call with no args to disambiguate)`;
         }
         const session = ref.session;
+
+        // Close any open picker so we don't leave stale UI behind.
+        ModalRegistry.dismissCurrent();
 
         try {
             setCurrentRealtimeSessionId(session.id);
@@ -273,7 +261,8 @@ export const realtimeClientTools = {
 
     /**
      * Create a new session. Directory + machine are derived from the active
-     * voice-chat session, then from /new wizard history; nothing else.
+     * voice-chat session, then from /new wizard history; nothing else. Then
+     * shows a countdown confirmation modal — countdown to zero creates.
      */
     createSession: async (_parameters: unknown) => {
         const currentSessionId = getCurrentRealtimeSessionId();
@@ -296,20 +285,26 @@ export const realtimeClientTools = {
             return "error (no directory available — open a session first or pick a path in /new)";
         }
 
-        try {
-            const result = await machineSpawnNewSession({
-                machineId,
-                directory,
-            });
+        const machine = storage.getState().machines[machineId];
+        const machineName = machine?.metadata?.displayName ?? machine?.metadata?.host ?? machineId;
+        const homeDir = machine?.metadata?.homeDir;
+        const displayDir = formatPathRelativeToHome(directory, homeDir);
 
-            if (result.type === 'success') {
-                setCurrentRealtimeSessionId(result.sessionId);
-                router.navigate(`/session/${result.sessionId}`);
-                return `Created new session in "${directory}".`;
-            } else if (result.type === 'requestToApproveDirectoryCreation') {
-                return `error (directory "${result.directory}" no longer exists on the machine)`;
+        const result = await showCreateConfirmation(displayDir, machineName);
+        if (result !== 'confirmed') {
+            return "cancelled by user";
+        }
+
+        try {
+            const spawn = await machineSpawnNewSession({ machineId, directory });
+            if (spawn.type === 'success') {
+                setCurrentRealtimeSessionId(spawn.sessionId);
+                router.navigate(`/session/${spawn.sessionId}`);
+                return `Created new session in "${displayDir}".`;
+            } else if (spawn.type === 'requestToApproveDirectoryCreation') {
+                return `error (directory "${spawn.directory}" no longer exists on the machine)`;
             } else {
-                return `error (${result.errorMessage})`;
+                return `error (${spawn.errorMessage})`;
             }
         } catch (error) {
             console.error('❌ Failed to create session:', error);
@@ -413,50 +408,64 @@ export const realtimeClientTools = {
     },
 
     /**
-     * Delete a session
+     * Delete (archive) a session. No args → picker (tap = instant delete, voice
+     * "the Nth" → LLM follows up with sessionId). With sessionId → countdown
+     * confirmation modal, archive on confirm.
      */
     deleteSessionTool: async (parameters: unknown) => {
-        const parsed = deleteSessionParametersSchema.safeParse(parameters);
-
+        const parsed = deleteSessionParametersSchema.safeParse(parameters ?? {});
         if (!parsed.success) {
             console.error('❌ Invalid deleteSession parameters:', parsed.error);
-            return "error (invalid parameters, expected sessionId and confirmed: true)";
+            return "error (invalid parameters)";
+        }
+        const { sessionId } = parsed.data;
+
+        if (!sessionId) {
+            const { orderedSessions } = showSessionPicker({
+                title: t('voiceActionConfirmation.pickerDeleteTitle'),
+                intent: 'delete',
+                onSelect: async (s) => {
+                    try {
+                        const result = await sessionDelete(s.id);
+                        if (result.success) {
+                            storage.getState().deleteSession(s.id);
+                        }
+                    } catch (error) {
+                        console.error('❌ Failed to delete session via tap:', error);
+                    }
+                },
+            });
+            if (orderedSessions.length === 0) {
+                return t('voiceActionConfirmation.emptyState');
+            }
+            return formatPickerList(orderedSessions, 'delete');
         }
 
-        const { sessionId: targetId, confirmed } = parsed.data;
-
-        const ref = resolveSessionRef(targetId);
+        const ref = resolveSessionRef(sessionId);
         if (ref.kind === 'not-found') {
-            return "error (session not found — use listSessions to see available sessions and ids)";
+            return "error (session not found — call deleteSessionTool with no args to see available sessions)";
         }
         if (ref.kind === 'ambiguous') {
-            return `error (multiple sessions named "${targetId}", call with the exact session id from listSessions)`;
+            return `error (multiple sessions named "${sessionId}", call with no args to disambiguate)`;
         }
         const session = ref.session;
-        const name = getSessionName(session);
+        const sessionName = getSessionName(session);
 
-        if (!confirmed) {
-            return `Are you sure you want to delete session "${name}"? Call deleteSessionTool again with confirmed: true to proceed.`;
-        }
+        // Close any open picker before we put up the countdown modal.
+        ModalRegistry.dismissCurrent();
 
-        // Hard UI safeguard: even when the agent passes confirmed: true, require
-        // the user to tap the destructive button before anything is deleted.
-        const userConfirmed = await Modal.confirm(
-            t('sessionInfo.deleteSessionConfirm'),
-            t('sessionInfo.deleteSessionWarning'),
-            { destructive: true },
-        );
-        if (!userConfirmed) {
+        const result = await showDeleteConfirmation(sessionName);
+        if (result !== 'confirmed') {
             return "cancelled by user";
         }
 
         try {
-            const result = await sessionDelete(session.id);
-            if (result.success) {
+            const delResult = await sessionDelete(session.id);
+            if (delResult.success) {
                 storage.getState().deleteSession(session.id);
                 return "Session deleted.";
             } else {
-                return `error (${result.message || 'failed to delete session'})`;
+                return `error (${delResult.message || 'failed to delete session'})`;
             }
         } catch (error) {
             console.error('❌ Failed to delete session:', error);
@@ -489,5 +498,13 @@ export const realtimeClientTools = {
             console.error('❌ Failed to end voice conversation:', error);
             return "error (failed to end voice conversation)";
         }
+    },
+
+    /**
+     * Cancel whatever voice confirmation modal is currently visible.
+     */
+    cancelPendingAction: async (_parameters: unknown) => {
+        const dismissed = ModalRegistry.dismissCurrent();
+        return dismissed ? 'cancelled' : 'nothing to cancel';
     },
 };

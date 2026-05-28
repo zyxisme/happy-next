@@ -12,6 +12,7 @@ const bridgedVoiceToolNameSchema = z.enum([
     'deleteSessionTool',
     'navigateHome',
     'endVoiceConversation',
+    'cancelPendingAction',
 ] as const);
 
 export type BridgedVoiceToolName = z.infer<typeof bridgedVoiceToolNameSchema>;
@@ -28,6 +29,7 @@ export const bridgedVoiceToolDescriptions: Record<BridgedVoiceToolName, string> 
     deleteSessionTool: 'Delete an existing coding session after confirmation.',
     navigateHome: 'Navigate to the home screen and leave the current conversation.',
     endVoiceConversation: 'End the current voice conversation.',
+    cancelPendingAction: 'Cancel the currently open voice confirmation modal (countdown or session picker).',
 };
 
 export const messageHappyCodeParametersSchema = z.object({
@@ -43,7 +45,7 @@ export const listSessionsParametersSchema = z.object({
 });
 
 export const switchSessionParametersSchema = z.object({
-    sessionId: z.string().min(1, 'sessionId is required'),
+    sessionId: z.string().min(1).optional(),
 });
 
 export const changeSessionSettingsParametersSchema = z.object({
@@ -56,8 +58,7 @@ export const getLatestAssistantReplyParametersSchema = z.object({
 });
 
 export const deleteSessionParametersSchema = z.object({
-    sessionId: z.string(),
-    confirmed: z.boolean(),
+    sessionId: z.string().min(1).optional(),
 });
 
 export const navigateHomeParametersSchema = z.object({});

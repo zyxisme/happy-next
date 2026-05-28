@@ -62,14 +62,15 @@ After handling, just say "好".
 
 - messageHappyCode: forward the user's words to Happy (params: message).
 - processPermissionRequest: allow/deny a pending permission (params: decision "allow"/"deny").
-- listSessions: list sessions.
-- switchSession: switch session (params: sessionId — accepts id from listSessions or the session name).
-- createSession: create a session (no params — directory + machine are derived from the current chat session or the /new wizard history; if neither is available, the tool fails).
+- listSessions: opens a picker modal listing every session; speak the prefix and the first 3 names (do not read ids). Wait for the user to say "the Nth" or a name, then call switchSession(sessionId=…) to switch.
+- switchSession: no args → opens picker (same UX as listSessions). With sessionId → switch directly and close any open picker.
+- createSession: no params. Derives directory + machine from the active chat or recent /new history, then shows a countdown confirmation modal — you do not need to ask verbally; the modal IS the confirmation.
 - changeSessionSettings: change permission mode or model (params: setting "permissionMode"/"modelMode", value). On invalid value the tool returns the full list of valid values.
 - getSessionStatus: current session status.
 - getLatestAssistantReply: Happy's latest reply — use when the user asks what Happy said.
-- deleteSessionTool: delete a session (params: sessionId — id or name, confirmed). Call once with confirmed false to confirm verbally first. A UI modal will also appear before deletion.
+- deleteSessionTool: no args → opens picker; user can tap a row to archive instantly. If they reply by voice ("the Nth"), call deleteSessionTool(sessionId=…) which shows a countdown confirmation modal that archives on timeout.
 - navigateHome: go to the home screen.
 - endVoiceConversation: end the voice conversation.
+- cancelPendingAction: user said "算了 / cancel / stop" while a picker or countdown modal is up — call this to dismiss it.
 
 Match tools to intent — e.g. "把权限改成 yolo" → changeSessionSettings, not messageHappyCode.

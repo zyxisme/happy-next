@@ -1169,11 +1169,11 @@ export const ru: TranslationStructure = {
         welcomeMessageDescription: 'Настройте приветствие голосового ассистента при начале сеанса. Оставьте пустым для использования приветствия по умолчанию.',
         welcomeMessagePlaceholder: 'Поздоровайтесь и спросите, что пользователь хочет создать.',
 
-        sendConfirmationTitle: 'Подтверждение отправки',
-        sendConfirmationDescription: 'Показывать диалог подтверждения с обратным отсчётом перед отправкой сообщений голосовым помощником.',
-        sendConfirmationLabel: 'Подтверждение отправки',
-        sendConfirmationSubtitle: 'Просмотр сообщений перед отправкой',
-        sendConfirmationSpeedTitle: 'Скорость отсчёта',
+        actionConfirmationTitle: 'Подтверждение голосового действия',
+        actionConfirmationDescription: 'Показывать обратный отсчёт перед выполнением голосовых действий (отправка/создание/удаление).',
+        actionConfirmationLabel: 'Подтверждение действия',
+        actionConfirmationSubtitle: 'Проверьте действия перед выполнением',
+        actionConfirmationSpeedTitle: 'Скорость отсчёта',
         speedFast: 'Быстро (3с)',
         speedNormal: 'Обычно (5с)',
         speedSlow: 'Медленно (8с)',
@@ -1192,11 +1192,19 @@ export const ru: TranslationStructure = {
         speechRateNormal: 'Нормально (0)',
     },
 
-    voiceSendConfirmation: {
-        title: 'Отправка сообщения',
+    voiceActionConfirmation: {
         cancel: 'Отмена',
-        sendNow: 'Отправить сейчас',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}с`,
+        sendTitle: 'Отправка сообщения',
+        sendConfirm: 'Отправить сейчас',
+        createTitle: 'Создание сессии',
+        createConfirm: 'Создать сейчас',
+        deleteTitle: 'Удаление сессии',
+        deleteConfirm: 'Удалить сейчас',
+        pickerTitle: 'Выбрать сессию',
+        pickerSwitchTitle: 'Переключить сессию',
+        pickerDeleteTitle: 'Удалить сессию',
+        emptyState: 'Пока нет сессий.',
     },
 
     settingsAccount: {

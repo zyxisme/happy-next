@@ -1160,11 +1160,11 @@ export const zhHant: TranslationStructure = {
         welcomeMessageDescription: '自訂語音助手開始對話時的歡迎語。留空則使用預設歡迎語。',
         welcomeMessagePlaceholder: '打個招呼，然後詢問使用者想要建構什麼。',
 
-        sendConfirmationTitle: '傳送確認',
-        sendConfirmationDescription: '語音助手向編碼代理傳送訊息前，顯示帶倒數計時的確認對話框。',
-        sendConfirmationLabel: '傳送確認',
-        sendConfirmationSubtitle: '傳送前預覽訊息內容',
-        sendConfirmationSpeedTitle: '倒數計時速度',
+        actionConfirmationTitle: '語音確認倒數計時',
+        actionConfirmationDescription: '創建、刪除、發送等動作執行前的倒數確認。',
+        actionConfirmationLabel: '語音確認倒數計時',
+        actionConfirmationSubtitle: '執行前給你確認的時間',
+        actionConfirmationSpeedTitle: '倒數計時速度',
         speedFast: '較快 (3秒)',
         speedNormal: '正常 (5秒)',
         speedSlow: '較慢 (8秒)',
@@ -1183,11 +1183,19 @@ export const zhHant: TranslationStructure = {
         speechRateNormal: '正常 (0)',
     },
 
-    voiceSendConfirmation: {
-        title: '即將傳送訊息',
+    voiceActionConfirmation: {
         cancel: '取消',
-        sendNow: '立即傳送',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}秒`,
+        sendTitle: '即將傳送訊息',
+        sendConfirm: '立即傳送',
+        createTitle: '正在建立會話',
+        createConfirm: '立即建立',
+        deleteTitle: '正在刪除會話',
+        deleteConfirm: '立即刪除',
+        pickerTitle: '選擇會話',
+        pickerSwitchTitle: '切換會話',
+        pickerDeleteTitle: '刪除會話',
+        emptyState: '還沒有會話。',
     },
 
     settingsAccount: {

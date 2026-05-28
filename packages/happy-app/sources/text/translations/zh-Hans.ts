@@ -1160,11 +1160,11 @@ export const zhHans: TranslationStructure = {
         welcomeMessageDescription: '自定义语音助手开始会话时的欢迎语。留空则使用默认欢迎语。',
         welcomeMessagePlaceholder: '打个招呼，然后询问用户想要构建什么。',
 
-        sendConfirmationTitle: '发送确认',
-        sendConfirmationDescription: '语音助手向编码代理发送消息前，显示带倒计时的确认对话框。',
-        sendConfirmationLabel: '发送确认',
-        sendConfirmationSubtitle: '发送前预览消息内容',
-        sendConfirmationSpeedTitle: '倒计时速度',
+        actionConfirmationTitle: '语音确认倒计时',
+        actionConfirmationDescription: '创建、删除、发送等动作执行前的倒计时确认。',
+        actionConfirmationLabel: '语音确认倒计时',
+        actionConfirmationSubtitle: '执行前给你确认的时间',
+        actionConfirmationSpeedTitle: '倒计时速度',
         speedFast: '较快 (3秒)',
         speedNormal: '正常 (5秒)',
         speedSlow: '较慢 (8秒)',
@@ -1183,11 +1183,19 @@ export const zhHans: TranslationStructure = {
         speechRateNormal: '正常 (0)',
     },
 
-    voiceSendConfirmation: {
-        title: '即将发送消息',
+    voiceActionConfirmation: {
         cancel: '取消',
-        sendNow: '立即发送',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}秒`,
+        sendTitle: '即将发送消息',
+        sendConfirm: '立即发送',
+        createTitle: '正在创建会话',
+        createConfirm: '立即创建',
+        deleteTitle: '正在删除会话',
+        deleteConfirm: '立即删除',
+        pickerTitle: '选择会话',
+        pickerSwitchTitle: '切换会话',
+        pickerDeleteTitle: '删除会话',
+        emptyState: '还没有会话。',
     },
 
     settingsAccount: {

@@ -2,7 +2,7 @@ import type { AppConfig } from './appConfig';
 import type { Settings } from './settings';
 import { storage } from './storage';
 import { sync } from './sync';
-export type SendConfirmationSpeed = 'fast' | 'normal' | 'slow';
+export type ActionConfirmationSpeed = 'fast' | 'normal' | 'slow';
 
 // Reference to app config for fallback defaults (set in initVoiceConfig).
 let configRef: AppConfig | undefined;
@@ -57,32 +57,32 @@ export function hasCustomHappyVoicePublicKey(): boolean {
     return settings().voiceAssistantPublicKey != null;
 }
 
-// ── Send Confirmation ──────────────────────────────────────────────
+// ── Action Confirmation ──────────────────────────────────────────────
 
-export function getSendConfirmation(): boolean {
-    return settings().voiceAssistantSendConfirmation;
+export function getActionConfirmation(): boolean {
+    return settings().voiceAssistantActionConfirmation;
 }
 
-export function setSendConfirmation(value: boolean): void {
-    applyVoiceSetting({ voiceAssistantSendConfirmation: value });
+export function setActionConfirmation(value: boolean): void {
+    applyVoiceSetting({ voiceAssistantActionConfirmation: value });
 }
 
-const SPEED_SECONDS: Record<SendConfirmationSpeed, number> = {
+const SPEED_SECONDS: Record<ActionConfirmationSpeed, number> = {
     fast: 3,
     normal: 5,
     slow: 8,
 };
 
-export function getSendConfirmationSpeed(): SendConfirmationSpeed {
-    return settings().voiceAssistantSendConfirmationSpeed;
+export function getActionConfirmationSpeed(): ActionConfirmationSpeed {
+    return settings().voiceAssistantActionConfirmationSpeed;
 }
 
-export function setSendConfirmationSpeed(value: SendConfirmationSpeed): void {
-    applyVoiceSetting({ voiceAssistantSendConfirmationSpeed: value });
+export function setActionConfirmationSpeed(value: ActionConfirmationSpeed): void {
+    applyVoiceSetting({ voiceAssistantActionConfirmationSpeed: value });
 }
 
-export function getSendConfirmationSeconds(): number {
-    return SPEED_SECONDS[getSendConfirmationSpeed()];
+export function getActionConfirmationSeconds(): number {
+    return SPEED_SECONDS[getActionConfirmationSpeed()];
 }
 
 // ── Welcome Message ─────────────────────────────────────────────────

@@ -1169,11 +1169,11 @@ export const pl: TranslationStructure = {
         welcomeMessageDescription: 'Dostosuj powitanie asystenta głosowego na początku sesji. Pozostaw puste, aby użyć domyślnego powitania.',
         welcomeMessagePlaceholder: 'Przywitaj się i zapytaj, co użytkownik chce zbudować.',
 
-        sendConfirmationTitle: 'Potwierdzenie wysyłania',
-        sendConfirmationDescription: 'Pokaż okno potwierdzenia z odliczaniem przed wysłaniem wiadomości przez asystenta głosowego.',
-        sendConfirmationLabel: 'Potwierdzenie wysyłania',
-        sendConfirmationSubtitle: 'Przeglądaj wiadomości przed wysłaniem',
-        sendConfirmationSpeedTitle: 'Szybkość odliczania',
+        actionConfirmationTitle: 'Potwierdzenie akcji głosowej',
+        actionConfirmationDescription: 'Pokazuj odliczanie przed wykonaniem akcji głosowych (wysyłanie/tworzenie/usuwanie).',
+        actionConfirmationLabel: 'Potwierdzenie akcji',
+        actionConfirmationSubtitle: 'Przejrzyj akcje przed ich wykonaniem',
+        actionConfirmationSpeedTitle: 'Szybkość odliczania',
         speedFast: 'Szybko (3s)',
         speedNormal: 'Normalnie (5s)',
         speedSlow: 'Wolno (8s)',
@@ -1192,11 +1192,19 @@ export const pl: TranslationStructure = {
         speechRateNormal: 'Normalne (0)',
     },
 
-    voiceSendConfirmation: {
-        title: 'Wysyłanie wiadomości',
+    voiceActionConfirmation: {
         cancel: 'Anuluj',
-        sendNow: 'Wyślij teraz',
         countdown: ({ seconds }: { seconds: number }) => `${seconds}s`,
+        sendTitle: 'Wysyłanie wiadomości',
+        sendConfirm: 'Wyślij teraz',
+        createTitle: 'Tworzenie sesji',
+        createConfirm: 'Utwórz teraz',
+        deleteTitle: 'Usuwanie sesji',
+        deleteConfirm: 'Usuń teraz',
+        pickerTitle: 'Wybierz sesję',
+        pickerSwitchTitle: 'Przełącz sesję',
+        pickerDeleteTitle: 'Usuń sesję',
+        emptyState: 'Brak sesji.',
     },
 
     settingsAccount: {
