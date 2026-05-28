@@ -35,6 +35,7 @@ import { matchForkUuid } from '@/utils/forkTarget';
 import type { UserTextMessage } from '@/sync/typesMessage';
 import { log } from '@/log';
 import { Ionicons } from '@expo/vector-icons';
+import { useHeaderHeight as useNavigationHeaderHeight } from '@react-navigation/elements';
 import { useFocusEffect, useIsFocused, useNavigation } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import * as React from 'react';
@@ -62,6 +63,9 @@ export const SessionView = React.memo((props: { id: string }) => {
     const deviceType = useDeviceType();
     const isIpad = Platform.OS === 'ios' && Platform.isPad;
     const shouldUseCompactLandscapeSessionLayout = isLandscape && !isIpad && deviceType === 'phone';
+    const shouldHideHeader = shouldHideSessionHeaderForCompactLayout(shouldUseCompactLandscapeSessionLayout);
+    const headerHeight = useNavigationHeaderHeight();
+    const shouldUseTransparentNativeHeader = Platform.OS === 'ios' && !isRunningOnMac() && !shouldHideHeader;
     const realtimeStatus = useRealtimeStatus();
     const isTablet = useIsTablet();
     const { width: screenWidth } = useWindowDimensions();
@@ -191,7 +195,8 @@ export const SessionView = React.memo((props: { id: string }) => {
             {/* Native header config — iOS uses system header, Android/Web go through createHeader */}
             <Stack.Screen
                 options={{
-                    headerShown: !shouldHideSessionHeaderForCompactLayout(shouldUseCompactLandscapeSessionLayout),
+                    headerShown: !shouldHideHeader,
+                    headerTransparent: shouldUseTransparentNativeHeader,
                     headerTitle: () => (
                         <ChatHeaderTitle
                             title={headerProps.title}
@@ -216,7 +221,7 @@ export const SessionView = React.memo((props: { id: string }) => {
             />
 
             {/* Content based on state */}
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, paddingTop: shouldUseTransparentNativeHeader ? headerHeight : 0 }}>
                 {/* Voice status bar below header - not on tablet (shown in sidebar), hidden in landscape phone */}
                 {!(shouldUseCompactLandscapeSessionLayout && Platform.OS !== 'web') && !isTablet && realtimeStatus !== 'disconnected' && (
                     <VoiceAssistantStatusBar variant="full" />
