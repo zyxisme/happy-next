@@ -74,11 +74,11 @@ export const TOOL_DEFINITIONS: OpenAiTool[] = [
         type: 'function',
         function: {
             name: 'switchSession',
-            description: 'Switch to a different coding session by its ID.',
+            description: 'Switch to a different coding session. Accepts the session ID from listSessions, or a case-insensitive session name.',
             parameters: {
                 type: 'object',
                 properties: {
-                    sessionId: { type: 'string', description: 'Target session ID' },
+                    sessionId: { type: 'string', description: 'Target session ID from listSessions, or session name' },
                 },
                 required: ['sessionId'],
                 additionalProperties: false,
@@ -89,15 +89,8 @@ export const TOOL_DEFINITIONS: OpenAiTool[] = [
         type: 'function',
         function: {
             name: 'createSession',
-            description: 'Create a new coding session.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    directory: { type: 'string', description: 'Working directory for the new session' },
-                },
-                required: [],
-                additionalProperties: false,
-            },
+            description: 'Create a new coding session. Directory and machine are derived automatically: from the current voice-chat session if one is active, otherwise from the user\'s most recent path in the /new wizard history. Takes no parameters.',
+            parameters: emptyParams,
         },
     },
     {
@@ -109,7 +102,10 @@ export const TOOL_DEFINITIONS: OpenAiTool[] = [
                 type: 'object',
                 properties: {
                     setting: { type: 'string', enum: ['permissionMode', 'modelMode'] },
-                    value: { type: 'string' },
+                    value: {
+                        type: 'string',
+                        description: 'For permissionMode: one of default, plan, acceptEdits, bypassPermissions, yolo, read-only, auto, on-failure, full-auto, auto_edit. For modelMode: "default", or a specific model like claude-opus-4-7, claude-opus-4-7[1m], claude-sonnet-4-6, claude-haiku-4-5, gpt-5.5-medium, gemini-3.5-pro-preview. Reasoning variants append -low/-medium/-high/-xhigh/-max (e.g. claude-opus-4-7-high). On invalid value the tool returns the full list.',
+                    },
                 },
                 required: ['setting', 'value'],
                 additionalProperties: false,
@@ -149,11 +145,11 @@ export const TOOL_DEFINITIONS: OpenAiTool[] = [
         type: 'function',
         function: {
             name: 'deleteSessionTool',
-            description: 'Delete an existing coding session after confirmation.',
+            description: 'Delete an existing coding session. Call first with confirmed: false to get a verbal confirmation prompt; only call again with confirmed: true after the user agrees. A UI confirmation modal is always shown as an extra safeguard.',
             parameters: {
                 type: 'object',
                 properties: {
-                    sessionId: { type: 'string' },
+                    sessionId: { type: 'string', description: 'Target session ID from listSessions, or session name' },
                     confirmed: { type: 'boolean' },
                 },
                 required: ['sessionId', 'confirmed'],

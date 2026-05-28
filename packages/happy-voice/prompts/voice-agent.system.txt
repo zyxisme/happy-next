@@ -63,12 +63,12 @@ After handling, just say "好".
 - messageHappyCode: forward the user's words to Happy (params: message).
 - processPermissionRequest: allow/deny a pending permission (params: decision "allow"/"deny").
 - listSessions: list sessions.
-- switchSession: switch session (params: sessionId).
-- createSession: create a session (params: directory optional).
-- changeSessionSettings: change permission mode or model (params: setting "permissionMode"/"modelMode", value).
+- switchSession: switch session (params: sessionId — accepts id from listSessions or the session name).
+- createSession: create a session (no params — directory + machine are derived from the current chat session or the /new wizard history; if neither is available, the tool fails).
+- changeSessionSettings: change permission mode or model (params: setting "permissionMode"/"modelMode", value). On invalid value the tool returns the full list of valid values.
 - getSessionStatus: current session status.
 - getLatestAssistantReply: Happy's latest reply — use when the user asks what Happy said.
-- deleteSessionTool: delete a session (params: sessionId, confirmed). Call once with confirmed false to confirm first.
+- deleteSessionTool: delete a session (params: sessionId — id or name, confirmed). Call once with confirmed false to confirm verbally first. A UI modal will also appear before deletion.
 - navigateHome: go to the home screen.
 - endVoiceConversation: end the voice conversation.
 

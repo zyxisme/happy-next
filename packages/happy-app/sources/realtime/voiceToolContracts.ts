@@ -46,10 +46,6 @@ export const switchSessionParametersSchema = z.object({
     sessionId: z.string().min(1, 'sessionId is required'),
 });
 
-export const createSessionParametersSchema = z.object({
-    directory: z.string().optional(),
-});
-
 export const changeSessionSettingsParametersSchema = z.object({
     setting: z.enum(['permissionMode', 'modelMode']),
     value: z.string(),

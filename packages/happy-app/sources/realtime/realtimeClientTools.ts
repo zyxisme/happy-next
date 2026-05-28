@@ -7,7 +7,6 @@ import { getCurrentRealtimeSessionId, setCurrentRealtimeSessionId, stopRealtimeS
 import { getSessionName, getSessionSubtitle, isSessionOnline, formatPathRelativeToHome } from '@/utils/sessionUtils';
 import {
     changeSessionSettingsParametersSchema,
-    createSessionParametersSchema,
     deleteSessionParametersSchema,
     getLatestAssistantReplyParametersSchema,
     listSessionsParametersSchema,
@@ -18,6 +17,30 @@ import {
 import { getSendConfirmation } from '@/sync/voiceConfig';
 import { showSendConfirmation } from './SendConfirmationModal';
 import { MODEL_MODES } from 'happy-wire';
+import { Modal } from '@/modal';
+import { t } from '@/text';
+import type { Session } from '@/sync/storageTypes';
+
+type SessionRefResult =
+    | { kind: 'found'; session: Session }
+    | { kind: 'not-found' }
+    | { kind: 'ambiguous'; matches: Session[] };
+
+// Resolve a session reference (id or case-insensitive name match) so voice users
+// can say "switch to fix login bug" instead of having to dictate a UUID.
+function resolveSessionRef(ref: string): SessionRefResult {
+    const direct = getSession(ref);
+    if (direct) return { kind: 'found', session: direct };
+
+    const target = ref.trim().toLowerCase();
+    if (!target) return { kind: 'not-found' };
+
+    const all = Object.values(storage.getState().sessions);
+    const matches = all.filter(s => getSessionName(s).trim().toLowerCase() === target);
+    if (matches.length === 1) return { kind: 'found', session: matches[0] };
+    if (matches.length > 1) return { kind: 'ambiguous', matches };
+    return { kind: 'not-found' };
+}
 
 function getLatestAssistantReplyFromCurrentSession(maxChars: number): string | null {
     const sessionId = getCurrentRealtimeSessionId();
@@ -229,14 +252,18 @@ export const realtimeClientTools = {
         }
 
         const { sessionId } = parsed.data;
-        const session = getSession(sessionId);
-        if (!session) {
-            return "error (session not found)";
+        const ref = resolveSessionRef(sessionId);
+        if (ref.kind === 'not-found') {
+            return "error (session not found — use listSessions to see available sessions and ids)";
         }
+        if (ref.kind === 'ambiguous') {
+            return `error (multiple sessions named "${sessionId}", call with the exact session id from listSessions)`;
+        }
+        const session = ref.session;
 
         try {
-            setCurrentRealtimeSessionId(sessionId);
-            router.navigate(`/session/${sessionId}`);
+            setCurrentRealtimeSessionId(session.id);
+            router.navigate(`/session/${session.id}`);
             return `Switched to session "${getSessionName(session)}".`;
         } catch (error) {
             console.error('❌ Failed to switch session:', error);
@@ -245,39 +272,42 @@ export const realtimeClientTools = {
     },
 
     /**
-     * Create a new session
+     * Create a new session. Directory + machine are derived from the active
+     * voice-chat session, then from /new wizard history; nothing else.
      */
-    createSession: async (parameters: unknown) => {
-        const parsed = createSessionParametersSchema.safeParse(parameters ?? {});
-
-        if (!parsed.success) {
-            console.error('❌ Invalid createSession parameters:', parsed.error);
-            return "error (invalid parameters)";
-        }
-
-        const { directory } = parsed.data;
+    createSession: async (_parameters: unknown) => {
         const currentSessionId = getCurrentRealtimeSessionId();
         const currentSession = currentSessionId ? getSession(currentSessionId) ?? null : null;
-        const machineId = currentSession?.metadata?.machineId;
 
-        if (!machineId) {
-            return "error (no machine available to create session on)";
+        let machineId: string | undefined;
+        let directory: string | undefined;
+        if (currentSession?.metadata?.machineId && currentSession.metadata.path) {
+            machineId = currentSession.metadata.machineId;
+            directory = currentSession.metadata.path;
+        } else {
+            const recent = storage.getState().settings.recentMachinePaths?.[0];
+            if (recent) {
+                machineId = recent.machineId;
+                directory = recent.path;
+            }
         }
 
-        const dir = directory || currentSession?.metadata?.path || '/';
+        if (!machineId || !directory) {
+            return "error (no directory available — open a session first or pick a path in /new)";
+        }
 
         try {
             const result = await machineSpawnNewSession({
                 machineId,
-                directory: dir,
+                directory,
             });
 
             if (result.type === 'success') {
                 setCurrentRealtimeSessionId(result.sessionId);
                 router.navigate(`/session/${result.sessionId}`);
-                return "Created new session.";
+                return `Created new session in "${directory}".`;
             } else if (result.type === 'requestToApproveDirectoryCreation') {
-                return `The directory "${result.directory}" does not exist. Ask the user if they want to create it.`;
+                return `error (directory "${result.directory}" no longer exists on the machine)`;
             } else {
                 return `error (${result.errorMessage})`;
             }
@@ -395,16 +425,35 @@ export const realtimeClientTools = {
 
         const { sessionId: targetId, confirmed } = parsed.data;
 
+        const ref = resolveSessionRef(targetId);
+        if (ref.kind === 'not-found') {
+            return "error (session not found — use listSessions to see available sessions and ids)";
+        }
+        if (ref.kind === 'ambiguous') {
+            return `error (multiple sessions named "${targetId}", call with the exact session id from listSessions)`;
+        }
+        const session = ref.session;
+        const name = getSessionName(session);
+
         if (!confirmed) {
-            const session = getSession(targetId);
-            const name = session ? getSessionName(session) : targetId;
             return `Are you sure you want to delete session "${name}"? Call deleteSessionTool again with confirmed: true to proceed.`;
         }
 
+        // Hard UI safeguard: even when the agent passes confirmed: true, require
+        // the user to tap the destructive button before anything is deleted.
+        const userConfirmed = await Modal.confirm(
+            t('sessionInfo.deleteSessionConfirm'),
+            t('sessionInfo.deleteSessionWarning'),
+            { destructive: true },
+        );
+        if (!userConfirmed) {
+            return "cancelled by user";
+        }
+
         try {
-            const result = await sessionDelete(targetId);
+            const result = await sessionDelete(session.id);
             if (result.success) {
-                storage.getState().deleteSession(targetId);
+                storage.getState().deleteSession(session.id);
                 return "Session deleted.";
             } else {
                 return `error (${result.message || 'failed to delete session'})`;
