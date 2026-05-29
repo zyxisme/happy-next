@@ -9,8 +9,9 @@ import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createReadStream, createWriteStream, unlink } from 'node:fs';
-import { copyFile, rename, unlink as unlinkAsync } from 'node:fs/promises';
+import { copyFile, rename, unlink as unlinkAsync, readFile, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
+import { logger } from '@/ui/logger';
 
 export interface ForkAndTruncateResult {
     success: boolean;
@@ -70,6 +71,20 @@ export async function forkAndTruncateSession(
                     errorMessage: truncateResult.errorMessage
                 };
             }
+        }
+
+        // Step 3: Fix up the resume bookmark. Claude Code resumes a session from
+        // `last-prompt.leafUuid`. That bookmark can be stale: a mid-session error
+        // (or interrupt) can split the conversation into sibling branches, leaving
+        // the bookmark on an early branch while the real latest progress lives on
+        // another; and truncation can delete the node it pointed at. Either way the
+        // resumed session would silently drop history. Repoint the bookmark to the
+        // genuine latest leaf of the retained tree. Best-effort: a failure here must
+        // not fail the fork itself.
+        try {
+            await repointLastPromptToLatestLeaf(newJsonlPath, newSessionId);
+        } catch (error) {
+            logger.debug('[claudeSessionFork] Failed to repoint last-prompt:', error);
         }
 
         return {
@@ -164,4 +179,81 @@ async function truncateSessionFile(
             errorMessage: error instanceof Error ? error.message : 'Failed to truncate session file'
         };
     }
+}
+
+/**
+ * Find the genuine latest leaf of the conversation tree: the most recent
+ * (by timestamp) user/assistant message that no other message descends from,
+ * excluding sidechain (sub-agent) branches. This is the message a resume should
+ * continue from.
+ */
+function findLatestLeafUuid(jsonl: string): string | null {
+    const parents = new Set<string>();
+    const candidates: { uuid: string; type: string; timestamp: number; isSidechain: boolean }[] = [];
+
+    for (const line of jsonl.split('\n')) {
+        if (!line.trim()) continue;
+        let entry: any;
+        try {
+            entry = JSON.parse(line);
+        } catch {
+            continue;
+        }
+        if (typeof entry?.parentUuid === 'string') parents.add(entry.parentUuid);
+        if (typeof entry?.uuid !== 'string' || !entry.uuid) continue;
+        const ts = typeof entry.timestamp === 'string' ? Date.parse(entry.timestamp) : NaN;
+        candidates.push({
+            uuid: entry.uuid,
+            type: entry.type,
+            timestamp: Number.isNaN(ts) ? 0 : ts,
+            isSidechain: entry.isSidechain === true,
+        });
+    }
+
+    let best: { uuid: string; timestamp: number } | null = null;
+    for (const c of candidates) {
+        if (parents.has(c.uuid)) continue; // not a leaf
+        if (c.type !== 'user' && c.type !== 'assistant') continue;
+        if (c.isSidechain) continue;
+        if (!best || c.timestamp > best.timestamp) best = { uuid: c.uuid, timestamp: c.timestamp };
+    }
+    return best?.uuid ?? null;
+}
+
+/**
+ * Repoint the session's `last-prompt` bookmark to the genuine latest leaf so a
+ * resume continues from the real last message. Rewrites an existing bookmark in
+ * place; appends one if truncation removed it. No-op when no resumable leaf can
+ * be determined.
+ */
+async function repointLastPromptToLatestLeaf(jsonlPath: string, sessionId: string): Promise<void> {
+    const content = await readFile(jsonlPath, 'utf8');
+    const leafUuid = findLatestLeafUuid(content);
+    if (!leafUuid) return;
+
+    const out: string[] = [];
+    let found = false;
+    for (const line of content.split('\n')) {
+        if (!line.trim()) continue;
+        let entry: any;
+        try {
+            entry = JSON.parse(line);
+        } catch {
+            out.push(line);
+            continue;
+        }
+        if (entry?.type === 'last-prompt') {
+            found = true;
+            entry.leafUuid = leafUuid;
+            out.push(JSON.stringify(entry));
+        } else {
+            out.push(line);
+        }
+    }
+
+    if (!found) {
+        out.push(JSON.stringify({ type: 'last-prompt', lastPrompt: '', leafUuid, sessionId }));
+    }
+
+    await writeFile(jsonlPath, out.join('\n') + '\n');
 }
