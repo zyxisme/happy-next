@@ -6,7 +6,11 @@ import { sessionUpdateMetadataFields } from '@/sync/ops';
 import { t } from '@/text';
 import { resolveDuplicatedModelMode } from '@/utils/duplicateModelMode';
 
-export type SessionState = 'disconnected' | 'syncing' | 'thinking' | 'waiting' | 'permission_required';
+export type SessionState = 'disconnected' | 'syncing' | 'thinking' | 'awaiting' | 'waiting' | 'permission_required';
+
+// How long the optimistic "processing…" indicator may linger without any real signal
+// (thinking / agent message / delivery error / offline) before it lazily expires.
+const AWAITING_RESPONSE_MAX_MS = 120_000;
 
 export interface SessionStatus {
     state: SessionState;
@@ -87,6 +91,21 @@ export function useSessionStatus(session: Session): SessionStatus {
             state: 'thinking',
             isConnected: true,
             statusText: vibingMessage,
+            shouldShowStatus: true,
+            statusColor: '#007AFF',
+            statusDotColor: '#007AFF',
+            isPulsing: true
+        };
+    }
+
+    // Optimistic "processing…" shown right after sending, until a real signal arrives
+    // or the marker lazily expires after AWAITING_RESPONSE_MAX_MS.
+    if (session.awaitingResponseSince != null
+        && Date.now() - session.awaitingResponseSince < AWAITING_RESPONSE_MAX_MS) {
+        return {
+            state: 'awaiting',
+            isConnected: true,
+            statusText: 'Processing…',
             shouldShowStatus: true,
             statusColor: '#007AFF',
             statusDotColor: '#007AFF',

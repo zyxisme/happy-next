@@ -191,6 +191,7 @@ interface StorageState {
     applyCachedSessions: (sessions: Record<string, Session>, sharedSessions: Record<string, Session>) => void;
     updateSessionDraft: (sessionId: string, draft: SessionDraft | null) => void;
     updateSessionActivity: (sessionId: string, active: boolean) => void;
+    setAwaitingResponse: (sessionId: string, value: number | null) => void;
     setSessionUpgrading: (sessionId: string, upgrading: boolean) => void;
     setSessionFastMode: (sessionId: string, fastMode: boolean) => void;
     updateSessionPermissionMode: (sessionId: string, mode: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan' | 'read-only' | 'on-failure' | 'full-auto' | 'auto_edit' | 'yolo') => void;
@@ -369,6 +370,7 @@ function areSessionsShallowEqual(a: Session, b: Session): boolean {
         a.agentStateVersion === b.agentStateVersion &&
         a.thinking === b.thinking &&
         a.thinkingAt === b.thinkingAt &&
+        a.awaitingResponseSince === b.awaitingResponseSince &&
         a.messageSyncing === b.messageSyncing &&
         a.presence === b.presence &&
         a.todos === b.todos &&
@@ -593,6 +595,13 @@ export const storage = create<StorageState>()((set, get) => {
                 // data doesn't overwrite a fresh ephemeral activity update.
                 const useExistingThinking = existing != null
                     && existing.thinkingAt > (session.thinkingAt ?? 0);
+                const mergedThinking = useExistingThinking ? existing.thinking : (session.thinking ?? false);
+                // Preserve the local optimistic "awaiting response" marker across routine
+                // session refreshes, but drop it once a real signal arrives: the CLI is now
+                // thinking, or the session went offline.
+                const mergedAwaitingResponseSince = (mergedThinking || resolvedActive === false)
+                    ? null
+                    : (existing?.awaitingResponseSince ?? null);
 
                 const mergedSession: Session = {
                     ...session,
@@ -604,8 +613,9 @@ export const storage = create<StorageState>()((set, get) => {
                     metadataVersion: useExistingMetadata ? existing.metadataVersion : session.metadataVersion,
                     agentState: useExistingAgentState ? existing.agentState : session.agentState,
                     agentStateVersion: useExistingAgentState ? existing.agentStateVersion : session.agentStateVersion,
-                    thinking: useExistingThinking ? existing.thinking : (session.thinking ?? false),
+                    thinking: mergedThinking,
                     thinkingAt: useExistingThinking ? existing.thinkingAt : (session.thinkingAt ?? 0),
+                    awaitingResponseSince: mergedAwaitingResponseSince,
                     presence: resolvedPresence,
                     draft: existingDraft || savedDraft || session.draft || null,
                     permissionMode: cloudSessionMode?.permissionMode ?? existing?.permissionMode ?? session.permissionMode ?? 'default',
@@ -1372,6 +1382,20 @@ export const storage = create<StorageState>()((set, get) => {
             const updatedSessions = { ...state.sessions, [sessionId]: updatedSession };
             const sessionListViewData = buildSessionListViewData(updatedSessions, state.sharedSessions);
             return { ...state, sessions: updatedSessions, sessionListViewData };
+        }),
+        setAwaitingResponse: (sessionId: string, value: number | null) => set((state) => {
+            const session = state.sessions[sessionId];
+            if (!session) return state;
+            if ((session.awaitingResponseSince ?? null) === value) return state;
+            const updatedSessions = {
+                ...state.sessions,
+                [sessionId]: { ...session, awaitingResponseSince: value }
+            };
+            return {
+                ...state,
+                sessions: updatedSessions,
+                sessionListViewData: buildSessionListViewData(updatedSessions, state.sharedSessions)
+            };
         }),
         updateSessionActivity: (sessionId: string, active: boolean) => set((state) => {
             const session = state.sessions[sessionId];

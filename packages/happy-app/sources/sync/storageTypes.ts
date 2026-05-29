@@ -153,6 +153,11 @@ export interface Session {
     agentStateVersion: number,
     thinking: boolean,
     thinkingAt: number,
+    // Local-only optimistic marker: set (timestamp) right after a message is sent so the
+    // UI can show "processing…" immediately, before the CLI's thinking heartbeat arrives.
+    // Not persisted and not synced from the server; cleared by real signals (thinking,
+    // agent message, delivery error, offline) and lazily expired after 120s. See useSessionStatus.
+    awaitingResponseSince?: number | null,
     messageSyncing?: boolean,
     presence: "online" | number, // "online" when active, timestamp when last seen
     todos?: Array<{

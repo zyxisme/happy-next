@@ -1471,9 +1471,11 @@ function NewSessionWizard() {
                     includeLastUsed: true,
                 });
 
-                // Send initial message if provided
+                // Send initial message if provided. Use sendOrQueueMessage (the /send
+                // path) so the first message gets the same hedged-retry resilience and
+                // the optimistic "processing…" status as a normal send.
                 if (promptToSend || images.length > 0) {
-                    await sync.sendMessage(result.sessionId, promptToSend, undefined, images.length > 0 ? images : undefined);
+                    await sync.sendOrQueueMessage(result.sessionId, promptToSend, undefined, images.length > 0 ? images : undefined);
                     clearImages();
                 }
 

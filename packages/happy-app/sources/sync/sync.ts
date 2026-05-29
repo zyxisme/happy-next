@@ -1003,6 +1003,10 @@ class Sync {
                 pending();
             }
 
+            // Optimistically mark the session as awaiting a response so the UI shows
+            // "processing…" immediately, without waiting for the CLI thinking heartbeat.
+            storage.getState().setAwaitingResponse(sessionId, Date.now());
+
             if (normalizedMessage) {
                 const msg = normalizedMessage;
                 void this.enqueueSessionMessageDispatch(sessionId, 'sendOrQueueMessage:sent-local-ack', async () => {
@@ -4098,6 +4102,8 @@ class Sync {
                         updateData.localId ?? null,
                         updateData.error
                     );
+                    // Error badge now visible — stop showing the optimistic "processing…".
+                    storage.getState().setAwaitingResponse(updateData.sid, null);
                 }, 10_000);
                 this.deliveryErrorTimers.set(key, timer);
             } else {
@@ -4107,6 +4113,7 @@ class Sync {
                     updateData.localId ?? null,
                     updateData.error
                 );
+                storage.getState().setAwaitingResponse(updateData.sid, null);
             }
         }
 
@@ -4179,6 +4186,11 @@ class Sync {
         }
         if (m.length > 0) {
             voiceHooks.onMessages(sessionId, m);
+            // Any agent/non-user output means the turn has started — drop the
+            // optimistic "awaiting response" marker if it's still set.
+            if (m.some((msg) => msg.kind !== 'user-text')) {
+                storage.getState().setAwaitingResponse(sessionId, null);
+            }
         }
         if (result.hasReadyEvent) {
             voiceHooks.onReady(sessionId);
