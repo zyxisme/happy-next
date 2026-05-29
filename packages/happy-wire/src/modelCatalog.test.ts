@@ -20,6 +20,8 @@ describe('modelCatalog', () => {
         expect(isModelModeForAgent('codex', 'gpt-5.3-codex-xhigh')).toBe(true);
         expect(isModelModeForAgent('gemini', 'gpt-5.3-codex-xhigh')).toBe(false);
         expect(isModelModeForAgent('claude', 'claude-opus-4-6')).toBe(true);
+        expect(isModelModeForAgent('claude', 'claude-opus-4-8')).toBe(true);
+        expect(isModelModeForAgent('claude', 'claude-opus-4-8[1m]-xhigh')).toBe(true);
         expect(isModelModeForAgent('gemini', 'gemini-2.5-flash-lite')).toBe(true);
     });
 
@@ -81,6 +83,9 @@ describe('modelCatalog', () => {
     });
 
     it('resolves context windows for claude composite and fast model modes', () => {
+        expect(getMaxContextSize('claude-opus-4-8-high', 'claude')).toBe(200_000);
+        expect(getMaxContextSize('claude-opus-4-8[1m]', 'claude')).toBe(1_000_000);
+        expect(getMaxContextSize('claude-opus-4-8[1m]-xhigh', 'claude')).toBe(1_000_000);
         expect(getMaxContextSize('claude-opus-4-6-high', 'claude')).toBe(200_000);
         expect(getMaxContextSize('claude-opus-4-6-fast', 'claude')).toBe(200_000);
         expect(getMaxContextSize('claude-opus-4-6', 'claude')).toBe(200_000);

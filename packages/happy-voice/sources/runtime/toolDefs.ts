@@ -104,7 +104,7 @@ export const TOOL_DEFINITIONS: OpenAiTool[] = [
                     setting: { type: 'string', enum: ['permissionMode', 'modelMode'] },
                     value: {
                         type: 'string',
-                        description: 'For permissionMode: one of default, plan, acceptEdits, bypassPermissions, yolo, read-only, auto, on-failure, full-auto, auto_edit. For modelMode: "default", or a specific model like claude-opus-4-7, claude-opus-4-7[1m], claude-sonnet-4-6, claude-haiku-4-5, gpt-5.5-medium, gemini-3.5-pro-preview. Reasoning variants append -low/-medium/-high/-xhigh/-max (e.g. claude-opus-4-7-high). On invalid value the tool returns the full list.',
+                        description: 'For permissionMode: one of default, plan, acceptEdits, bypassPermissions, yolo, read-only, auto, on-failure, full-auto, auto_edit. For modelMode: "default", or a specific model like claude-opus-4-8, claude-opus-4-8[1m], claude-sonnet-4-6, claude-haiku-4-5, gpt-5.5-medium, gemini-3.5-pro-preview. Reasoning variants append -low/-medium/-high/-xhigh/-max (e.g. claude-opus-4-8-high). On invalid value the tool returns the full list.',
                     },
                 },
                 required: ['setting', 'value'],
