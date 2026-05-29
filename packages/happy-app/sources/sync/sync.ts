@@ -955,7 +955,7 @@ class Sync {
 
         try {
             const API_ENDPOINT = getServerUrl();
-            const response = await fetch(
+            const response = await this.hedgedSend(
                 `${API_ENDPOINT}/v3/sessions/${sessionId}/send`,
                 {
                     method: 'POST',
@@ -1020,6 +1020,85 @@ class Sync {
             this.pendingSendCallbacks.delete(localId);
             return { success: false, localId, error: error instanceof Error ? error.message : 'Unknown error' };
         }
+    }
+
+    /**
+     * Sends a request with hedging to survive flaky networks. Fires the request,
+     * and if it hasn't produced a response yet, fires additional concurrent
+     * attempts on the schedule below WITHOUT cancelling earlier ones. All attempts
+     * share the same body (and localId), so the server's localId de-duplication
+     * guarantees at most one message is created even if several attempts succeed.
+     *
+     * The first attempt to receive any HTTP response wins; the remaining in-flight
+     * attempts are aborted. If no attempt produces a response within the total
+     * budget, all attempts are aborted and the call rejects (treated as a failed
+     * send by the caller, which keeps the draft for retry).
+     */
+    private async hedgedSend(url: string, init: RequestInit): Promise<Response> {
+        // Attempt start offsets (ms). First fires immediately, then earlier-then-
+        // wider spacing to catch stalled connections fast without flooding a slow
+        // but live link. Total budget = last offset + tail wait.
+        const SCHEDULE_MS = [0, 4000, 12000, 22000];
+        const TOTAL_TIMEOUT_MS = 28000;
+
+        return await new Promise<Response>((resolve, reject) => {
+            const controllers: AbortController[] = [];
+            const timers: ReturnType<typeof setTimeout>[] = [];
+            let settled = false;
+            let inFlight = 0;
+            let scheduledRemaining = SCHEDULE_MS.length;
+
+            const clearTimers = () => {
+                for (const t of timers) clearTimeout(t);
+            };
+
+            const overallTimer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                clearTimers();
+                for (const c of controllers) c.abort();
+                reject(new Error('Send timed out'));
+            }, TOTAL_TIMEOUT_MS);
+            timers.push(overallTimer);
+
+            const launch = () => {
+                scheduledRemaining--;
+                const controller = new AbortController();
+                controllers.push(controller);
+                inFlight++;
+                fetch(url, { ...init, signal: controller.signal })
+                    .then((response) => {
+                        if (settled) return;
+                        settled = true;
+                        clearTimers();
+                        // Abort the other attempts; keep this one's stream readable.
+                        for (const c of controllers) {
+                            if (c !== controller) c.abort();
+                        }
+                        resolve(response);
+                    })
+                    .catch(() => {
+                        if (settled) return;
+                        inFlight--;
+                        // All attempts have been launched and all failed.
+                        if (inFlight === 0 && scheduledRemaining === 0) {
+                            settled = true;
+                            clearTimers();
+                            reject(new Error('Send failed: network error'));
+                        }
+                    });
+            };
+
+            for (const delay of SCHEDULE_MS) {
+                if (delay === 0) {
+                    launch();
+                } else {
+                    timers.push(setTimeout(() => {
+                        if (!settled) launch();
+                    }, delay));
+                }
+            }
+        });
     }
 
     async changePermissionMode(sessionId: string, mode: PermissionMode): Promise<boolean> {

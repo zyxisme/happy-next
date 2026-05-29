@@ -15,6 +15,7 @@ import {
 import { dispatchNextPendingIfPossible } from "@/app/session/pendingMessageAutoDispatch";
 import { dispatchSessionMessage } from "@/app/session/sessionMessageDispatch";
 import { db } from "@/storage/db";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { type Fastify } from "../types";
 import { scheduleFirstMessageReplay } from "./firstMessageReplay";
@@ -463,15 +464,33 @@ export function v3SessionRoutes(app: Fastify) {
             });
         }
 
-        const dispatched = await dispatchSessionMessage({
-            ownerId,
-            sessionId,
-            content,
-            localId,
-            sentBy: userId,
-            sentByName,
-            trackCliDelivery,
-        });
+        let dispatched: Awaited<ReturnType<typeof dispatchSessionMessage>>;
+        try {
+            dispatched = await dispatchSessionMessage({
+                ownerId,
+                sessionId,
+                content,
+                localId,
+                sentBy: userId,
+                sentByName,
+                trackCliDelivery,
+            });
+        } catch (error) {
+            // A concurrent request sharing this localId (e.g. hedged retries) may
+            // have inserted the message between our existence check above and the
+            // create. Treat the unique-constraint violation as idempotent and
+            // return the row the other request created, mirroring the dedup branch.
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+                const winner = await findExistingSentMessageByLocalId(sessionId, localId);
+                if (winner) {
+                    return reply.send({
+                        mode: "sent",
+                        message: toSendResponseMessage(winner),
+                    });
+                }
+            }
+            throw error;
+        }
 
         if (dispatched.message.seq === 1 && dispatched.ownerSessionScopedDeliveries === 0) {
             scheduleFirstMessageReplay({

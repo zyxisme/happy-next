@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/storage/db";
 
 export type PendingMessageContent = {
@@ -101,25 +102,39 @@ export async function enqueuePendingMessage(params: {
         return { message: existing, created: false };
     }
 
-    const created = await db.sessionPendingMessage.create({
-        data: {
-            sessionId: params.sessionId,
-            localId: params.localId,
-            content: {
-                t: "encrypted",
-                c: params.content,
+    try {
+        const created = await db.sessionPendingMessage.create({
+            data: {
+                sessionId: params.sessionId,
+                localId: params.localId,
+                content: {
+                    t: "encrypted",
+                    c: params.content,
+                },
+                sentBy: params.sentBy,
+                sentByName: params.sentByName,
+                trackCliDelivery: params.trackCliDelivery,
             },
-            sentBy: params.sentBy,
-            sentByName: params.sentByName,
-            trackCliDelivery: params.trackCliDelivery,
-        },
-        select: pendingMessageSelect,
-    });
+            select: pendingMessageSelect,
+        });
 
-    return {
-        message: created as PendingMessageRecord,
-        created: true,
-    };
+        return {
+            message: created as PendingMessageRecord,
+            created: true,
+        };
+    } catch (error) {
+        // A concurrent request (e.g. hedged retries sharing one localId) may have
+        // inserted the same (sessionId, localId) between our check and create.
+        // Treat the unique-constraint violation as idempotent: return the row the
+        // other request created instead of failing.
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            const winner = await findPendingMessageBySessionLocalId(params.sessionId, params.localId);
+            if (winner) {
+                return { message: winner, created: false };
+            }
+        }
+        throw error;
+    }
 }
 
 export async function pinPendingMessage(sessionId: string, pendingId: string): Promise<PendingMessageRecord | null> {

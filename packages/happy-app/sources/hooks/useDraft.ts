@@ -20,7 +20,17 @@ export function useDraft(
     const { autoSaveInterval = 2000 } = options;
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastSavedRef = useRef<{ text: string; imageCount: number }>({ text: '', imageCount: 0 });
+    // After a send clears the draft, briefly suppress restoration so a focus
+    // change / re-render right after sending can't repopulate the input from a
+    // stale draft. Bound to a sessionId so switching sessions doesn't inherit a
+    // suppression set for a different session.
+    const suppressRestoreRef = useRef<{ sessionId: string; until: number } | null>(null);
     const isFocused = useIsFocused();
+
+    const isRestoreSuppressed = useCallback(() => {
+        const s = suppressRestoreRef.current;
+        return !!s && s.sessionId === sessionId && s.until > Date.now();
+    }, [sessionId]);
 
     // Save draft to storage
     const saveDraft = useCallback((text: string, imgs: LocalImage[]) => {
@@ -34,6 +44,8 @@ export function useDraft(
     // Load draft on mount and when focused
     useEffect(() => {
         if (!sessionId || !isFocused) return;
+        // Don't restore right after a send cleared this session's draft.
+        if (isRestoreSuppressed()) return;
 
         const session = getSession(sessionId);
         if (session?.draft) {
@@ -118,6 +130,14 @@ export function useDraft(
     const clearDraft = useCallback(() => {
         if (!sessionId) return;
 
+        // Cancel any pending debounced auto-save so it can't write the
+        // just-cleared text back into the draft after we clear it.
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+        }
+        // Block restoration of THIS session's draft for a short window after clearing.
+        suppressRestoreRef.current = { sessionId, until: Date.now() + 2000 };
         storage.getState().updateSessionDraft(sessionId, null);
         lastSavedRef.current = { text: '', imageCount: 0 };
     }, [sessionId]);
