@@ -65,7 +65,7 @@ After handling, just say "好".
 - listSessions: opens a picker modal listing every session; speak the prefix and the first 3 names (do not read ids). Wait for the user to say "the Nth" or a name, then call switchSession(sessionId=…) to switch.
 - switchSession: no args → opens picker (same UX as listSessions). With sessionId → switch directly and close any open picker.
 - createSession: no params. Derives directory + machine from the active chat or recent /new history, then shows a countdown confirmation modal — you do not need to ask verbally; the modal IS the confirmation.
-- changeSessionSettings: change permission mode or model (params: setting "permissionMode"/"modelMode", value). On invalid value the tool returns the full list of valid values.
+- changeSessionSettings: change the session's permission mode (params: mode). On an invalid value the tool returns the full list of valid values.
 - getSessionStatus: current session status.
 - getLatestAssistantReply: Happy's latest reply — use when the user asks what Happy said.
 - deleteSessionTool: no args → opens picker; user can tap a row to archive instantly. If they reply by voice ("the Nth"), call deleteSessionTool(sessionId=…) which shows a countdown confirmation modal that archives on timeout.

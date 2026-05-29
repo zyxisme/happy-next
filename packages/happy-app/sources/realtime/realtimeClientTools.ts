@@ -18,7 +18,6 @@ import { getActionConfirmation } from '@/sync/voiceConfig';
 import { showSendConfirmation, showCreateConfirmation, showDeleteConfirmation } from './ActionConfirmationModal';
 import { showSessionPicker } from './SessionPickerModal';
 import { ModalRegistry } from './voiceModalRegistry';
-import { MODEL_MODES } from 'happy-wire';
 import { t } from '@/text';
 import { Modal } from '@/modal';
 import type { Session } from '@/sync/storageTypes';
@@ -330,7 +329,7 @@ export const realtimeClientTools = {
     },
 
     /**
-     * Change session settings (permission mode or model)
+     * Change the active session's permission mode
      */
     changeSessionSettings: async (parameters: unknown) => {
         const parsed = changeSessionSettingsParametersSchema.safeParse(parameters);
@@ -340,7 +339,7 @@ export const realtimeClientTools = {
             return "error (invalid parameters)";
         }
 
-        const { setting, value } = parsed.data;
+        const { mode } = parsed.data;
         const sessionId = getCurrentRealtimeSessionId();
 
         if (!sessionId) {
@@ -348,29 +347,16 @@ export const realtimeClientTools = {
         }
 
         try {
-            if (setting === 'permissionMode') {
-                const validModes = ['default', 'acceptEdits', 'auto', 'bypassPermissions', 'plan', 'read-only', 'on-failure', 'full-auto', 'auto_edit', 'yolo'] as const;
-                if (!validModes.includes(value as any)) {
-                    return `error (invalid permission mode. Valid modes: ${validModes.join(', ')})`;
-                }
-                storage.getState().updateSessionPermissionMode(sessionId, value as typeof validModes[number]);
-                return `Permission mode changed to "${value}".`;
+            const validModes = ['default', 'acceptEdits', 'auto', 'bypassPermissions', 'plan', 'read-only', 'on-failure', 'full-auto', 'auto_edit', 'yolo'] as const;
+            if (!validModes.includes(mode as any)) {
+                return `error (invalid permission mode. Valid modes: ${validModes.join(', ')})`;
             }
-
-            if (setting === 'modelMode') {
-                const validModels = MODEL_MODES;
-                if (!validModels.includes(value as any)) {
-                    return `error (invalid model. Valid models: ${validModels.join(', ')})`;
-                }
-                storage.getState().updateSessionModelMode(sessionId, value);
-                return `Model changed to "${value}".`;
-            }
+            storage.getState().updateSessionPermissionMode(sessionId, mode as typeof validModes[number]);
+            return `Permission mode changed to "${mode}".`;
         } catch (error) {
-            console.error('❌ Failed to change setting:', error);
-            return "error (failed to change setting)";
+            console.error('❌ Failed to change permission mode:', error);
+            return "error (failed to change permission mode)";
         }
-
-        return "error (unknown setting)";
     },
 
     /**

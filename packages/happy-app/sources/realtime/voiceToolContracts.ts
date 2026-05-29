@@ -1,37 +1,5 @@
 import { z } from 'zod';
 
-const bridgedVoiceToolNameSchema = z.enum([
-    'messageHappyCode',
-    'processPermissionRequest',
-    'listSessions',
-    'switchSession',
-    'createSession',
-    'changeSessionSettings',
-    'getSessionStatus',
-    'getLatestAssistantReply',
-    'deleteSessionTool',
-    'navigateHome',
-    'endVoiceConversation',
-    'cancelPendingAction',
-] as const);
-
-export type BridgedVoiceToolName = z.infer<typeof bridgedVoiceToolNameSchema>;
-
-export const bridgedVoiceToolDescriptions: Record<BridgedVoiceToolName, string> = {
-    messageHappyCode: 'Forward a message to the coding agent. Use when the user explicitly asks to send something to Happy, or for code/project tasks. For app operations (sessions, settings, navigation) use the dedicated tools instead.',
-    processPermissionRequest: 'Allow or deny a pending permission request.',
-    listSessions: 'List all coding sessions.',
-    switchSession: 'Switch to a different coding session by its ID.',
-    createSession: 'Create a new coding session.',
-    changeSessionSettings: 'Change session settings such as model or permission mode.',
-    getSessionStatus: 'Get current status from the active coding session.',
-    getLatestAssistantReply: 'Use when the user asks what Happy just replied. Returns the latest assistant text from the active coding session.',
-    deleteSessionTool: 'Delete an existing coding session after confirmation.',
-    navigateHome: 'Navigate to the home screen and leave the current conversation.',
-    endVoiceConversation: 'End the current voice conversation.',
-    cancelPendingAction: 'Cancel the currently open voice confirmation modal (countdown or session picker).',
-};
-
 export const messageHappyCodeParametersSchema = z.object({
     message: z.string().min(1, 'Message cannot be empty'),
 });
@@ -49,8 +17,7 @@ export const switchSessionParametersSchema = z.object({
 });
 
 export const changeSessionSettingsParametersSchema = z.object({
-    setting: z.enum(['permissionMode', 'modelMode']),
-    value: z.string(),
+    mode: z.string(),
 });
 
 export const getLatestAssistantReplyParametersSchema = z.object({
@@ -60,7 +27,3 @@ export const getLatestAssistantReplyParametersSchema = z.object({
 export const deleteSessionParametersSchema = z.object({
     sessionId: z.string().min(1).optional(),
 });
-
-export const navigateHomeParametersSchema = z.object({});
-
-export const endVoiceConversationParametersSchema = z.object({});
