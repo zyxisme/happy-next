@@ -1,4 +1,5 @@
 // packages/happy-app/sources/realtime/SessionPickerModal.tsx
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Typography } from '@/constants/Typography';
@@ -36,6 +37,18 @@ function SessionPickerContent({ title, intent, sessions, onSelect, onCancel }: S
     const { theme } = useUnistyles();
     const currentId = getCurrentRealtimeSessionId();
     const machines = storage.getState().machines;
+
+    // Visible countdown on the cancel button, mirroring the safety timeout that
+    // actually closes the picker (managed in showSessionPicker). Shown on the
+    // button rather than as a progress bar to leave more room for the list.
+    const [remaining, setRemaining] = useState(() => Math.ceil(PICKER_SAFETY_TIMEOUT_MS / 1000));
+    useEffect(() => {
+        const deadline = Date.now() + PICKER_SAFETY_TIMEOUT_MS;
+        const tick = () => setRemaining(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+        tick();
+        const id = setInterval(tick, 500);
+        return () => clearInterval(id);
+    }, []);
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
@@ -82,7 +95,7 @@ function SessionPickerContent({ title, intent, sessions, onSelect, onCancel }: S
                 onPress={onCancel}
             >
                 <Text style={[styles.cancelText, { color: theme.colors.textDestructive }]}>
-                    {t('voiceActionConfirmation.cancel')}
+                    {t('voiceActionConfirmation.cancel')} ({remaining}s)
                 </Text>
             </Pressable>
         </View>
