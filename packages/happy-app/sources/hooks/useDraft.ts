@@ -26,6 +26,11 @@ export function useDraft(
     // suppression set for a different session.
     const suppressRestoreRef = useRef<{ sessionId: string; until: number } | null>(null);
     const isFocused = useIsFocused();
+    // True while a message for this session is being sent. The composed draft is
+    // only cleared after a send succeeds, so during the (hedge-widened) in-flight
+    // window we must not restore it — otherwise leaving and re-entering the chat
+    // mid-send resurrects the just-sent text.
+    const sendInFlight = storage((state) => !!(sessionId && state.sessionSendInFlight[sessionId]));
 
     const isRestoreSuppressed = useCallback(() => {
         const s = suppressRestoreRef.current;
@@ -46,6 +51,8 @@ export function useDraft(
         if (!sessionId || !isFocused) return;
         // Don't restore right after a send cleared this session's draft.
         if (isRestoreSuppressed()) return;
+        // Don't restore the draft of a message that's currently being sent.
+        if (sendInFlight) return;
 
         const session = getSession(sessionId);
         if (session?.draft) {
@@ -59,7 +66,7 @@ export function useDraft(
         } else {
             lastSavedRef.current = { text: '', imageCount: 0 };
         }
-    }, [sessionId, isFocused, onChange, onImagesChange]);
+    }, [sessionId, isFocused, onChange, onImagesChange, sendInFlight]);
 
     // Auto-save with smart debouncing
     useEffect(() => {

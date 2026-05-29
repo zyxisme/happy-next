@@ -106,6 +106,10 @@ interface StorageState {
     sessionListViewData: SessionListViewItem[] | null;
     sessionMessages: Record<string, SessionMessages>;
     sessionPendingMessages: Record<string, PendingMessage[]>;
+    // Per-session "a send is currently in flight" flag (transient, not persisted).
+    // Used to suppress draft restoration while a message is being sent so that
+    // leaving and re-entering the chat mid-send can't resurrect the just-sent text.
+    sessionSendInFlight: Record<string, boolean>;
     sessionGitStatus: Record<string, GitStatus | null>;
     machines: Record<string, Machine>;
     openClawMachines: Record<string, OpenClawMachine>;  // OpenClaw machine configurations
@@ -192,6 +196,7 @@ interface StorageState {
     updateSessionDraft: (sessionId: string, draft: SessionDraft | null) => void;
     updateSessionActivity: (sessionId: string, active: boolean) => void;
     setAwaitingResponse: (sessionId: string, value: number | null) => void;
+    setSendInFlight: (sessionId: string, inFlight: boolean) => void;
     setSessionUpgrading: (sessionId: string, upgrading: boolean) => void;
     setSessionFastMode: (sessionId: string, fastMode: boolean) => void;
     updateSessionPermissionMode: (sessionId: string, mode: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan' | 'read-only' | 'on-failure' | 'full-auto' | 'auto_edit' | 'yolo') => void;
@@ -436,6 +441,7 @@ export const storage = create<StorageState>()((set, get) => {
         sessionListViewData: null,
         sessionMessages: {},
         sessionPendingMessages: {},
+        sessionSendInFlight: {},
         sessionGitStatus: {},
         realtimeStatus: 'disconnected',
         realtimeMode: 'idle',
@@ -1396,6 +1402,17 @@ export const storage = create<StorageState>()((set, get) => {
                 sessions: updatedSessions,
                 sessionListViewData: buildSessionListViewData(updatedSessions, state.sharedSessions)
             };
+        }),
+        setSendInFlight: (sessionId: string, inFlight: boolean) => set((state) => {
+            const current = !!state.sessionSendInFlight[sessionId];
+            if (current === inFlight) return state;
+            const next = { ...state.sessionSendInFlight };
+            if (inFlight) {
+                next[sessionId] = true;
+            } else {
+                delete next[sessionId];
+            }
+            return { ...state, sessionSendInFlight: next };
         }),
         updateSessionActivity: (sessionId: string, active: boolean) => set((state) => {
             const session = state.sessions[sessionId];
