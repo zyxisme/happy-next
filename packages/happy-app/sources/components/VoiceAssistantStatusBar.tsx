@@ -179,11 +179,14 @@ export const VoiceAssistantStatusBar = React.memo(({ variant = 'full', style }: 
         return (
             <Pressable
                 onPress={handleFullBarPress}
-                style={{
-                    backgroundColor: statusInfo.backgroundColor,
-                    width: '100%',
-                    paddingHorizontal: 16,
-                }}
+                style={[
+                    {
+                        backgroundColor: statusInfo.backgroundColor,
+                        width: '100%',
+                        paddingHorizontal: 16,
+                    },
+                    style,
+                ]}
             >
                 {/* Top row — always 32px, identical in collapsed & expanded */}
                 <View style={{ height: 32, justifyContent: 'center' }}>

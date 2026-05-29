@@ -224,7 +224,14 @@ export const SessionView = React.memo((props: { id: string }) => {
             <View style={{ flex: 1, paddingTop: shouldUseTransparentNativeHeader ? headerHeight : 0 }}>
                 {/* Voice status bar below header - not on tablet (shown in sidebar), hidden in landscape phone */}
                 {!(shouldUseCompactLandscapeSessionLayout && Platform.OS !== 'web') && !isTablet && realtimeStatus !== 'disconnected' && (
-                    <VoiceAssistantStatusBar variant="full" />
+                    <VoiceAssistantStatusBar
+                        variant="full"
+                        style={{
+                            position: 'relative',
+                            zIndex: 20,
+                            elevation: 20,
+                        }}
+                    />
                 )}
                 {!isDataReady ? (
                     // Loading state - initial data not ready
