@@ -20,6 +20,7 @@ import { showSessionPicker } from './SessionPickerModal';
 import { ModalRegistry } from './voiceModalRegistry';
 import { MODEL_MODES } from 'happy-wire';
 import { t } from '@/text';
+import { Modal } from '@/modal';
 import type { Session } from '@/sync/storageTypes';
 
 type SessionRefResult =
@@ -43,6 +44,17 @@ function resolveSessionRef(ref: string): SessionRefResult {
     return { kind: 'not-found' };
 }
 
+// Local + realtime cleanup after a successful sessionDelete. If the deleted
+// session was the active voice-chat target, the voice assistant would otherwise
+// keep operating on a phantom id; clear it and navigate home.
+function finishSessionDeletion(sessionId: string): void {
+    storage.getState().deleteSession(sessionId);
+    if (getCurrentRealtimeSessionId() === sessionId) {
+        setCurrentRealtimeSessionId(null);
+        try { router.replace('/'); } catch (_) { /* router may already be at root */ }
+    }
+}
+
 function formatPickerList(sessions: Session[], intent: 'switch' | 'delete'): string {
     const machines = storage.getState().machines;
     const lines = sessions.map((s, i) => {
@@ -51,9 +63,11 @@ function formatPickerList(sessions: Session[], intent: 'switch' | 'delete'): str
         const machine = machineId ? machines[machineId] : null;
         const homeDir = machine?.metadata?.homeDir;
         const path = formatPathRelativeToHome(s.metadata?.path ?? '', homeDir);
+        const machineName = machine?.metadata?.displayName ?? machine?.metadata?.host ?? machineId;
+        const location = [path, machineName].filter(Boolean).join(' on ');
         const isCurrent = s.id === getCurrentRealtimeSessionId();
         const tag = isCurrent ? ' (current)' : '';
-        return `${i + 1}. ${name}${tag}${path ? ` [${path}]` : ''} (id: ${s.id})`;
+        return `${i + 1}. ${name}${tag}${location ? ` [${location}]` : ''} (id: ${s.id})`;
     });
     const header = intent === 'switch'
         ? `You have ${sessions.length} sessions — switch to which one?`
@@ -246,8 +260,9 @@ export const realtimeClientTools = {
         }
         const session = ref.session;
 
-        // Close any open picker so we don't leave stale UI behind.
-        ModalRegistry.dismissCurrent();
+        // Close any open picker so we don't leave stale UI behind. Scoped to
+        // pickers so an in-flight sendConfirmation countdown isn't killed.
+        ModalRegistry.dismissCurrentPicker();
 
         try {
             setCurrentRealtimeSessionId(session.id);
@@ -290,9 +305,11 @@ export const realtimeClientTools = {
         const homeDir = machine?.metadata?.homeDir;
         const displayDir = formatPathRelativeToHome(directory, homeDir);
 
-        const result = await showCreateConfirmation(displayDir, machineName);
-        if (result !== 'confirmed') {
-            return "cancelled by user";
+        if (getActionConfirmation()) {
+            const result = await showCreateConfirmation(displayDir, machineName);
+            if (result !== 'confirmed') {
+                return "cancelled by user";
+            }
         }
 
         try {
@@ -428,10 +445,13 @@ export const realtimeClientTools = {
                     try {
                         const result = await sessionDelete(s.id);
                         if (result.success) {
-                            storage.getState().deleteSession(s.id);
+                            finishSessionDeletion(s.id);
+                        } else {
+                            Modal.alert(t('common.error'), result.message || 'Failed to delete session.');
                         }
                     } catch (error) {
                         console.error('❌ Failed to delete session via tap:', error);
+                        Modal.alert(t('common.error'), error instanceof Error ? error.message : String(error));
                     }
                 },
             });
@@ -451,18 +471,21 @@ export const realtimeClientTools = {
         const session = ref.session;
         const sessionName = getSessionName(session);
 
-        // Close any open picker before we put up the countdown modal.
-        ModalRegistry.dismissCurrent();
+        // Close any open picker before we put up the countdown modal. Scoped
+        // to pickers so an unrelated countdown (e.g. sendConfirmation) survives.
+        ModalRegistry.dismissCurrentPicker();
 
-        const result = await showDeleteConfirmation(sessionName);
-        if (result !== 'confirmed') {
-            return "cancelled by user";
+        if (getActionConfirmation()) {
+            const result = await showDeleteConfirmation(sessionName);
+            if (result !== 'confirmed') {
+                return "cancelled by user";
+            }
         }
 
         try {
             const delResult = await sessionDelete(session.id);
             if (delResult.success) {
-                storage.getState().deleteSession(session.id);
+                finishSessionDeletion(session.id);
                 return "Session deleted.";
             } else {
                 return `error (${delResult.message || 'failed to delete session'})`;

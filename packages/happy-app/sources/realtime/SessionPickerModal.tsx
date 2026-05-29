@@ -10,7 +10,6 @@ import { getSessionName, isSessionOnline, formatPathRelativeToHome } from '@/uti
 import { getCurrentRealtimeSessionId } from './RealtimeSession';
 import { ModalRegistry, type RegisteredVoiceModal } from './voiceModalRegistry';
 
-const MAX_VISIBLE = 8;
 const PICKER_SAFETY_TIMEOUT_MS = 60_000;
 
 export type SessionPickerIntent = 'switch' | 'delete';
@@ -93,7 +92,7 @@ function SessionPickerContent({ title, intent, sessions, onSelect, onCancel }: S
 function computeOrderedSessions(includeOffline: boolean | undefined): Session[] {
     const all = Object.values(storage.getState().sessions);
     const filtered = includeOffline ? all : all.filter(isSessionOnline);
-    // Match listSessions: group by project path → machine → updatedAt desc
+    // Match listSessions: group by project path → machine → createdAt desc
     const machines = storage.getState().machines;
     const grouped = new Map<string, Map<string, Session[]>>();
     for (const s of filtered) {
@@ -141,8 +140,6 @@ export function showSessionPicker(opts: SessionPickerOptions): SessionPickerHand
         return { close: () => {}, orderedSessions: [] };
     }
 
-    const visible = sessions.slice(0, MAX_VISIBLE);
-
     let resolved = false;
     let modalId: string | null = null;
     let safetyTimer: ReturnType<typeof setTimeout> | null = null;
@@ -161,6 +158,7 @@ export function showSessionPicker(opts: SessionPickerOptions): SessionPickerHand
     };
 
     const handle: RegisteredVoiceModal = {
+        kind: 'picker',
         dismiss: () => finalize('cancel'),
     };
 
@@ -169,7 +167,7 @@ export function showSessionPicker(opts: SessionPickerOptions): SessionPickerHand
         props: {
             title: opts.title,
             intent: opts.intent,
-            sessions: visible,
+            sessions,
             onSelect: (s: Session) => finalize('select', s),
             onCancel: () => finalize('cancel'),
         },

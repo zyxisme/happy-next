@@ -137,7 +137,7 @@ export function getCurrentRealtimeSessionId(): string | null {
     return currentSessionId;
 }
 
-export function setCurrentRealtimeSessionId(sessionId: string) {
+export function setCurrentRealtimeSessionId(sessionId: string | null) {
     currentSessionId = sessionId;
 }
 

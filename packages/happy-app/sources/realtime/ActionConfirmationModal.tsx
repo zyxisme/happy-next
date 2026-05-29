@@ -109,16 +109,19 @@ function showActionConfirmation(opts: {
     return new Promise((resolve) => {
         let resolved = false;
         let modalId: string | null = null;
+        let safetyTimer: ReturnType<typeof setTimeout> | null = null;
 
         const finalize = (result: ActionConfirmationResult) => {
             if (resolved) return;
             resolved = true;
+            if (safetyTimer !== null) clearTimeout(safetyTimer);
             ModalRegistry.unregister(handle);
             if (modalId !== null) Modal.hide(modalId);
             resolve(result);
         };
 
         const handle: RegisteredVoiceModal = {
+            kind: 'countdown',
             dismiss: () => finalize('cancelled'),
         };
 
@@ -137,7 +140,7 @@ function showActionConfirmation(opts: {
         ModalRegistry.register(handle);
 
         // Fallback: never leave a pending promise behind.
-        setTimeout(() => finalize('cancelled'), (countdownSeconds + 2) * 1000);
+        safetyTimer = setTimeout(() => finalize('cancelled'), (countdownSeconds + 2) * 1000);
     });
 }
 
