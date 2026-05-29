@@ -1120,12 +1120,6 @@ export const zhHans: TranslationStructure = {
         copyMessage: '复制提交信息',
     },
 
-    voiceAssistant: {
-        happySays: ({ text }: { text: string }) => `Happy 说：${text}`,
-        happyWantsTool: ({ tool }: { tool: string }) => `Happy 想使用 ${tool}，要允许吗？`,
-        happyNeedsPermission: 'Happy 需要权限，要允许吗？',
-    },
-
     settingsVoice: {
 
 

@@ -1129,12 +1129,6 @@ export const pl: TranslationStructure = {
         copyMessage: 'Kopiuj wiadomość commita',
     },
 
-    voiceAssistant: {
-        happySays: ({ text }: { text: string }) => `Happy mówi: ${text}`,
-        happyWantsTool: ({ tool }: { tool: string }) => `Happy chce użyć ${tool}. Zezwolić?`,
-        happyNeedsPermission: 'Happy potrzebuje uprawnień. Zezwolić?',
-    },
-
     settingsVoice: {
 
 

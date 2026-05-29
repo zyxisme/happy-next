@@ -2,9 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import VERTC, { MediaType, RoomProfileType, type IRTCEngine } from '@volcengine/rtc';
 import { registerVoiceSession, getSessionVersion, setRealtimeStatusIfCurrent, setRealtimeModeIfCurrent } from './RealtimeSession';
 import { storage } from '@/sync/storage';
-import { getCurrentLanguage, t } from '@/text';
+import { getCurrentLanguage } from '@/text';
 import { startHappyVoiceSession, stopHappyVoiceSession, cleanSpeechText } from '@/sync/apiHappyVoice';
-import { getWelcomeMessage } from '@/sync/voiceConfig';
+import { getWelcomeMessage, happySaysPhrase, happyWantsToolPhrase, happyNeedsPermissionPhrase } from '@/sync/voiceConfig';
 import type { VoiceSession, VoiceSessionConfig } from './types';
 import { serializeHappyVoiceContext } from './HappyVoiceContextSerializer';
 import { buildAgentCommand, parseAgentMessage } from './happyVoiceProtocol';
@@ -176,13 +176,13 @@ class HappyVoiceSessionImpl implements VoiceSession {
                 if (!cleaned) return;
                 const MAX_SPOKEN = 1000;
                 const body = cleaned.length > MAX_SPOKEN ? `${cleaned.slice(0, MAX_SPOKEN)}……` : cleaned;
-                sendAgentCommand('ExternalTextToSpeech', t('voiceAssistant.happySays', { text: body }));
+                sendAgentCommand('ExternalTextToSpeech', happySaysPhrase(body));
             })();
         } else {
             // permission: announce briefly and wait for the user's allow/deny.
             const payload = match?.[2] ?? message;
             const tool = payload.match(/use\s+([A-Za-z]+)/)?.[1];
-            sendAgentCommand('ExternalTextToSpeech', tool ? t('voiceAssistant.happyWantsTool', { tool }) : t('voiceAssistant.happyNeedsPermission'));
+            sendAgentCommand('ExternalTextToSpeech', tool ? happyWantsToolPhrase(tool) : happyNeedsPermissionPhrase());
         }
     }
 

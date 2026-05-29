@@ -1118,12 +1118,6 @@ export const ca: TranslationStructure = {
         copyMessage: 'Copiar missatge del commit',
     },
 
-    voiceAssistant: {
-        happySays: ({ text }: { text: string }) => `Happy diu: ${text}`,
-        happyWantsTool: ({ tool }: { tool: string }) => `Happy vol fer servir ${tool}. Ho permets?`,
-        happyNeedsPermission: 'Happy necessita permís. Ho permets?',
-    },
-
     settingsVoice: {
 
 

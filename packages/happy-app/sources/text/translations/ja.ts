@@ -1150,12 +1150,6 @@ export const ja: TranslationStructure = {
         copyMessage: 'コミットメッセージをコピー',
     },
 
-    voiceAssistant: {
-        happySays: ({ text }: { text: string }) => `Happy が言いました：${text}`,
-        happyWantsTool: ({ tool }: { tool: string }) => `Happy が ${tool} を使いたいそうです。許可しますか？`,
-        happyNeedsPermission: 'Happy が権限を必要としています。許可しますか？',
-    },
-
     settingsVoice: {
 
 
