@@ -1581,7 +1581,7 @@ export const zhHant: TranslationStructure = {
         notAvailable: '此工作階段無法使用複製功能',
         loadFailed: '載入對話歷史失敗',
         confirmTitle: '確認複製',
-        confirmMessage: '將建立一個從選定訊息之前開始的新對話。是否繼續？',
+        confirmMessage: '將從這裡分叉出一個新對話。是否繼續？',
         failed: '複製對話失敗',
         noMessages: '沒有可複製的訊息',
         confirm: '複製',

@@ -1604,7 +1604,7 @@ export const pl: TranslationStructure = {
         notAvailable: 'Duplikowanie jest niedostępne dla tej sesji',
         loadFailed: 'Nie udało się załadować historii rozmowy',
         confirmTitle: 'Potwierdź duplikowanie',
-        confirmMessage: 'Zostanie utworzona nowa rozmowa zaczynająca się przed wybraną wiadomością. Kontynuować?',
+        confirmMessage: 'Od tego miejsca zostanie utworzona nowa rozmowa (odgałęzienie). Kontynuować?',
         failed: 'Nie udało się zduplikować rozmowy',
         noMessages: 'Brak wiadomości do zduplikowania',
         confirm: 'Duplikuj',

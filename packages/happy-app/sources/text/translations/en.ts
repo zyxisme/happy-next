@@ -1597,7 +1597,7 @@ export const en: TranslationStructure = {
         notAvailable: 'Duplicate is not available for this session',
         loadFailed: 'Failed to load conversation history',
         confirmTitle: 'Confirm Duplicate',
-        confirmMessage: 'This will create a new conversation starting from before the selected message. Continue?',
+        confirmMessage: 'This will branch a new conversation from here. Continue?',
         failed: 'Failed to duplicate conversation',
         noMessages: 'No messages to duplicate',
         confirm: 'Duplicate',

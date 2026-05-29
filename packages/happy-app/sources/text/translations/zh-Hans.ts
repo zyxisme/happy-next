@@ -1571,7 +1571,7 @@ export const zhHans: TranslationStructure = {
         notAvailable: '此会话无法使用复制功能',
         loadFailed: '加载对话历史失败',
         confirmTitle: '确认复制',
-        confirmMessage: '将创建一个从选定消息之前开始的新对话。是否继续？',
+        confirmMessage: '将从这里分叉出一个新对话。是否继续？',
         failed: '复制对话失败',
         noMessages: '没有可复制的消息',
         confirm: '复制',

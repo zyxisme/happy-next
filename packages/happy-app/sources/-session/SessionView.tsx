@@ -5,7 +5,7 @@ import { Avatar } from '@/components/Avatar';
 import { MultiTextInputHandle } from '@/components/MultiTextInput';
 import { getSuggestions } from '@/components/autocomplete/suggestions';
 import { ChatHeaderTitle } from '@/components/ChatHeaderTitle';
-import { ChatList } from '@/components/ChatList';
+import { ChatList, type ForkMessageRequest } from '@/components/ChatList';
 import { Deferred } from '@/components/Deferred';
 import { DuplicateSheet } from '@/components/DuplicateSheet';
 import { ActionMenuModal } from '@/components/ActionMenuModal';
@@ -18,7 +18,7 @@ import { useImagePicker } from '@/hooks/useImagePicker';
 import { Modal } from '@/modal';
 import { voiceHooks } from '@/realtime/hooks/voiceHooks';
 import { startRealtimeSession, stopRealtimeSession } from '@/realtime/RealtimeSession';
-import { sessionAbort, machineGetClaudeSessionUserMessages, machineDuplicateClaudeSession, machineSpawnNewSession, machineGetGeminiSessionUserMessages, machineDuplicateGeminiSession, machineGetCodexSessionUserMessages, machineDuplicateCodexSession, type UserMessageWithUuid } from '@/sync/ops';
+import { sessionAbort, machineGetClaudeSessionUserMessages, machineDuplicateClaudeSession, machineForkClaudeSession, machineSpawnNewSession, machineGetGeminiSessionUserMessages, machineDuplicateGeminiSession, machineForkGeminiSession, machineGetCodexSessionUserMessages, machineDuplicateCodexSession, machineForkCodexSession, type UserMessageWithUuid } from '@/sync/ops';
 import { storage, useIsDataReady, useLocalSetting, useOrchestratorRunningTaskCount, useOrchestratorHasRuns, useRealtimeStatus, useSessionMessages, useSessionPendingMessages, useSessionUsage, useSetting } from '@/sync/storage';
 import { useSession } from '@/sync/storage';
 import { Session } from '@/sync/storageTypes';
@@ -32,7 +32,6 @@ import { formatPathRelativeToHome, generateCopyTitle, getSessionAvatarId, getSes
 import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
 import { isVersionSupported, useLatestCliVersion } from '@/utils/versionUtils';
 import { matchForkUuid } from '@/utils/forkTarget';
-import type { UserTextMessage } from '@/sync/typesMessage';
 import { log } from '@/log';
 import { Ionicons } from '@expo/vector-icons';
 import { useHeaderHeight as useNavigationHeaderHeight } from '@react-navigation/elements';
@@ -525,7 +524,15 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
     // Core fork-and-spawn logic, shared by the duplicate sheet and the
     // per-message fork icon. `userMessages` is the loaded CLI message list,
     // used to recover the selected message's text for the new session draft.
-    const forkSessionFromUuid = React.useCallback(async (uuid: string, userMessages: UserMessageWithUuid[]) => {
+    //
+    // `uuid` is the CLI message to truncate before (the new session keeps
+    // everything older than it). Passing `uuid: null` forks the WHOLE session
+    // with no truncation — used when forking from the latest AI reply, which has
+    // no following user prompt to truncate at. `skipDraft` suppresses the draft
+    // write (AI-message forks continue after the reply, so there's nothing to
+    // pre-fill; user-message forks pre-fill the tapped prompt).
+    const forkSessionFromUuid = React.useCallback(async (opts: { uuid: string | null; userMessages: UserMessageWithUuid[]; skipDraft: boolean }) => {
+        const { uuid, userMessages, skipDraft } = opts;
         const flavor = session.metadata?.flavor;
         const claudeSessionId = session.metadata?.claudeSessionId;
         const codexSessionId = session.metadata?.codexSessionId;
@@ -544,7 +551,9 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
             let agent: 'claude' | 'gemini' | 'codex' = 'claude';
 
             if (flavor === 'gemini') {
-                const duplicateResult = await machineDuplicateGeminiSession(machineId, session.id, uuid);
+                const duplicateResult = uuid
+                    ? await machineDuplicateGeminiSession(machineId, session.id, uuid)
+                    : await machineForkGeminiSession(machineId, session.id);
                 if (!duplicateResult.success || !duplicateResult.newSessionId) {
                     setDuplicateConfirming(false);
                     Modal.alert(t('common.error'), duplicateResult.errorMessage || t('duplicate.failed'));
@@ -553,7 +562,9 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 resumeSessionId = duplicateResult.newSessionId;
                 agent = 'gemini';
             } else if (flavor === 'codex' && codexSessionId) {
-                const duplicateResult = await machineDuplicateCodexSession(machineId, codexSessionId, uuid);
+                const duplicateResult = uuid
+                    ? await machineDuplicateCodexSession(machineId, codexSessionId, uuid)
+                    : await machineForkCodexSession(machineId, codexSessionId);
                 if (!duplicateResult.success || !duplicateResult.newFilePath) {
                     setDuplicateConfirming(false);
                     Modal.alert(t('common.error'), duplicateResult.errorMessage || t('duplicate.failed'));
@@ -562,7 +573,9 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 resumeSessionId = duplicateResult.newFilePath;
                 agent = 'codex';
             } else if (claudeSessionId) {
-                const duplicateResult = await machineDuplicateClaudeSession(machineId, claudeSessionId, uuid);
+                const duplicateResult = uuid
+                    ? await machineDuplicateClaudeSession(machineId, claudeSessionId, uuid)
+                    : await machineForkClaudeSession(machineId, claudeSessionId);
                 if (!duplicateResult.success || !duplicateResult.newSessionId) {
                     setDuplicateConfirming(false);
                     Modal.alert(t('common.error'), duplicateResult.errorMessage || t('duplicate.failed'));
@@ -592,9 +605,10 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 await copySessionMetadata(session, spawnResult.sessionId).catch(e => console.warn('copySessionMetadata failed:', e));
                 copySessionModeSettings(session, spawnResult.sessionId);
 
-                // Save the selected message as a draft in the new session so it appears in the input box
-                const selectedMessage = userMessages.find(m => m.uuid === uuid);
-                if (selectedMessage?.content) {
+                // Save the selected message as a draft in the new session so it appears in the input box.
+                // Skipped for AI-message forks (the new session continues after the reply, nothing to pre-fill).
+                const selectedMessage = uuid ? userMessages.find(m => m.uuid === uuid) : undefined;
+                if (!skipDraft && selectedMessage?.content) {
                     storage.getState().updateSessionDraft(spawnResult.sessionId, {
                         text: selectedMessage.content,
                         images: [],
@@ -618,7 +632,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
 
     // Handle selecting a message in the duplicate sheet
     const handleDuplicateSelect = React.useCallback((uuid: string) => {
-        forkSessionFromUuid(uuid, duplicateMessages ?? []);
+        forkSessionFromUuid({ uuid, userMessages: duplicateMessages ?? [], skipDraft: false });
     }, [forkSessionFromUuid, duplicateMessages]);
 
     // Runs after the user confirms a per-message fork: load CLI user messages,
@@ -626,7 +640,12 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
     // deferred to here (post-confirm) so tapping the fork icon shows the
     // confirm dialog instantly instead of waiting on an RPC round-trip.
     // Falls back to opening the sheet if the target can't be matched.
-    const performForkFromMessage = React.useCallback(async (target: UserTextMessage) => {
+    //
+    // `request.target` is the user message whose UUID becomes the truncation
+    // point. For an AI-message fork it's the user prompt that FOLLOWS the reply
+    // (so the reply is kept); when the reply has no following prompt it's null,
+    // meaning fork the whole session with no truncation.
+    const performForkFromMessage = React.useCallback(async (request: ForkMessageRequest) => {
         const flavor = session.metadata?.flavor;
         const claudeSessionId = session.metadata?.claudeSessionId;
         const codexSessionId = session.metadata?.codexSessionId;
@@ -634,8 +653,16 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
 
         // Turn the tapped message's fork icon into a spinner for the whole
         // post-confirm window (message load + fork), then clear it.
-        setForkingMessageId(target.id);
+        setForkingMessageId(request.loadingMessageId);
         try {
+            // No truncation target (forking from the latest AI reply): duplicate
+            // the whole session, no draft.
+            if (!request.target) {
+                await forkSessionFromUuid({ uuid: null, userMessages: [], skipDraft: true });
+                return;
+            }
+
+            const target = request.target;
             let userMessages: UserMessageWithUuid[] = [];
             try {
                 if (flavor === 'gemini') {
@@ -661,7 +688,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 return;
             }
 
-            await forkSessionFromUuid(uuid, userMessages);
+            await forkSessionFromUuid({ uuid, userMessages, skipDraft: request.skipDraft });
         } finally {
             setForkingMessageId(null);
         }
@@ -669,7 +696,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
 
     // Handle the per-message fork icon: show the confirm dialog immediately,
     // then do the network work in performForkFromMessage once confirmed.
-    const handleForkFromMessage = React.useCallback((target: UserTextMessage) => {
+    const handleForkFromMessage = React.useCallback((request: ForkMessageRequest) => {
         const flavor = session.metadata?.flavor;
         const claudeSessionId = session.metadata?.claudeSessionId;
         const codexSessionId = session.metadata?.codexSessionId;
@@ -687,7 +714,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
             t('duplicate.confirmMessage'),
             [
                 { text: t('common.cancel'), style: 'cancel' },
-                { text: t('duplicate.confirm'), onPress: () => { performForkFromMessage(target); } },
+                { text: t('duplicate.confirm'), onPress: () => { performForkFromMessage(request); } },
             ]
         );
     }, [machineId, session.metadata?.flavor, session.metadata?.claudeSessionId, session.metadata?.codexSessionId, performForkFromMessage]);

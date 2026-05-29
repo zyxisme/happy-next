@@ -1610,7 +1610,7 @@ export const it: TranslationStructure = {
         notAvailable: 'La duplicazione non è disponibile per questa sessione',
         loadFailed: 'Impossibile caricare la cronologia della conversazione',
         confirmTitle: 'Conferma duplicazione',
-        confirmMessage: 'Verrà creata una nuova conversazione a partire da prima del messaggio selezionato. Continuare?',
+        confirmMessage: 'Verrà creata una nuova conversazione ramificata da qui. Continuare?',
         failed: 'Impossibile duplicare la conversazione',
         noMessages: 'Nessun messaggio da duplicare',
         confirm: 'Duplica',

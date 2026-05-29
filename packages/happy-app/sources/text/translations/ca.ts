@@ -1569,7 +1569,7 @@ export const ca: TranslationStructure = {
         notAvailable: 'La duplicació no està disponible per a aquesta sessió',
         loadFailed: 'Error en carregar l\'historial de la conversa',
         confirmTitle: 'Confirmar duplicació',
-        confirmMessage: 'Es crearà una nova conversa començant abans del missatge seleccionat. Continuar?',
+        confirmMessage: 'Es crearà una nova conversa ramificada des d’aquí. Continuar?',
         failed: 'Error en duplicar la conversa',
         noMessages: 'No hi ha missatges per duplicar',
         confirm: 'Duplicar',

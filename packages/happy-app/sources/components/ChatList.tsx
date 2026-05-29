@@ -23,7 +23,22 @@ function shouldHideMessageInChatList(message: Message): boolean {
     return message.kind === 'user-text' && isCompactionMarkerText(message.displayText ?? message.text);
 }
 
-export const ChatList = React.memo((props: { session: Session; onFillInput?: (text: string, allOptions?: string[]) => void; onLoadMore?: () => void; onForkMessage?: (target: UserTextMessage) => void; forkingMessageId?: string | null }) => {
+// Describes a fork initiated from a message's inline fork icon.
+export interface ForkMessageRequest {
+    // The user message to truncate before — the new session keeps everything
+    // older than it. For a fork from an AI reply this is the user prompt that
+    // FOLLOWS the reply (so the reply itself is kept); `null` means there is no
+    // following prompt, so the whole session is duplicated with no truncation.
+    target: UserTextMessage | null;
+    // The message whose fork icon was tapped — drives the inline loading spinner.
+    loadingMessageId: string;
+    // Suppress the new-session draft. User-message forks pre-fill the tapped
+    // prompt; AI-message forks continue after the reply, so there's nothing to
+    // pre-fill.
+    skipDraft: boolean;
+}
+
+export const ChatList = React.memo((props: { session: Session; onFillInput?: (text: string, allOptions?: string[]) => void; onLoadMore?: () => void; onForkMessage?: (request: ForkMessageRequest) => void; forkingMessageId?: string | null }) => {
     const { messages, hasMore } = useSessionMessages(props.session.id);
     const profile = useProfile();
     const isSharedSession = !!(props.session.isShared || props.session.accessLevel);
@@ -70,7 +85,7 @@ const ChatListInternal = React.memo((props: {
     onLoadMore?: () => void,
     isSharedSession: boolean,
     currentUserId: string,
-    onForkMessage?: (target: UserTextMessage) => void,
+    onForkMessage?: (request: ForkMessageRequest) => void,
     thinking?: boolean,
     forkingMessageId?: string | null,
 }) => {
@@ -156,18 +171,32 @@ const ChatListInternal = React.memo((props: {
 
     const keyExtractor = useCallback((item: any) => item.id, []);
     const renderItem = useCallback(({ item, index }: { item: Message, index: number }) => {
-        // Fork is only offered on user messages (you fork from a user prompt).
-        const forkTarget = props.onForkMessage && !props.isSharedSession && item.kind === 'user-text'
-            ? item
-            : null;
-        const onFork = forkTarget && props.onForkMessage
-            ? () => props.onForkMessage!(forkTarget)
-            : undefined;
         // Agent turns show the action bar only on their last text segment;
         // user messages always show it.
         const showActionBar = item.kind === 'agent-text'
             ? lastAgentSegmentIds.has(item.id)
             : true;
+        // Fork is offered on user prompts and on AI replies (private sessions only):
+        // - User message: fork truncates before this prompt; its text becomes the
+        //   new session's draft.
+        // - AI reply: fork keeps the conversation through this reply by truncating
+        //   before the NEXT user prompt (newer → lower index in the inverted
+        //   array), with no draft. If there is no later prompt, the whole session
+        //   is duplicated. Only the turn's last segment carries the action bar.
+        let onFork: (() => void) | undefined;
+        if (props.onForkMessage && !props.isSharedSession) {
+            if (item.kind === 'user-text') {
+                const target = item;
+                onFork = () => props.onForkMessage!({ target, loadingMessageId: item.id, skipDraft: false });
+            } else if (item.kind === 'agent-text' && showActionBar) {
+                let nextUserMessage: UserTextMessage | null = null;
+                for (let j = index - 1; j >= 0; j--) {
+                    const newer = visibleMessages[j];
+                    if (newer.kind === 'user-text') { nextUserMessage = newer; break; }
+                }
+                onFork = () => props.onForkMessage!({ target: nextUserMessage, loadingMessageId: item.id, skipDraft: true });
+            }
+        }
         const forkLoading = !!props.forkingMessageId && props.forkingMessageId === item.id;
         return (
             <MessageView
@@ -184,7 +213,7 @@ const ChatListInternal = React.memo((props: {
                 showSenderName={senderVisibility?.get(item.id) ?? false}
             />
         );
-    }, [props.metadata, props.sessionId, props.onFillInput, props.onForkMessage, props.isSharedSession, props.currentUserId, senderVisibility, lastAgentSegmentIds, props.forkingMessageId]);
+    }, [props.metadata, props.sessionId, props.onFillInput, props.onForkMessage, props.isSharedSession, props.currentUserId, senderVisibility, lastAgentSegmentIds, props.forkingMessageId, visibleMessages]);
 
     React.useEffect(() => {
         visibleMessagesRef.current = visibleMessages;

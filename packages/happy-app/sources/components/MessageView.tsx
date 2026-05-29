@@ -235,6 +235,7 @@ function RenderBlock(props: {
           readOnly={props.readOnly}
           onFork={props.onFork}
           showActionBar={props.showActionBar}
+          forkLoading={props.forkLoading}
         />
       );
 
@@ -396,6 +397,7 @@ function AgentTextBlock(props: {
   readOnly?: boolean;
   onFork?: () => void;
   showActionBar?: boolean;
+  forkLoading?: boolean;
 }) {
   const showThinkingMessages = useSetting('showThinkingMessages');
   const [optionsLoadingState, setOptionsLoadingState] = React.useState<OptionsLoadingState>({ loadingIndex: null });
@@ -470,6 +472,7 @@ function AgentTextBlock(props: {
           createdAt={props.message.createdAt}
           onCopy={messageText ? handleCopy : undefined}
           onFork={props.onFork}
+          forkLoading={props.forkLoading}
           onSpeak={messageText ? handleSpeak : undefined}
           ttsState={ttsState}
         />

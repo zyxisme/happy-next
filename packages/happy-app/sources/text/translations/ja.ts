@@ -1612,7 +1612,7 @@ export const ja: TranslationStructure = {
         notAvailable: 'このセッションでは複製を使用できません',
         loadFailed: '会話履歴の読み込みに失敗しました',
         confirmTitle: '複製の確認',
-        confirmMessage: '選択したメッセージの前から新しい会話が作成されます。続行しますか？',
+        confirmMessage: 'ここから分岐して新しい会話を作成します。続行しますか？',
         failed: '会話の複製に失敗しました',
         noMessages: '複製するメッセージがありません',
         confirm: '複製',

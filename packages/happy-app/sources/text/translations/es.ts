@@ -1580,7 +1580,7 @@ export const es: TranslationStructure = {
         notAvailable: 'La duplicación no está disponible para esta sesión',
         loadFailed: 'Error al cargar el historial de conversación',
         confirmTitle: 'Confirmar duplicación',
-        confirmMessage: 'Se creará una nueva conversación comenzando antes del mensaje seleccionado. ¿Continuar?',
+        confirmMessage: 'Se creará una nueva conversación ramificada desde aquí. ¿Continuar?',
         failed: 'Error al duplicar la conversación',
         noMessages: 'No hay mensajes para duplicar',
         confirm: 'Duplicar',
