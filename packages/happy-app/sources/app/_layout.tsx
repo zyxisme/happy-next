@@ -5,7 +5,7 @@ import * as React from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Fonts from 'expo-font';
 import * as Notifications from 'expo-notifications';
-import { FontAwesome, FontAwesome6, Ionicons, Octicons, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
+import { FontAwesome, FontAwesome6, Ionicons, Octicons, MaterialCommunityIcons, AntDesign, SimpleLineIcons } from '@expo/vector-icons';
 import { AuthCredentials, TokenStorage } from '@/auth/tokenStorage';
 import { AuthProvider } from '@/auth/AuthContext';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -169,6 +169,7 @@ const allFonts = {
     ...Octicons.font,
     ...MaterialCommunityIcons.font,
     ...AntDesign.font,
+    ...SimpleLineIcons.font,
 };
 
 async function loadFontsWithRetry() {

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { View, Text, Pressable, Platform, ActivityIndicator } from "react-native";
 import { Image } from "expo-image";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, SimpleLineIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { ImageViewer } from "./ImageViewer";
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -108,9 +108,9 @@ function MessageActionBar(props: {
           {ttsState === 'loading' ? (
             <ActivityIndicator size="small" color={theme.colors.textSecondary} style={styles.actionSpinner} />
           ) : (
-            <Ionicons
-              name={ttsState === 'playing' ? 'pause-circle-outline' : 'play-circle-outline'}
-              size={16}
+            <SimpleLineIcons
+              name={ttsState === 'playing' ? 'control-pause' : 'volume-2'}
+              size={ttsState === 'playing' ? 12 : 14.5}
               color={theme.colors.textSecondary}
             />
           )}
