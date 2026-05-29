@@ -56,9 +56,9 @@ function SessionPickerContent({ title, intent, sessions, onSelect, onCancel }: S
                                 { backgroundColor: pressed ? theme.colors.surfacePressed : theme.colors.surfaceHigh },
                             ]}
                         >
-                            <Text style={[styles.rowIndex, { color: theme.colors.textSecondary }]}>{i + 1}.</Text>
                             <View style={styles.rowMain}>
                                 <Text style={[styles.rowName, { color: theme.colors.text }]} numberOfLines={1}>
+                                    <Text style={{ color: theme.colors.textSecondary }}>{i + 1}. </Text>
                                     {getSessionName(s)}{isCurrent ? ' (current)' : ''}
                                 </Text>
                                 {path ? (
@@ -194,7 +194,6 @@ const styles = StyleSheet.create((theme) => ({
     title: { fontSize: 17, textAlign: 'center', marginBottom: 12, ...Typography.default('semiBold') },
     list: { maxHeight: 360, marginBottom: 12 },
     row: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, marginBottom: 6 },
-    rowIndex: { width: 24, fontSize: 15, ...Typography.default('semiBold') },
     rowMain: { flex: 1 },
     rowName: { fontSize: 15, ...Typography.default('semiBold') },
     rowPath: { fontSize: 12, marginTop: 2, ...Typography.default() },
