@@ -110,6 +110,10 @@ interface StorageState {
     // Used to suppress draft restoration while a message is being sent so that
     // leaving and re-entering the chat mid-send can't resurrect the just-sent text.
     sessionSendInFlight: Record<string, boolean>;
+    // Per-session "message-list bootstrap (re)fetch is in flight" flag (transient, not persisted).
+    // Set true while a focus/retry-triggered full reload (fetchMessagesV3 bootstrap) is loading,
+    // cleared on success OR error. Drives the "refreshing" indicator in SessionView.
+    sessionMessagesFetching: Record<string, boolean>;
     sessionGitStatus: Record<string, GitStatus | null>;
     machines: Record<string, Machine>;
     openClawMachines: Record<string, OpenClawMachine>;  // OpenClaw machine configurations
@@ -197,6 +201,7 @@ interface StorageState {
     updateSessionActivity: (sessionId: string, active: boolean) => void;
     setAwaitingResponse: (sessionId: string, value: number | null) => void;
     setSendInFlight: (sessionId: string, inFlight: boolean) => void;
+    setSessionMessagesFetching: (sessionId: string, fetching: boolean) => void;
     setSessionUpgrading: (sessionId: string, upgrading: boolean) => void;
     setSessionFastMode: (sessionId: string, fastMode: boolean) => void;
     updateSessionPermissionMode: (sessionId: string, mode: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan' | 'read-only' | 'on-failure' | 'full-auto' | 'auto_edit' | 'yolo') => void;
@@ -442,6 +447,7 @@ export const storage = create<StorageState>()((set, get) => {
         sessionMessages: {},
         sessionPendingMessages: {},
         sessionSendInFlight: {},
+        sessionMessagesFetching: {},
         sessionGitStatus: {},
         realtimeStatus: 'disconnected',
         realtimeMode: 'idle',
@@ -1414,6 +1420,17 @@ export const storage = create<StorageState>()((set, get) => {
             }
             return { ...state, sessionSendInFlight: next };
         }),
+        setSessionMessagesFetching: (sessionId: string, fetching: boolean) => set((state) => {
+            const current = !!state.sessionMessagesFetching[sessionId];
+            if (current === fetching) return state;
+            const next = { ...state.sessionMessagesFetching };
+            if (fetching) {
+                next[sessionId] = true;
+            } else {
+                delete next[sessionId];
+            }
+            return { ...state, sessionMessagesFetching: next };
+        }),
         updateSessionActivity: (sessionId: string, active: boolean) => set((state) => {
             const session = state.sessions[sessionId];
             if (!session) return state;
@@ -2331,6 +2348,12 @@ export function useSessionMessages(sessionId: string): { messages: Message[], is
             fetchVersion: session?.fetchVersion ?? 0,
         };
     }));
+}
+
+// Dedicated selector so consumers of the (heavy) useSessionMessages list don't
+// re-render when only the bootstrap-fetch flag flips. See SessionView's refreshing indicator.
+export function useSessionMessagesFetching(sessionId: string): boolean {
+    return storage((state) => !!state.sessionMessagesFetching[sessionId]);
 }
 
 export function useSessionPendingMessages(sessionId: string): PendingMessage[] {

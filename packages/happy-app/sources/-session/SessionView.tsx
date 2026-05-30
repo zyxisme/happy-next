@@ -19,7 +19,7 @@ import { Modal } from '@/modal';
 import { voiceHooks } from '@/realtime/hooks/voiceHooks';
 import { startRealtimeSession, stopRealtimeSession } from '@/realtime/RealtimeSession';
 import { sessionAbort, machineGetClaudeSessionUserMessages, machineDuplicateClaudeSession, machineForkClaudeSession, machineSpawnNewSession, machineGetGeminiSessionUserMessages, machineDuplicateGeminiSession, machineForkGeminiSession, machineGetCodexSessionUserMessages, machineDuplicateCodexSession, machineForkCodexSession, type UserMessageWithUuid } from '@/sync/ops';
-import { storage, useIsDataReady, useLocalSetting, useOrchestratorRunningTaskCount, useOrchestratorHasRuns, useRealtimeStatus, useSessionMessages, useSessionPendingMessages, useSessionUsage, useSetting } from '@/sync/storage';
+import { storage, useIsDataReady, useLocalSetting, useOrchestratorRunningTaskCount, useOrchestratorHasRuns, useRealtimeStatus, useSessionMessages, useSessionMessagesFetching, useSessionPendingMessages, useSessionUsage, useSetting } from '@/sync/storage';
 import { useSession } from '@/sync/storage';
 import { Session } from '@/sync/storageTypes';
 import { sync } from '@/sync/sync';
@@ -271,6 +271,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
     const [message, setMessage] = React.useState('');
     const realtimeStatus = useRealtimeStatus();
     const { messages, isLoaded, fetchVersion } = useSessionMessages(sessionId);
+    const messagesFetching = useSessionMessagesFetching(sessionId);
     const pendingMessages = useSessionPendingMessages(sessionId);
     const acknowledgedCliVersions = useLocalSetting('acknowledgedCliVersions');
 
@@ -291,6 +292,9 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
     const alwaysShowContextSize = useSetting('alwaysShowContextSize');
     const [silentRefreshTrackingKey, setSilentRefreshTrackingKey] = React.useState(0);
     const [silentRefreshPhase, setSilentRefreshPhase] = React.useState<'idle' | 'refreshing' | 'failed'>('idle');
+    // Opens SILENT_REFRESH_INDICATOR_DELAY_MS after focus/retry. Gates the message-list
+    // refreshing indicator so a fast (<3s) reload never flashes "refreshing".
+    const [refreshGateOpen, setRefreshGateOpen] = React.useState(false);
     const latestMessageSnapshotRef = React.useRef({ isLoaded, messages, fetchVersion });
     latestMessageSnapshotRef.current = { isLoaded, messages, fetchVersion };
     const silentRefreshBaselineRef = React.useRef<{ isLoaded: boolean; messagesRef: typeof messages; fetchVersion: number } | null>(null);
@@ -354,14 +358,31 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
     const handleRetryStatusRefresh = React.useCallback(() => {
         startSilentRefreshTracking();
         setSilentRefreshPhase('refreshing');
+        // Explicit retry: surface feedback immediately and force a fresh message bootstrap
+        // (clears the cursor → fetchMessagesV3 bootstrap → sets messagesFetching).
+        setRefreshGateOpen(true);
+        sync.onSessionVisible(sessionId, true);
         void sync.refreshSessions().catch(() => {
             // Keep current phase and rely on timeout-based feedback.
         });
-    }, [startSilentRefreshTracking]);
+    }, [startSilentRefreshTracking, sessionId]);
 
     const isRefreshingStatus = silentRefreshPhase === 'refreshing' || sessionStatus.state === 'syncing';
+    // Real "message list is reloading" signal, gated behind the 3s delay. When true it takes
+    // priority over both the original clear and the 12s failure: as long as the list is genuinely
+    // still fetching, keep showing "refreshing" (an errored fetch clears messagesFetching, so a
+    // stuck network falls through to "refresh failed" instead of spinning forever).
+    const isListRefreshing = messagesFetching && refreshGateOpen;
 
     const inputConnectionStatus = React.useMemo(() => {
+        if (isListRefreshing) {
+            return {
+                text: t('status.refreshing'),
+                color: theme.colors.status.connecting,
+                dotColor: theme.colors.status.connecting,
+                isPulsing: true
+            };
+        }
         if (silentRefreshPhase === 'failed') {
             return {
                 text: t('status.refreshFailed'),
@@ -386,7 +407,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
             isPulsing: sessionStatus.isPulsing,
             ...(sessionStatus.state === 'permission_required' && { action: 'openPermission' as const }),
         };
-    }, [silentRefreshPhase, isRefreshingStatus, sessionStatus, theme.colors.status.connecting, theme.colors.status.error, handleRetryStatusRefresh]);
+    }, [isListRefreshing, silentRefreshPhase, isRefreshingStatus, sessionStatus, theme.colors.status.connecting, theme.colors.status.error, handleRetryStatusRefresh]);
 
     // Ref for the input component (used for web auto-focus)
     const inputRef = React.useRef<MultiTextInputHandle>(null);
@@ -836,9 +857,14 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         React.useCallback(() => {
             sync.onSessionVisible(sessionId, true);
             startSilentRefreshTracking();
+            // Keep the message-list refreshing indicator suppressed for the first 3s, matching
+            // the existing silent-refresh behavior, then let it reflect the real fetch state.
+            setRefreshGateOpen(false);
+            const gateTimer = setTimeout(() => setRefreshGateOpen(true), SILENT_REFRESH_INDICATOR_DELAY_MS);
             void sync.refreshSessions().catch(() => {
                 // Silent refresh indicator handles delayed feedback if status stays stale.
             });
+            return () => clearTimeout(gateTimer);
         }, [sessionId, startSilentRefreshTracking])
     );
 

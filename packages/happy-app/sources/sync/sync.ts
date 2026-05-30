@@ -2844,6 +2844,12 @@ class Sync {
         await lock.inLock(async () => {
             const currentCursor = this.sessionLastSeq.get(sessionId);
             if (currentCursor === undefined) {
+                // Mark the message list as actively (re)loading so the UI can show a real
+                // "refreshing" indicator. Cleared in finally on both success and error — an
+                // errored attempt counts as "done loading" so a stuck network surfaces as a
+                // failure (with retry) rather than an indefinite spinner.
+                storage.getState().setSessionMessagesFetching(sessionId, true);
+                try {
                 // Bootstrap with latest page only to avoid loading very large histories at once.
                 // v3 with no after_seq/before_seq returns latest messages in desc order.
                 const API_ENDPOINT = getServerUrl();
@@ -2888,6 +2894,9 @@ class Sync {
 
                 log.log(`💬 fetchMessagesV3 bootstrap completed for session ${sessionId}, lastSeq=${this.sessionLastSeq.get(sessionId) ?? 0}`);
                 return;
+                } finally {
+                    storage.getState().setSessionMessagesFetching(sessionId, false);
+                }
             }
 
             let afterSeq = currentCursor;
