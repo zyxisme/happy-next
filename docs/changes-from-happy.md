@@ -64,8 +64,9 @@ The original Happy only supported Claude Code. Happy Next treats Claude Code, Co
 
 - **Multi-agent history page** with per-provider tabs (Claude / Codex / Gemini)
 - **Session resume and duplicate/fork** for all three agents
-- **`/duplicate` slash command**: opens a message picker to fork a session from any point in the conversation, creating a new session with history up to the selected message
+- **`/duplicate` slash command**: opens a message picker to fork a session from any point in the conversation — including directly from an AI reply — creating a new session with history up to the selected message
 - **Per-agent model selection** cached independently, with context window display
+- **Claude Opus 4.8** added to the model catalog
 - **Cost tracking** with accurate token usage for Claude models (cache tokens, reasoning tokens)
 - **Codex reasoning effort** configuration (low / medium / high / xhigh)
 - **ACP (Agent Client Protocol) backend** for Codex, replacing the MCP client approach
@@ -92,7 +93,7 @@ Happy Next includes a complete voice gateway stack built on the Volcano (火山�
 - **LLM text cleaning before speech** tuned for latency: trivial short text skips cleaning, in-call announcements are localized (i18n framings), capped token budget
 - **Voice settings sync** across devices via end-to-end-encrypted user settings
 - **Microphone mute** in voice conversations (Happy Voice)
-- **Voice tools**: session management (navigate, end conversation), message sending
+- **Voice tools**: refreshed session-management tools (start / switch / message a session) with a single session-settings `mode` parameter, clearer titles, hardened parameters, and an auto-close countdown on the session-picker cancel button
 - **Voice message send confirmation** with configurable countdown
 - **"Thinking" indicator** in voice status bar
 - **Context-aware voice**: full app state (sessions, git status, etc.) injected as structured context
@@ -228,7 +229,8 @@ Extensive improvements to the chat and session management experience.
 - **Session search** in history page
 - **Session rename** with lock to prevent AI auto-update
 - **Session preview** on history page
-- **`/duplicate` command** in chat input to fork a session from any message (with DuplicateSheet picker)
+- **`/duplicate` command** in chat input to fork a session from any message, including directly from an AI reply (with DuplicateSheet picker)
+- **Optimistic send status**: an immediate "Processing…" status after sending, plus a "refreshing" indicator while the message list reloads
 - **Slash-command autocomplete** shows each command's source scope (repo / user / plugin / system) and kind; session capabilities are stored separately from metadata and sync live (atomic CAS write + socket broadcast) so command and skill lists stay fresh
 - **Per-message action bar**: copy, fork-from-here (with progress spinner), read-aloud (TTS), and full timestamp on web hover / native tap
 - **Options**: click-to-send and long-press-to-fill
@@ -321,6 +323,8 @@ Over 250 bug fixes landed. The following are grouped by area.
 - Fix input not clearing when WebSocket push beats send-ack
 - Return failure on send timeout instead of assuming success
 - Fix AskUserQuestion options submitting duplicate messages
+- Harden message send on flaky networks
+- Suppress draft restore while a send is in flight
 
 ### Unread Blue Dot Indicator
 - Fix blue dot not showing for offline sessions

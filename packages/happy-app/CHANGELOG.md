@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 12 - 2026-05-27
+## Version 12 - 2026-05-30
 
 Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming speech and native iOS voice calls, selectable voice timbre and speech rate, end-to-end-encrypted voice settings sync, and richer slash-command autocomplete with live capability sync.
 
@@ -9,10 +9,15 @@ Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming spe
 - Voice personalization: choose your assistant's voice timbre and speech rate; multilingual replies default to the seed-tts-2.0 voice
 - Voice quality: smarter LLM text cleaning before speech — trivial short text skips cleaning to cut latency, in-call announcements are localized, and reply length caps were raised
 - Voice settings: voice assistant configuration now syncs across devices via end-to-end-encrypted user settings; refreshed language-search header and layout
+- Voice tools: refreshed session-management voice tools (start / switch / message a session) with a single-parameter session-settings mode, clearer titles, and an auto-close countdown on the session-picker cancel button
 - Autocomplete: slash-command suggestions now show their source scope (repo / user / plugin / system) and kind; session capabilities are stored separately from metadata and sync live so command and skill lists stay fresh
+- Messages: fork a conversation directly from an AI reply; sending now shows an optimistic "Processing…" status immediately and a "refreshing" indicator while the list reloads
+- Reliability: message send is hardened for flaky networks, and draft restore is suppressed while a send is in flight
 - Reliability: the chat reducer no longer synthesizes out-of-order completed-permission messages
+- Models: added Claude Opus 4.8 to the model catalog
+- iOS: transparent native session header with proper top padding, and the chat placeholder is centered in the visible area above the keyboard
 - Deploy: docker-compose Happy Voice service points at the Volcano gateway, with the gateway port standardized to 3040
-- CLI: Happy CLI updated to v0.5.1
+- CLI: Happy CLI updated to v0.5.2
 
 ## Version 11 - 2026-05-25
 

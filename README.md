@@ -102,7 +102,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Per-agent model selection, cost tracking, and context window display
 - ACP and App-Server (JSON-RPC) backends for Codex, Codex v0.130.0 with fast mode
 - AI backend profiles with presets for DeepSeek, Z.AI, OpenAI, Azure, and Google AI
-- Claude Opus 4.7 support with empty thinking block filtering for clean 4.x rendering
+- Claude Opus 4.8 support with empty thinking block filtering for clean 4.x rendering
 - GPT-5.5 support for Codex with low/medium/high/xhigh reasoning levels
 - Gemini 3.1 Pro and Gemini 3 Flash (GA) in the model catalog; wizard handles flash model variants
 
@@ -115,6 +115,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Microphone mute, voice message send confirmation, "thinking" indicator
 - Context-aware voice: app state is injected into the voice LLM automatically
 - Read any AI reply aloud with a one-tap voice button in the message footer (one-shot text-to-speech via the voice gateway)
+- Manage sessions by voice — start, switch, and message a session through dedicated voice tools with a single session-settings mode parameter, clearer titles, and an auto-close countdown on the session-picker cancel button
 
 ### Multi-Repo Worktree Workspaces
 - Create, switch, and archive multi-repo workspaces from the app
@@ -167,13 +168,15 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Server-confirmed message sending with retry and message receipt tracking
 - Fixes for cursor skip, outbox race, message duplication/loss
 - Chat reducer no longer synthesizes out-of-order completed-permission messages
+- Message send hardened for flaky networks; draft restore is suppressed while a send is in flight
 
 ### Chat & Session UX
 - Image attachment and clipboard paste (web), image support in drafts, high-quality pass-through up to 1568px preserving text sharpness in code/UI screenshots
 - Session titles seeded from the first user message for new sessions (until an AI summary takes over)
 - Slash command results surface even when the agent emits no assistant message (e.g. unknown commands no longer blank out)
 - Slash-command autocomplete shows each command's source scope (repo / user / plugin / system) and kind; session capabilities are stored separately from metadata and sync live so command and skill lists stay fresh
-- `/duplicate` command to fork a session from any message
+- `/duplicate` command to fork a session from any message, including directly from an AI reply
+- Sending shows an optimistic "Processing…" status immediately, plus a "refreshing" indicator while the message list reloads
 - Message pagination, unread blue dot indicator, compact list view
 - Active/Inactive tab filter, session preview expand/collapse, metadata caching
 - Recent session history pagination for faster initial load
