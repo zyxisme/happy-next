@@ -4,7 +4,7 @@
 
 ## Language Preference
 
-- Use Simplified Chinese for technical summaries and key conclusions, unless the user explicitly requests another language
+- Respond in Simplified Chinese unless the user explicitly requests another language
 
 ## Repository Overview
 
