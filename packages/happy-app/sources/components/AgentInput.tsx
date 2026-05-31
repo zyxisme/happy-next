@@ -591,6 +591,9 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
         selection: { start: 0, end: 0 }
     });
     const hasText = inputState.text.trim().length > 0 || props.value.trim().length > 0;
+    // Attached images alone are enough to send (e.g. an image-only chat message),
+    // even when the text input is empty.
+    const hasImages = (props.images?.length ?? 0) > 0;
 
     // Keep a latest text snapshot to avoid stale parent-state reads during fast click-after-type sends.
     const latestTextRef = React.useRef(props.value);
@@ -1554,7 +1557,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                 <View
                                     style={[
                                         styles.sendButton,
-                                        (hasText || props.isSending || props.allowEmptySend || (props.onMicPress && !props.isMicActive))
+                                        (hasText || hasImages || props.isSending || props.allowEmptySend || (props.onMicPress && !props.isMicActive))
                                             ? styles.sendButtonActive
                                             : styles.sendButtonInactive
                                     ]}
@@ -1571,7 +1574,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                         onPress={() => {
                                             const textSnapshot = resolveSendSnapshot();
                                             log.log(`[SEND_DEBUG][INPUT] press hasText=${hasText} latestLen=${latestTextRef.current.trim().length} stateLen=${inputState.text.trim().length} propLen=${props.value.trim().length} pickedLen=${textSnapshot.trim().length} mic=${props.onMicPress ? 'yes' : 'no'} disabled=${props.isSendDisabled || props.isSending ? 'yes' : 'no'}`);
-                                            if (textSnapshot.trim() || props.allowEmptySend) {
+                                            if (textSnapshot.trim() || hasImages || props.allowEmptySend) {
                                                 hapticsLight();
                                                 props.onSend(textSnapshot);
                                                 return;
@@ -1582,7 +1585,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                             }
                                         }}
                                         accessibilityState={{
-                                            disabled: !!(props.isSendDisabled || props.isSending || (!hasText && !props.onMicPress && !props.allowEmptySend)),
+                                            disabled: !!(props.isSendDisabled || props.isSending || (!hasText && !hasImages && !props.onMicPress && !props.allowEmptySend)),
                                         }}
                                         disabled={props.isSendDisabled || props.isSending}
                                     >
@@ -1591,7 +1594,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                                 size="small"
                                                 color={theme.colors.button.primary.tint}
                                             />
-                                        ) : hasText ? (
+                                        ) : (hasText || hasImages) ? (
                                             <Octicons
                                                 name="arrow-up"
                                                 size={16}
