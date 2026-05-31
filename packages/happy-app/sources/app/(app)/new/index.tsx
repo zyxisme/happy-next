@@ -1630,6 +1630,7 @@ function NewSessionWizard() {
                                 onChangeText={setSessionPrompt}
                                 onSend={handleCreateSession}
                                 isSendDisabled={!canCreate}
+                                allowEmptySend={true}
                                 isSending={isCreating}
                                 placeholder={t('session.initialMessage')}
                                 autocompletePrefixes={[]}
@@ -2405,6 +2406,7 @@ function NewSessionWizard() {
                             onChangeText={setSessionPrompt}
                             onSend={handleCreateSession}
                             isSendDisabled={!canCreate}
+                            allowEmptySend={true}
                             isSending={isCreating}
                             placeholder={t('session.initialMessage')}
                             autocompletePrefixes={[]}

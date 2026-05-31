@@ -99,6 +99,10 @@ interface AgentInputProps {
     onFastModeChange?: (enabled: boolean) => void;
     isSendDisabled?: boolean;
     isSending?: boolean;
+    // When true, the send button stays active and fires onSend even with an empty
+    // input (e.g. the new-session wizard, which can create a session without an
+    // initial message). Defaults to the usual "only send when there is text".
+    allowEmptySend?: boolean;
     minHeight?: number;
     profileId?: string | null;
     onProfileClick?: () => void;
@@ -1550,7 +1554,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                 <View
                                     style={[
                                         styles.sendButton,
-                                        (hasText || props.isSending || (props.onMicPress && !props.isMicActive))
+                                        (hasText || props.isSending || props.allowEmptySend || (props.onMicPress && !props.isMicActive))
                                             ? styles.sendButtonActive
                                             : styles.sendButtonInactive
                                     ]}
@@ -1567,7 +1571,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                         onPress={() => {
                                             const textSnapshot = resolveSendSnapshot();
                                             log.log(`[SEND_DEBUG][INPUT] press hasText=${hasText} latestLen=${latestTextRef.current.trim().length} stateLen=${inputState.text.trim().length} propLen=${props.value.trim().length} pickedLen=${textSnapshot.trim().length} mic=${props.onMicPress ? 'yes' : 'no'} disabled=${props.isSendDisabled || props.isSending ? 'yes' : 'no'}`);
-                                            if (textSnapshot.trim()) {
+                                            if (textSnapshot.trim() || props.allowEmptySend) {
                                                 hapticsLight();
                                                 props.onSend(textSnapshot);
                                                 return;
@@ -1578,7 +1582,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                             }
                                         }}
                                         accessibilityState={{
-                                            disabled: !!(props.isSendDisabled || props.isSending || (!hasText && !props.onMicPress)),
+                                            disabled: !!(props.isSendDisabled || props.isSending || (!hasText && !props.onMicPress && !props.allowEmptySend)),
                                         }}
                                         disabled={props.isSendDisabled || props.isSending}
                                     >
@@ -1614,7 +1618,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                                 style={[
                                                     styles.sendButtonIcon,
                                                     { marginTop: Platform.OS === 'web' ? 2 : 0 },
-                                                    theme.dark && { opacity: 0.5 },
+                                                    theme.dark && !props.allowEmptySend && { opacity: 0.5 },
                                                 ]}
                                             />
                                         )}
