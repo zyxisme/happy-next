@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 12 - 2026-05-30
+## Version 12 - 2026-05-31
 
 Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming speech and native iOS voice calls, selectable voice timbre and speech rate, end-to-end-encrypted voice settings sync, and richer slash-command autocomplete with live capability sync.
 
@@ -12,6 +12,9 @@ Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming spe
 - Voice tools: refreshed session-management voice tools (start / switch / message a session) with a single-parameter session-settings mode, clearer titles, and an auto-close countdown on the session-picker cancel button
 - Autocomplete: slash-command suggestions now show their source scope (repo / user / plugin / system) and kind; session capabilities are stored separately from metadata and sync live so command and skill lists stay fresh
 - Messages: fork a conversation directly from an AI reply; sending now shows an optimistic "Processing…" status immediately and a "refreshing" indicator while the list reloads
+- Composer: send a message with only attached images and no text — the send button now enables when images are attached even if the text field is empty
+- New session: start a session with an empty initial message — no prompt required
+- Sessions: tidied "vibing" activity messages and lowercased the "awaiting" status label
 - Reliability: message send is hardened for flaky networks, and draft restore is suppressed while a send is in flight
 - Reliability: the chat reducer no longer synthesizes out-of-order completed-permission messages
 - Models: added Claude Opus 4.8 to the model catalog
