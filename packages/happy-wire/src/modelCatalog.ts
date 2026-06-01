@@ -499,7 +499,7 @@ const AGENT_DEFAULT_CONTEXT_WINDOWS: Record<AgentFlavor, number> = {
 
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
     // Claude models (default 200K; 1M is opt-in via [1m] suffix in Claude Code)
-    'claude-opus-4-8': 200_000,
+    'claude-opus-4-8': 1_000_000, // 4.8 defaults to 1M (no opt-in needed); base name resolves to 1M
     'claude-opus-4-8[1m]': 1_000_000,
     'claude-opus-4-7': 200_000,
     'claude-opus-4-7[1m]': 1_000_000,

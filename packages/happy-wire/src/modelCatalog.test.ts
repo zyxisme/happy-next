@@ -83,7 +83,7 @@ describe('modelCatalog', () => {
     });
 
     it('resolves context windows for claude composite and fast model modes', () => {
-        expect(getMaxContextSize('claude-opus-4-8-high', 'claude')).toBe(200_000);
+        expect(getMaxContextSize('claude-opus-4-8-high', 'claude')).toBe(1_000_000);
         expect(getMaxContextSize('claude-opus-4-8[1m]', 'claude')).toBe(1_000_000);
         expect(getMaxContextSize('claude-opus-4-8[1m]-xhigh', 'claude')).toBe(1_000_000);
         expect(getMaxContextSize('claude-opus-4-6-high', 'claude')).toBe(200_000);
