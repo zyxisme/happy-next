@@ -492,11 +492,20 @@ class Sync {
     }
 
     onSessionVisible = (sessionId: string, userInitiated: boolean = false) => {
-        // When user navigates into a session, clear the cursor so
-        // fetchMessagesV3 runs a fresh bootstrap (latest 100 messages)
-        // instead of incrementally catching up from a potentially stale cursor.
+        // When user navigates into a session, decide between a full bootstrap and an
+        // incremental catch-up. If the message list is already loaded in memory and we
+        // still hold a seq cursor, keep the cursor so fetchMessagesV3 only fetches what
+        // came after it (usually nothing — the websocket keeps the cursor current via the
+        // contiguous-seq fast path) instead of re-downloading and re-decrypting the latest
+        // 100 messages on every open. Gap detection and message-syncing reset the cursor on
+        // their own paths, so the self-heal behavior for the cases that truly need a full
+        // reload is preserved.
         if (userInitiated) {
-            this.sessionLastSeq.delete(sessionId);
+            const existing = storage.getState().sessionMessages[sessionId];
+            const canIncremental = !!existing?.isLoaded && this.sessionLastSeq.has(sessionId);
+            if (!canIncremental) {
+                this.sessionLastSeq.delete(sessionId);
+            }
         }
 
         if (this.encryption?.getSessionEncryption(sessionId)) {
