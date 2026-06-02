@@ -103,6 +103,7 @@ type OrchestratorListQuery = {
 type OrchestratorSendMessageBody = {
     taskId: string;
     message: string;
+    idempotencyKey?: string;
 };
 
 export class ApiSessionClient extends EventEmitter {
@@ -454,6 +455,7 @@ export class ApiSessionClient extends EventEmitter {
             `${configuration.serverUrl}/v1/orchestrator/tasks/${encodeURIComponent(body.taskId)}/send-message`,
             {
                 message: body.message,
+                idempotencyKey: body.idempotencyKey,
             },
             {
                 headers: this.orchestratorHeaders(),

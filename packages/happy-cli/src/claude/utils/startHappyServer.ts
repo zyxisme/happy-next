@@ -275,6 +275,7 @@ function createMcpServer(client: ApiSessionClient, options: { enableOrchestrator
                 const response = await client.orchestratorSendMessage({
                     taskId: args.taskId,
                     message: args.message,
+                    idempotencyKey: args.idempotencyKey,
                 });
                 return toToolSuccess(response);
             } catch (error) {

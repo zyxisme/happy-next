@@ -221,6 +221,9 @@ model OrchestratorExecution {
   status          String
   attempt         Int              @default(1)
   dispatchToken   String           @unique
+  // Client key for idempotent resume (send-message). Nullable so non-resume
+  // executions and legacy callers stay distinct (multiple NULLs allowed).
+  idempotencyKey  String?
   timeoutMs       Int?
   pid             Int?
   startedAt       DateTime?
@@ -234,6 +237,7 @@ model OrchestratorExecution {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
+  @@unique([taskId, idempotencyKey])
   @@index([runId, status, createdAt])
   @@index([taskId, status, createdAt])
   @@index([machineId, status, createdAt])

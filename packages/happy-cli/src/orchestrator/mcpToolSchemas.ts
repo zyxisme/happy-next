@@ -44,7 +44,8 @@ export const ORCHESTRATOR_SUBMIT_TOOL_SCHEMA = {
     title: z.string().min(1).max(256).describe('Run title'),
     tasks: z.array(orchestratorTaskSchema).min(1).max(32),
     maxConcurrency: z.number().int().min(1).max(8).optional(),
-    idempotencyKey: z.string().min(1).max(128).optional(),
+    idempotencyKey: z.string().min(1).max(128).optional()
+      .describe('Stable key to make this dispatch idempotent. If a submit times out or errors and you retry it, pass the SAME key so the server returns the existing run instead of creating a duplicate. Use distinct keys for genuinely separate dispatches.'),
     metadata: z.record(z.string(), z.unknown()).optional(),
     controllerSessionId: z.string().optional().describe('Optional controller session ID. Defaults to current MCP session when omitted.'),
   },
@@ -90,5 +91,7 @@ export const ORCHESTRATOR_SEND_MESSAGE_TOOL_SCHEMA = {
   inputSchema: {
     taskId: z.string().describe('Task ID to resume'),
     message: z.string().min(1).max(65_536).describe('Message to send to the existing child session'),
+    idempotencyKey: z.string().min(1).max(128).optional()
+      .describe('Stable key to make this resume idempotent. If a send times out or errors and you retry it, pass the SAME key so the server returns the existing resume instead of running the agent twice. Use distinct keys for genuinely separate resumes.'),
   },
 } as const;

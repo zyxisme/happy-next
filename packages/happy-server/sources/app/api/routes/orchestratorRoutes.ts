@@ -1208,14 +1208,17 @@ export function orchestratorRoutes(app: Fastify) {
             }),
             body: z.object({
                 message: z.string().min(1).max(65_536),
+                // Optional client key so a retried resume dedupes to one execution
+                // instead of re-running the agent. Omitting it keeps legacy append behavior.
+                idempotencyKey: z.string().min(1).max(128).optional(),
             }),
         },
     }, async (request, reply) => {
         const userId = request.userId;
         const { taskId } = request.params;
-        const { message } = request.body;
+        const { message, idempotencyKey } = request.body;
 
-        const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+        const runSendMessage = () => db.$transaction(async (tx: Prisma.TransactionClient) => {
             const task = await tx.orchestratorTask.findFirst({
                 where: {
                     id: taskId,
@@ -1241,6 +1244,25 @@ export function orchestratorRoutes(app: Fastify) {
 
             if (!task) {
                 return { kind: 'not_found' as const };
+            }
+
+            // Idempotency: a retry that already created its execution returns that one
+            // without re-queuing the task. Must run BEFORE the state check, since the
+            // first call already moved the task out of completed/failed.
+            if (idempotencyKey) {
+                const existing = await tx.orchestratorExecution.findFirst({
+                    where: { taskId: task.id, idempotencyKey },
+                    select: { id: true },
+                });
+                if (existing) {
+                    return {
+                        kind: 'ok' as const,
+                        runId: task.runId,
+                        taskId: task.id,
+                        executionId: existing.id,
+                        controllerSessionId: task.run.controllerSessionId,
+                    };
+                }
             }
 
             if (task.status !== 'completed' && task.status !== 'failed') {
@@ -1306,6 +1328,7 @@ export function orchestratorRoutes(app: Fastify) {
                     status: 'queued',
                     attempt,
                     dispatchToken: randomUUID(),
+                    idempotencyKey: idempotencyKey ?? null,
                     timeoutMs: task.timeoutMs,
                 },
                 select: {
@@ -1329,6 +1352,35 @@ export function orchestratorRoutes(app: Fastify) {
                 controllerSessionId: task.run.controllerSessionId,
             };
         });
+
+        let result: Awaited<ReturnType<typeof runSendMessage>>;
+        try {
+            result = await runSendMessage();
+        } catch (error) {
+            // Concurrent retry with the same key won the unique race: return its execution.
+            if (idempotencyKey && isUniqueConstraintError(error)) {
+                const existing = await db.orchestratorExecution.findFirst({
+                    where: { taskId, idempotencyKey, task: { run: { accountId: userId } } },
+                    select: {
+                        id: true,
+                        runId: true,
+                        task: { select: { run: { select: { controllerSessionId: true } } } },
+                    },
+                });
+                if (!existing) {
+                    throw error;
+                }
+                result = {
+                    kind: 'ok' as const,
+                    runId: existing.runId,
+                    taskId,
+                    executionId: existing.id,
+                    controllerSessionId: existing.task.run.controllerSessionId,
+                };
+            } else {
+                throw error;
+            }
+        }
 
         if (result.kind === 'not_found') {
             return sendError(reply, 404, 'NOT_FOUND', 'Task not found');
