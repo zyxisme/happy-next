@@ -32,6 +32,7 @@ import { loadPendingSettings, savePendingSettings, loadSessionLastViewedAt, save
 import { initializeTracking, tracking } from '@/track';
 import { parseToken } from '@/utils/parseToken';
 import { getServerUrl } from './serverConfig';
+import { apiFetch } from './apiFetch';
 import { log } from '@/log';
 import { signContentPublicKey } from './directShareEncryption';
 import { uploadContentPublicKey, fetchSharedSessions as apiFetchSharedSessions } from './apiSharing';
@@ -662,7 +663,7 @@ class Sync {
         }
 
         const API_ENDPOINT = getServerUrl();
-        const response = await fetch(
+        const response = await apiFetch(
             `${API_ENDPOINT}/v3/sessions/${sessionId}/pending-messages`,
             {
                 headers: {
@@ -688,7 +689,7 @@ class Sync {
 
         try {
             const API_ENDPOINT = getServerUrl();
-            const response = await fetch(
+            const response = await apiFetch(
                 `${API_ENDPOINT}/v3/sessions/${sessionId}/pending-messages/${pendingId}/pin`,
                 {
                     method: 'POST',
@@ -730,7 +731,7 @@ class Sync {
 
         try {
             const API_ENDPOINT = getServerUrl();
-            const response = await fetch(
+            const response = await apiFetch(
                 `${API_ENDPOINT}/v3/sessions/${sessionId}/pending-messages/${pendingId}`,
                 {
                     method: 'DELETE',
@@ -1251,7 +1252,7 @@ class Sync {
         // "I am the first full sync" semantics. Retries after a failure
         // re-run from scratch (storage merge is idempotent).
         const url = `${API_ENDPOINT}/v1/sessions`;
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
                 'Content-Type': 'application/json'
@@ -1326,7 +1327,7 @@ class Sync {
             return;
         }
         const url = `${API_ENDPOINT}/v1/sessions?since=${cursor}`;
-        const response = await fetch(url, {
+        const response = await apiFetch(url, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
                 'Content-Type': 'application/json'
@@ -1491,7 +1492,7 @@ class Sync {
             return null;
         }
 
-        const response = await fetch(`${getServerUrl()}/v1/sessions/${encodeURIComponent(sessionId)}/capabilities`, {
+        const response = await apiFetch(`${getServerUrl()}/v1/sessions/${encodeURIComponent(sessionId)}/capabilities`, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
                 'Content-Type': 'application/json'
@@ -1599,7 +1600,7 @@ class Sync {
             query.set('beforeId', params.beforeId);
         }
 
-        const response = await fetch(`${API_ENDPOINT}/v1/sessions?${query.toString()}`, {
+        const response = await apiFetch(`${API_ENDPOINT}/v1/sessions?${query.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
                 'Content-Type': 'application/json'
@@ -1657,7 +1658,7 @@ class Sync {
             known[session.id] = session.updatedAt;
         }
 
-        const response = await fetch(`${getServerUrl()}/v1/sessions/diff`, {
+        const response = await apiFetch(`${getServerUrl()}/v1/sessions/diff`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
@@ -2016,7 +2017,7 @@ class Sync {
 
         console.log('📊 Sync: Fetching machines...');
         const API_ENDPOINT = getServerUrl();
-        const response = await fetch(`${API_ENDPOINT}/v1/machines`, {
+        const response = await apiFetch(`${API_ENDPOINT}/v1/machines`, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
                 'Content-Type': 'application/json'
@@ -2145,7 +2146,7 @@ class Sync {
 
         console.log('🤖 Sync: Fetching OpenClaw machines...');
         const API_ENDPOINT = getServerUrl();
-        const response = await fetch(`${API_ENDPOINT}/v1/openclaw/machines`, {
+        const response = await apiFetch(`${API_ENDPOINT}/v1/openclaw/machines`, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
                 'Content-Type': 'application/json'
@@ -2583,7 +2584,7 @@ class Sync {
             while (retryCount < maxRetries) {
                 let version = storage.getState().settingsVersion;
                 let settings = applySettings(storage.getState().settings, this.pendingSettings);
-                const response = await fetch(`${API_ENDPOINT}/v1/account/settings`, {
+                const response = await apiFetch(`${API_ENDPOINT}/v1/account/settings`, {
                     method: 'POST',
                     body: JSON.stringify({
                         settings: await this.encryption.encryptRaw(settings),
@@ -2644,7 +2645,7 @@ class Sync {
         }
 
         // Run request
-        const response = await fetch(`${API_ENDPOINT}/v1/account/settings`, {
+        const response = await apiFetch(`${API_ENDPOINT}/v1/account/settings`, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
                 'Content-Type': 'application/json'
@@ -2689,7 +2690,7 @@ class Sync {
         if (!this.credentials) return;
 
         const API_ENDPOINT = getServerUrl();
-        const response = await fetch(`${API_ENDPOINT}/v1/account/profile`, {
+        const response = await apiFetch(`${API_ENDPOINT}/v1/account/profile`, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
                 'Content-Type': 'application/json'
@@ -2737,7 +2738,7 @@ class Sync {
             const version = Constants.expoConfig?.version!;
             const appId = (Platform.OS === 'ios' ? Constants.expoConfig?.ios?.bundleIdentifier! : Constants.expoConfig?.android?.package!);
 
-            const response = await fetch(`${serverUrl}/v1/version`, {
+            const response = await apiFetch(`${serverUrl}/v1/version`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -2853,7 +2854,7 @@ class Sync {
                 // Bootstrap with latest page only to avoid loading very large histories at once.
                 // v3 with no after_seq/before_seq returns latest messages in desc order.
                 const API_ENDPOINT = getServerUrl();
-                const response = await fetch(
+                const response = await apiFetch(
                     `${API_ENDPOINT}/v3/sessions/${sessionId}/messages?limit=${Sync.INITIAL_MESSAGES_LIMIT}`,
                     {
                         headers: {
@@ -2905,7 +2906,7 @@ class Sync {
 
             while (hasMore) {
                 const API_ENDPOINT = getServerUrl();
-                const response = await fetch(
+                const response = await apiFetch(
                     `${API_ENDPOINT}/v3/sessions/${sessionId}/messages?after_seq=${afterSeq}&limit=100`,
                     {
                         headers: {
@@ -2977,7 +2978,7 @@ class Sync {
         try {
             const before = sessionState.oldestSeq;
             const API_ENDPOINT = getServerUrl();
-            const response = await fetch(
+            const response = await apiFetch(
                 `${API_ENDPOINT}/v3/sessions/${sessionId}/messages?before_seq=${before}&limit=${Sync.INITIAL_MESSAGES_LIMIT}`,
                 {
                     headers: {
