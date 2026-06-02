@@ -16,12 +16,12 @@ describe('isRetryableRequest', () => {
         expect(isRetryableRequest('POST', `${BASE}/v1/badge/reset`)).toBe(true);
     });
 
-    it('openclaw machines POST 禁止重试(无约束 create)', () => {
-        expect(isRetryableRequest('POST', `${BASE}/v1/openclaw/machines`)).toBe(false);
+    it('openclaw machines POST 可重试(已加 idempotencyKey 去重)', () => {
+        expect(isRetryableRequest('POST', `${BASE}/v1/openclaw/machines`)).toBe(true);
     });
 
-    it('openclaw machines PUT 禁止重试(seq 累加)', () => {
-        expect(isRetryableRequest('PUT', `${BASE}/v1/openclaw/machines/abc123`)).toBe(false);
+    it('openclaw machines PUT 可重试(seq 仅在真实变更时自增)', () => {
+        expect(isRetryableRequest('PUT', `${BASE}/v1/openclaw/machines/abc123`)).toBe(true);
     });
 
     it('openclaw machines GET 可重试', () => {

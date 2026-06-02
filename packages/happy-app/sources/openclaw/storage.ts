@@ -6,6 +6,8 @@
  */
 
 import { getServerUrl } from '../sync/serverConfig';
+import { apiFetch } from '../sync/apiFetch';
+import { randomUUID } from 'expo-crypto';
 import {
     OpenClawMetadataSchema,
     OpenClawPairingDataSchema,
@@ -134,9 +136,11 @@ export async function createOpenClawMachine(
         metadata: encryptedMetadata,
         pairingData: encryptedPairingData,
         dataEncryptionKey: encryptedKey,
+        // Stable per logical create so apiFetch's auto-retry dedupes to one machine.
+        idempotencyKey: randomUUID(),
     };
 
-    const response = await fetch(`${API_ENDPOINT}/v1/openclaw/machines`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/openclaw/machines`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,

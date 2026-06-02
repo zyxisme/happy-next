@@ -29,6 +29,10 @@ import {
 /**
  * Format OpenClaw machine for API response
  */
+function isUniqueConstraintError(error: unknown): boolean {
+    return !!error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === 'P2002';
+}
+
 function formatOpenClawMachine(m: OpenClawMachine) {
     return {
         id: m.id,
@@ -75,12 +79,14 @@ export function openclawRoutes(app: Fastify) {
                 directConfig: z.string().optional(),
                 metadata: z.string(),
                 pairingData: z.string().optional(),
-                dataEncryptionKey: z.string().optional()
+                dataEncryptionKey: z.string().optional(),
+                // Optional client-supplied key so a network retry dedupes to one machine.
+                idempotencyKey: z.string().min(1).max(128).optional()
             })
         }
     }, async (request, reply) => {
         const userId = request.userId;
-        const { type, happyMachineId, directConfig, metadata, pairingData, dataEncryptionKey } = request.body;
+        const { type, happyMachineId, directConfig, metadata, pairingData, dataEncryptionKey, idempotencyKey } = request.body;
 
         // Validate type-specific requirements
         if (type === 'happy' && !happyMachineId) {
@@ -90,22 +96,51 @@ export function openclawRoutes(app: Fastify) {
             return reply.code(400).send({ error: 'directConfig is required when type is direct' });
         }
 
+        // Idempotent create: if a machine with this key already exists, return it
+        // without creating a duplicate or re-emitting the new-machine event.
+        const loadExistingByKey = async (): Promise<OpenClawMachine | null> => {
+            if (!idempotencyKey) {
+                return null;
+            }
+            return db.openClawMachine.findFirst({
+                where: { accountId: userId, idempotencyKey }
+            });
+        };
+
         try {
+            const existing = await loadExistingByKey();
+            if (existing) {
+                return reply.send({ machine: formatOpenClawMachine(existing) });
+            }
+
             log({ module: 'openclaw', userId }, 'Creating new OpenClaw machine');
 
-            const machine = await db.openClawMachine.create({
-                data: {
-                    accountId: userId,
-                    type,
-                    happyMachineId: type === 'happy' ? happyMachineId : null,
-                    directConfig: type === 'direct' ? directConfig : null,
-                    metadata,
-                    metadataVersion: 1,
-                    pairingData: pairingData || null,
-                    dataEncryptionKey: dataEncryptionKey ? privacyKit.decodeBase64(dataEncryptionKey) : null,
-                    seq: 0
+            let machine: OpenClawMachine;
+            try {
+                machine = await db.openClawMachine.create({
+                    data: {
+                        accountId: userId,
+                        type,
+                        happyMachineId: type === 'happy' ? happyMachineId : null,
+                        directConfig: type === 'direct' ? directConfig : null,
+                        metadata,
+                        metadataVersion: 1,
+                        pairingData: pairingData || null,
+                        dataEncryptionKey: dataEncryptionKey ? privacyKit.decodeBase64(dataEncryptionKey) : null,
+                        idempotencyKey: idempotencyKey ?? null,
+                        seq: 0
+                    }
+                });
+            } catch (error) {
+                // Concurrent request with the same key won the race: return the winner.
+                if (idempotencyKey && isUniqueConstraintError(error)) {
+                    const winner = await loadExistingByKey();
+                    if (winner) {
+                        return reply.send({ machine: formatOpenClawMachine(winner) });
+                    }
                 }
-            });
+                throw error;
+            }
 
             // Emit new-openclaw-machine event
             const updSeq = await allocateUserSeq(userId);

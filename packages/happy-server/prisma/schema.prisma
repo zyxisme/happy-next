@@ -564,10 +564,15 @@ model OpenClawMachine {
   // Version control for optimistic concurrency
   metadataVersion Int @default(0)
 
+  // Client-supplied key for idempotent creation (retries dedupe to one machine).
+  // Nullable so legacy clients that omit it keep working (multiple NULLs stay distinct).
+  idempotencyKey String?
+
   seq       Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([accountId, idempotencyKey])
   @@index([accountId])
 }
 

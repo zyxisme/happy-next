@@ -14,8 +14,6 @@ const NON_RETRYABLE: NonRetryableRule[] = [
     { method: 'POST', pattern: /^\/v1\/orchestrator\/tasks\/[^/]+\/send-message$/, reason: '新建 resume execution,重复投递 (orchestratorRoutes.ts:1296)' },
     { method: 'POST', pattern: /^\/v1\/badge\/increment$/, reason: 'badgeCount 累加 (pushRoutes.ts:127)' },
     { method: 'GET', pattern: /^\/v1\/public-share\/[^/]+$/, reason: 'useCount++ 且写访问日志 (publicShareRoutes.ts:328)' },
-    { method: 'POST', pattern: /^\/v1\/openclaw\/machines$/, reason: '无唯一约束 create,重复机器 (openclawRoutes.ts:96)' },
-    { method: 'PUT', pattern: /^\/v1\/openclaw\/machines\/[^/]+$/, reason: 'seq 累加,非 metadata 字段无幂等 (openclawRoutes.ts:213)' },
     { method: 'POST', pattern: /^\/v1\/chat\/upload-image$/, reason: '随机文件名,重复上传 (chatImageUpload.ts:81)' },
     { method: 'POST', pattern: /^\/v1\/voice\/tool-call$/, reason: 'RPC 执行动作两次 (voiceRoutes.ts:60)' },
     { method: 'GET', pattern: /^\/v1\/connect\/github\/callback$/, reason: '消费一次性 OAuth code (connectRoutes.ts:120)' },
