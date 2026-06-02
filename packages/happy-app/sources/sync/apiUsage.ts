@@ -1,5 +1,5 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
-import { backoff } from '@/utils/time';
+import { apiFetch } from './apiFetch';
 import { getServerUrl } from './serverConfig';
 
 export interface UsageDataPoint {
@@ -30,26 +30,24 @@ export async function queryUsage(
 ): Promise<UsageResponse> {
     const API_ENDPOINT = getServerUrl();
     
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/usage/query`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(params)
-        });
-
-        if (!response.ok) {
-            if (response.status === 404 && params.sessionId) {
-                throw new Error('Session not found');
-            }
-            throw new Error(`Failed to query usage: ${response.status}`);
-        }
-
-        const data = await response.json() as UsageResponse;
-        return data;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/usage/query`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(params)
     });
+
+    if (!response.ok) {
+        if (response.status === 404 && params.sessionId) {
+            throw new Error('Session not found');
+        }
+        throw new Error(`Failed to query usage: ${response.status}`);
+    }
+
+    const data = await response.json() as UsageResponse;
+    return data;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
-import { backoff } from '@/utils/time';
+import { apiFetch } from './apiFetch';
 import { getServerUrl } from './serverConfig';
 import {
     UserProfile,
@@ -20,36 +20,34 @@ export async function searchUsersByUsername(
 ): Promise<UserProfile[]> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(
-            `${API_ENDPOINT}/v1/user/search?${new URLSearchParams({ query: username })}`,
-            {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${credentials.token}`
-                }
+    const response = await apiFetch(
+        `${API_ENDPOINT}/v1/user/search?${new URLSearchParams({ query: username })}`,
+        {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${credentials.token}`
             }
-        );
-
-        if (!response.ok) {
-            if (response.status === 404) {
-                return [];
-            }
-            if (response.status === 403) {
-                return [];
-            }
-            throw new Error(`Failed to search users: ${response.status}`);
         }
+    );
 
-        const data = await response.json();
-        const parsed = UsersSearchResponseSchema.safeParse(data);
-        if (!parsed.success) {
-            console.error('Failed to parse search response:', parsed.error);
+    if (!response.ok) {
+        if (response.status === 404) {
             return [];
         }
+        if (response.status === 403) {
+            return [];
+        }
+        throw new Error(`Failed to search users: ${response.status}`);
+    }
 
-        return parsed.data.users;
-    });
+    const data = await response.json();
+    const parsed = UsersSearchResponseSchema.safeParse(data);
+    if (!parsed.success) {
+        console.error('Failed to parse search response:', parsed.error);
+        return [];
+    }
+
+    return parsed.data.users;
 }
 
 /**
@@ -61,33 +59,31 @@ export async function getUserProfile(
 ): Promise<UserProfile | null> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(
-            `${API_ENDPOINT}/v1/user/${userId}`,
-            {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${credentials.token}`
-                }
+    const response = await apiFetch(
+        `${API_ENDPOINT}/v1/user/${userId}`,
+        {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${credentials.token}`
             }
-        );
-
-        if (!response.ok) {
-            if (response.status === 404) {
-                return null;
-            }
-            throw new Error(`Failed to get user profile: ${response.status}`);
         }
+    );
 
-        const data = await response.json();
-        const parsed = UserResponseSchema.safeParse(data);
-        if (!parsed.success) {
-            console.error('Failed to parse user response:', parsed.error);
+    if (!response.ok) {
+        if (response.status === 404) {
             return null;
         }
+        throw new Error(`Failed to get user profile: ${response.status}`);
+    }
 
-        return parsed.data.user;
-    });
+    const data = await response.json();
+    const parsed = UserResponseSchema.safeParse(data);
+    if (!parsed.success) {
+        console.error('Failed to parse user response:', parsed.error);
+        return null;
+    }
+
+    return parsed.data.user;
 }
 
 /**
@@ -116,32 +112,30 @@ export async function sendFriendRequest(
 ): Promise<UserProfile | null> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/friends/add`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ uid: recipientId })
-        });
+    const response = await apiFetch(`${API_ENDPOINT}/v1/friends/add`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ uid: recipientId })
+    });
 
-        if (!response.ok) {
-            if (response.status === 404) {
-                return null;
-            }
-            throw new Error(`Failed to add friend: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const parsed = UserResponseSchema.safeParse(data);
-        if (!parsed.success) {
-            console.error('Failed to parse add friend response:', parsed.error);
+    if (!response.ok) {
+        if (response.status === 404) {
             return null;
         }
+        throw new Error(`Failed to add friend: ${response.status}`);
+    }
 
-        return parsed.data.user;
-    });
+    const data = await response.json();
+    const parsed = UserResponseSchema.safeParse(data);
+    if (!parsed.success) {
+        console.error('Failed to parse add friend response:', parsed.error);
+        return null;
+    }
+
+    return parsed.data.user;
 }
 
 // Note: respondToFriendRequest and getPendingFriendRequests have been removed
@@ -158,27 +152,25 @@ export async function getFriendsList(
 ): Promise<UserProfile[]> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/friends`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to get friends list: ${response.status}`);
+    const response = await apiFetch(`${API_ENDPOINT}/v1/friends`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`
         }
-
-        const data = await response.json();
-        const parsed = FriendsResponseSchema.safeParse(data);
-        if (!parsed.success) {
-            console.error('Failed to parse friends list:', parsed.error);
-            return [];
-        }
-
-        return parsed.data.friends;
     });
+
+    if (!response.ok) {
+        throw new Error(`Failed to get friends list: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const parsed = FriendsResponseSchema.safeParse(data);
+    if (!parsed.success) {
+        console.error('Failed to parse friends list:', parsed.error);
+        return [];
+    }
+
+    return parsed.data.friends;
 }
 
 /**
@@ -190,30 +182,28 @@ export async function removeFriend(
 ): Promise<UserProfile | null> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/friends/remove`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ uid: friendId })
-        });
+    const response = await apiFetch(`${API_ENDPOINT}/v1/friends/remove`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ uid: friendId })
+    });
 
-        if (!response.ok) {
-            if (response.status === 404) {
-                return null;
-            }
-            throw new Error(`Failed to remove friend: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const parsed = UserResponseSchema.safeParse(data);
-        if (!parsed.success) {
-            console.error('Failed to parse remove friend response:', parsed.error);
+    if (!response.ok) {
+        if (response.status === 404) {
             return null;
         }
+        throw new Error(`Failed to remove friend: ${response.status}`);
+    }
 
-        return parsed.data.user;
-    });
+    const data = await response.json();
+    const parsed = UserResponseSchema.safeParse(data);
+    if (!parsed.success) {
+        console.error('Failed to parse remove friend response:', parsed.error);
+        return null;
+    }
+
+    return parsed.data.user;
 }

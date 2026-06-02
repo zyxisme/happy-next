@@ -1,6 +1,6 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { HappyError } from '@/utils/errors';
-import { backoff } from '@/utils/time';
+import { apiFetch } from './apiFetch';
 import { getServerUrl } from './serverConfig';
 
 export interface GitHubOAuthParams {
@@ -27,13 +27,14 @@ export interface AccountProfile {
 export async function getGitHubOAuthParams(credentials: AuthCredentials, callback?: string): Promise<GitHubOAuthParams> {
     const API_ENDPOINT = getServerUrl();
 
-    // Don't use backoff — OAuth configuration errors (400) are permanent and should fail immediately.
-    // Retrying would cause infinite loops when GITHUB_CLIENT_ID/GITHUB_REDIRECT_URL are not set on the server.
+    // OAuth configuration errors (400) are permanent and should fail immediately.
+    // apiFetch does not retry 4xx responses, so the 400 below is surfaced at once
+    // (only network/5xx failures are retried).
     const url = new URL(`${API_ENDPOINT}/v1/connect/github/params`);
     if (callback) {
         url.searchParams.set('callback', callback);
     }
-    const response = await fetch(url.toString(), {
+    const response = await apiFetch(url.toString(), {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -59,22 +60,20 @@ export async function getGitHubOAuthParams(credentials: AuthCredentials, callbac
 export async function getAccountProfile(credentials: AuthCredentials): Promise<AccountProfile> {
     const API_ENDPOINT = getServerUrl();
     
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/account/profile`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to get account profile: ${response.status}`);
+    const response = await apiFetch(`${API_ENDPOINT}/v1/account/profile`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
         }
-
-        const data = await response.json() as AccountProfile;
-        return data;
     });
+
+    if (!response.ok) {
+        throw new Error(`Failed to get account profile: ${response.status}`);
+    }
+
+    const data = await response.json() as AccountProfile;
+    return data;
 }
 
 /**
@@ -83,25 +82,23 @@ export async function getAccountProfile(credentials: AuthCredentials): Promise<A
 export async function disconnectGitHub(credentials: AuthCredentials): Promise<void> {
     const API_ENDPOINT = getServerUrl();
     
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/connect/github`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`
-            }
-        });
-
-        if (!response.ok) {
-            if (response.status === 404) {
-                const error = await response.json();
-                throw new Error(error.error || 'GitHub account not connected');
-            }
-            throw new Error(`Failed to disconnect GitHub: ${response.status}`);
-        }
-
-        const data = await response.json() as { success: true };
-        if (!data.success) {
-            throw new Error('Failed to disconnect GitHub account');
+    const response = await apiFetch(`${API_ENDPOINT}/v1/connect/github`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`
         }
     });
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            const error = await response.json();
+            throw new Error(error.error || 'GitHub account not connected');
+        }
+        throw new Error(`Failed to disconnect GitHub: ${response.status}`);
+    }
+
+    const data = await response.json() as { success: true };
+    if (!data.success) {
+        throw new Error('Failed to disconnect GitHub account');
+    }
 }
