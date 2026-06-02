@@ -1,5 +1,5 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
-import { backoff } from '@/utils/time';
+import { apiFetch } from './apiFetch';
 import { getServerUrl } from './serverConfig';
 
 //
@@ -72,24 +72,22 @@ export async function kvGet(
 ): Promise<KvItem | null> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/kv/${encodeURIComponent(key)}`, {
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`
-            }
-        });
-
-        if (response.status === 404) {
-            return null;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/kv/${encodeURIComponent(key)}`, {
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`
         }
-
-        if (!response.ok) {
-            throw new Error(`Failed to get KV value: ${response.status}`);
-        }
-
-        const data = await response.json() as KvItem;
-        return data;
     });
+
+    if (response.status === 404) {
+        return null;
+    }
+
+    if (!response.ok) {
+        throw new Error(`Failed to get KV value: ${response.status}`);
+    }
+
+    const data = await response.json() as KvItem;
+    return data;
 }
 
 /**
@@ -113,20 +111,18 @@ export async function kvList(
         ? `${API_ENDPOINT}/v1/kv?${queryParams.toString()}`
         : `${API_ENDPOINT}/v1/kv`;
 
-    return await backoff(async () => {
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to list KV items: ${response.status}`);
+    const response = await apiFetch(url, {
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`
         }
-
-        const data = await response.json() as KvListResponse;
-        return data;
     });
+
+    if (!response.ok) {
+        throw new Error(`Failed to list KV items: ${response.status}`);
+    }
+
+    const data = await response.json() as KvListResponse;
+    return data;
 }
 
 /**
@@ -146,23 +142,21 @@ export async function kvBulkGet(
 
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/kv/bulk`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ keys })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to bulk get KV values: ${response.status}`);
-        }
-
-        const data = await response.json() as KvBulkGetResponse;
-        return data;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/kv/bulk`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ keys })
     });
+
+    if (!response.ok) {
+        throw new Error(`Failed to bulk get KV values: ${response.status}`);
+    }
+
+    const data = await response.json() as KvBulkGetResponse;
+    return data;
 }
 
 /**
@@ -184,28 +178,26 @@ export async function kvMutate(
 
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/kv`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ mutations })
-        });
-
-        if (response.status === 409) {
-            const data = await response.json() as KvMutateErrorResponse;
-            return data;
-        }
-
-        if (!response.ok) {
-            throw new Error(`Failed to mutate KV values: ${response.status}`);
-        }
-
-        const data = await response.json() as KvMutateSuccessResponse;
-        return data;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/kv`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ mutations })
     });
+
+    if (response.status === 409) {
+        const data = await response.json() as KvMutateErrorResponse;
+        return data;
+    }
+
+    if (!response.ok) {
+        throw new Error(`Failed to mutate KV values: ${response.status}`);
+    }
+
+    const data = await response.json() as KvMutateSuccessResponse;
+    return data;
 }
 
 //

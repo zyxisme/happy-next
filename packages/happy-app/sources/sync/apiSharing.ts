@@ -1,4 +1,5 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
+import { apiFetch } from './apiFetch';
 import { getServerUrl } from './serverConfig';
 import {
     SessionShare,
@@ -39,7 +40,7 @@ export async function fetchSharedSessions(
 ): Promise<SharedSessionFromServer[]> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/sessions/shared`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/sessions/shared`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -76,7 +77,7 @@ export async function fetchSessionsSharedByMe(
 ): Promise<SharedByMeSession[]> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/sessions/shared-by-me?withUserId=${encodeURIComponent(withUserId)}`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/sessions/shared-by-me?withUserId=${encodeURIComponent(withUserId)}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -101,7 +102,7 @@ export async function uploadContentPublicKey(
 ): Promise<void> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/user/content-key`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/user/content-key`, {
         method: 'PUT',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -124,7 +125,7 @@ export async function getSessionShares(
 ): Promise<SessionShare[]> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/shares`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/shares`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -152,7 +153,7 @@ export async function createSessionShare(
 ): Promise<SessionShare> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/shares`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/shares`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -188,7 +189,7 @@ export async function updateSessionShare(
 ): Promise<SessionShare> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/shares/${shareId}`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/shares/${shareId}`, {
         method: 'PATCH',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -221,7 +222,7 @@ export async function deleteSessionShare(
 ): Promise<void> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/shares/${shareId}`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/shares/${shareId}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -248,7 +249,7 @@ export async function getPublicShare(
 ): Promise<PublicSessionShare | null> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/public-share`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/public-share`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -279,7 +280,7 @@ export async function createPublicShare(
 ): Promise<PublicSessionShare> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/public-share`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/public-share`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -308,7 +309,7 @@ export async function deletePublicShare(
 ): Promise<void> {
     const API_ENDPOINT = getServerUrl();
 
-    const response = await fetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/public-share`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/sessions/${sessionId}/public-share`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${credentials.token}`,
@@ -336,7 +337,7 @@ export async function getPublicShareMessages(
         url.searchParams.set('consent', 'true');
     }
 
-    const response = await fetch(url.toString(), {
+    const response = await apiFetch(url.toString(), {
         method: 'GET',
     });
 
@@ -370,7 +371,7 @@ export async function accessPublicShare(
         url.searchParams.set('consent', 'true');
     }
 
-    const response = await fetch(url.toString(), {
+    const response = await apiFetch(url.toString(), {
         method: 'GET',
     });
 

@@ -1,5 +1,5 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
-import { backoff } from '@/utils/time';
+import { apiFetch } from './apiFetch';
 import { getServerUrl } from './serverConfig';
 import { Artifact, ArtifactCreateRequest, ArtifactUpdateRequest, ArtifactUpdateResponse } from './artifactTypes';
 
@@ -9,21 +9,19 @@ import { Artifact, ArtifactCreateRequest, ArtifactUpdateRequest, ArtifactUpdateR
 export async function fetchArtifacts(credentials: AuthCredentials): Promise<Artifact[]> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/artifacts`, {
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch artifacts: ${response.status}`);
+    const response = await apiFetch(`${API_ENDPOINT}/v1/artifacts`, {
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
         }
-
-        const data = await response.json() as Artifact[];
-        return data;
     });
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch artifacts: ${response.status}`);
+    }
+
+    const data = await response.json() as Artifact[];
+    return data;
 }
 
 /**
@@ -32,24 +30,22 @@ export async function fetchArtifacts(credentials: AuthCredentials): Promise<Arti
 export async function fetchArtifact(credentials: AuthCredentials, artifactId: string): Promise<Artifact> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/artifacts/${artifactId}`, {
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error('Artifact not found');
-            }
-            throw new Error(`Failed to fetch artifact: ${response.status}`);
+    const response = await apiFetch(`${API_ENDPOINT}/v1/artifacts/${artifactId}`, {
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
         }
-
-        const data = await response.json() as Artifact;
-        return data;
     });
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            throw new Error('Artifact not found');
+        }
+        throw new Error(`Failed to fetch artifact: ${response.status}`);
+    }
+
+    const data = await response.json() as Artifact;
+    return data;
 }
 
 /**
@@ -61,26 +57,24 @@ export async function createArtifact(
 ): Promise<Artifact> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/artifacts`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(request)
-        });
-
-        if (!response.ok) {
-            if (response.status === 409) {
-                throw new Error('Artifact ID already exists');
-            }
-            throw new Error(`Failed to create artifact: ${response.status}`);
-        }
-
-        const data = await response.json() as Artifact;
-        return data;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/artifacts`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(request)
     });
+
+    if (!response.ok) {
+        if (response.status === 409) {
+            throw new Error('Artifact ID already exists');
+        }
+        throw new Error(`Failed to create artifact: ${response.status}`);
+    }
+
+    const data = await response.json() as Artifact;
+    return data;
 }
 
 /**
@@ -93,26 +87,24 @@ export async function updateArtifact(
 ): Promise<ArtifactUpdateResponse> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/artifacts/${artifactId}`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(request)
-        });
-
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error('Artifact not found');
-            }
-            throw new Error(`Failed to update artifact: ${response.status}`);
-        }
-
-        const data = await response.json() as ArtifactUpdateResponse;
-        return data;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/artifacts/${artifactId}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(request)
     });
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            throw new Error('Artifact not found');
+        }
+        throw new Error(`Failed to update artifact: ${response.status}`);
+    }
+
+    const data = await response.json() as ArtifactUpdateResponse;
+    return data;
 }
 
 /**
@@ -124,19 +116,17 @@ export async function deleteArtifact(
 ): Promise<void> {
     const API_ENDPOINT = getServerUrl();
 
-    return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/artifacts/${artifactId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${credentials.token}`
-            }
-        });
-
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error('Artifact not found');
-            }
-            throw new Error(`Failed to delete artifact: ${response.status}`);
+    const response = await apiFetch(`${API_ENDPOINT}/v1/artifacts/${artifactId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${credentials.token}`
         }
     });
+
+    if (!response.ok) {
+        if (response.status === 404) {
+            throw new Error('Artifact not found');
+        }
+        throw new Error(`Failed to delete artifact: ${response.status}`);
+    }
 }
