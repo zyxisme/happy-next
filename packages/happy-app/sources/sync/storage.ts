@@ -411,7 +411,6 @@ export const storage = create<StorageState>()((set, get) => {
     let { settings, version } = loadSettings();
     let localSettings = loadLocalSettings();
     let profile = loadProfile();
-    let sessionDrafts = loadSessionDrafts();
     const _cachedProjects = loadDooTaskProjects();
     const _cachedUsers = loadDooTaskUserCache();
     const _cachedPriorities = loadDooTaskPriorities();
@@ -499,6 +498,10 @@ export const storage = create<StorageState>()((set, get) => {
             return Object.values(state.sessions).filter(s => s.active);
         },
         applyCachedSessions: (sessions, sharedSessions) => set((state) => {
+            // Drafts are not stored in the sessions cache (see stripVolatileSessionFields).
+            // Restore them from the authoritative `session-drafts` MMKV so a cleared
+            // draft stays cleared and an unsent one survives the cold-start hydration.
+            const persistedDrafts = loadSessionDrafts();
             const normalizedSessions = Object.fromEntries(
                 Object.entries(sessions).map(([id, session]) => [
                     id,
@@ -508,6 +511,7 @@ export const storage = create<StorageState>()((set, get) => {
                         thinking: false,
                         thinkingAt: 0,
                         messageSyncing: false,
+                        draft: persistedDrafts[id] ?? null,
                     }
                 ])
             );
@@ -520,6 +524,7 @@ export const storage = create<StorageState>()((set, get) => {
                         thinking: false,
                         thinkingAt: 0,
                         messageSyncing: false,
+                        draft: persistedDrafts[id] ?? null,
                     }
                 ])
             );
@@ -561,8 +566,10 @@ export const storage = create<StorageState>()((set, get) => {
             };
         }),
         applySessions: (sessions: (Omit<Session, 'presence'> & { presence?: "online" | number })[]) => set((state) => {
-            // Load drafts if sessions are empty (initial load)
-            const savedDrafts = Object.keys(state.sessions).length === 0 ? sessionDrafts : {};
+            // Load drafts if sessions are empty (initial load). Read fresh from MMKV
+            // rather than a startup snapshot so a draft cleared mid-session can't be
+            // resurrected from stale in-memory state.
+            const savedDrafts = Object.keys(state.sessions).length === 0 ? loadSessionDrafts() : {};
 
             // Merge new sessions with existing ones
             const mergedSessions: Record<string, Session> = { ...state.sessions };

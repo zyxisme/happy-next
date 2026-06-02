@@ -447,7 +447,11 @@ function stripVolatileSessionFields(session: Session): Session {
         thinkingAt: 0,
         messageSyncing: false,
         presence: session.active ? 'online' : session.activeAt,
-        draft: session.draft ?? null,
+        // Drafts are owned by the dedicated `session-drafts` MMKV key, not the
+        // sessions cache. Persisting them here let the two stores diverge: clearing
+        // a draft (after send) updates `session-drafts` but not this cache, so a
+        // later cold-start hydration could resurrect an already-sent draft.
+        draft: null,
         upgrading: false,
     };
 }
