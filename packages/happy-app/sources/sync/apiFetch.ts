@@ -111,3 +111,122 @@ export async function apiFetch(
     // 不可达,兜底
     throw lastNetworkError ?? new Error('apiFetch: exhausted retries');
 }
+
+export interface HedgedApiFetchOptions {
+    scheduleMs?: number[];       // 各并发尝试的启动偏移(ms),默认 [0,4000,12000,22000]
+    totalTimeoutMs?: number;     // 全部尝试的总预算,默认 28000
+    signal?: AbortSignal;        // 调用方取消信号
+    retry?: boolean;             // 显式开关;默认按 retryPolicy 判定是否允许对冲
+}
+
+const DEFAULT_HEDGE_SCHEDULE_MS = [0, 4000, 12000, 22000];
+const DEFAULT_HEDGE_TOTAL_TIMEOUT_MS = 28000;
+
+/**
+ * 并发对冲发送:用于延迟敏感、且按 localId 去重(幂等)的请求(如发消息)。
+ * 按 schedule 依次发起**并发**尝试且不取消先前的;第一个拿到 HTTP 响应者胜出,
+ * 其余 abort。所有尝试共用同一 body/localId,服务端去重保证最多创建一条。
+ * 仅对 retryPolicy 判定为幂等的端点对冲;非幂等端点退化为单次带超时尝试,
+ * 避免重复副作用。调用方 abort 视为取消。
+ */
+export async function hedgedApiFetch(
+    url: string,
+    init?: RequestInit,
+    opts?: HedgedApiFetchOptions,
+): Promise<Response> {
+    const method = init?.method ?? 'GET';
+    const allowHedge = opts?.retry ?? isRetryableRequest(method, url);
+
+    // 非幂等端点:绝不并发对冲(会重复副作用),退化为单次带超时尝试。
+    if (!allowHedge) {
+        return apiFetch(url, init, { maxRetries: 0, retry: false, signal: opts?.signal });
+    }
+
+    const schedule = opts?.scheduleMs ?? DEFAULT_HEDGE_SCHEDULE_MS;
+    const totalTimeoutMs = opts?.totalTimeoutMs ?? DEFAULT_HEDGE_TOTAL_TIMEOUT_MS;
+    const externalSignal = opts?.signal ?? init?.signal ?? undefined;
+    const { signal: _callerSignal, ...restInit } = init ?? {};
+
+    return await new Promise<Response>((resolve, reject) => {
+        const controllers: AbortController[] = [];
+        const timers: ReturnType<typeof setTimeout>[] = [];
+        let settled = false;
+        let inFlight = 0;
+        let scheduledRemaining = schedule.length;
+
+        const clearTimers = () => {
+            for (const t of timers) clearTimeout(t);
+        };
+        const abortAll = () => {
+            for (const c of controllers) c.abort();
+        };
+        const cleanupExternal = () => externalSignal?.removeEventListener('abort', onExternalAbort);
+
+        function onExternalAbort() {
+            if (settled) return;
+            settled = true;
+            clearTimers();
+            abortAll();
+            cleanupExternal();
+            reject(new DOMException('Aborted', 'AbortError'));
+        }
+
+        if (externalSignal) {
+            if (externalSignal.aborted) {
+                reject(new DOMException('Aborted', 'AbortError'));
+                return;
+            }
+            externalSignal.addEventListener('abort', onExternalAbort);
+        }
+
+        const overallTimer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            clearTimers();
+            abortAll();
+            cleanupExternal();
+            reject(new Error('Send timed out'));
+        }, totalTimeoutMs);
+        timers.push(overallTimer);
+
+        const launch = () => {
+            scheduledRemaining--;
+            const controller = new AbortController();
+            controllers.push(controller);
+            inFlight++;
+            fetch(url, { ...restInit, signal: controller.signal })
+                .then((response) => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimers();
+                    cleanupExternal();
+                    // Abort the other attempts; keep this one's stream readable.
+                    for (const c of controllers) {
+                        if (c !== controller) c.abort();
+                    }
+                    resolve(response);
+                })
+                .catch(() => {
+                    if (settled) return;
+                    inFlight--;
+                    // All scheduled attempts launched and all failed.
+                    if (inFlight === 0 && scheduledRemaining === 0) {
+                        settled = true;
+                        clearTimers();
+                        cleanupExternal();
+                        reject(new Error('Send failed: network error'));
+                    }
+                });
+        };
+
+        for (const offset of schedule) {
+            if (offset === 0) {
+                launch();
+            } else {
+                timers.push(setTimeout(() => {
+                    if (!settled) launch();
+                }, offset));
+            }
+        }
+    });
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { apiFetch, computeRetryDelayMs } from './apiFetch';
+import { apiFetch, computeRetryDelayMs, hedgedApiFetch } from './apiFetch';
 
 const BASE = 'https://api.example.com';
 
@@ -124,5 +124,66 @@ describe('apiFetch', () => {
         const res = await apiFetch(`${BASE}/v1/orchestrator/runs`, undefined, { backoffMs: () => 0 });
         expect(res.status).toBe(200);
         expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('hedgedApiFetch', () => {
+    const SEND = `${BASE}/v3/sessions/s1/send`;
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.useRealTimers();
+    });
+
+    it('首个尝试成功:单次 fetch 即返回', async () => {
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(200, { ok: true }));
+        const res = await hedgedApiFetch(SEND, { method: 'POST' }, { scheduleMs: [0], totalTimeoutMs: 1000 });
+        expect(res.status).toBe(200);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('首个挂起时按 schedule 触发第二个并取胜', async () => {
+        vi.useFakeTimers();
+        let calls = 0;
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => {
+            calls++;
+            if (calls === 1) {
+                // 永不 resolve,直到被 abort
+                return new Promise((_resolve, reject) => {
+                    (init as RequestInit | undefined)?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+                });
+            }
+            return Promise.resolve(jsonResponse(200, { ok: true }));
+        });
+        const p = hedgedApiFetch(SEND, { method: 'POST' }, { scheduleMs: [0, 10], totalTimeoutMs: 1000 });
+        await vi.advanceTimersByTimeAsync(10);
+        const res = await p;
+        expect(res.status).toBe(200);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('所有尝试网络失败 -> reject', async () => {
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Network request failed'));
+        await expect(
+            hedgedApiFetch(SEND, { method: 'POST' }, { scheduleMs: [0], totalTimeoutMs: 1000 }),
+        ).rejects.toThrow(/Send failed/);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('非幂等端点不对冲:退化为单次尝试', async () => {
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(200, { ok: true }));
+        const res = await hedgedApiFetch(`${BASE}/v1/badge/increment`, { method: 'POST' }, { scheduleMs: [0, 10] });
+        expect(res.status).toBe(200);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('调用方已取消:直接 reject AbortError', async () => {
+        const controller = new AbortController();
+        controller.abort();
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(200));
+        await expect(
+            hedgedApiFetch(SEND, { method: 'POST' }, { signal: controller.signal, scheduleMs: [0] }),
+        ).rejects.toThrow(/Aborted/);
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });
