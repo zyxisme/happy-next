@@ -7,9 +7,10 @@ vi.mock('./serverConfig', () => ({
     getServerUrl: () => 'https://api.test.com'
 }));
 
-// Mock backoff utility
+// Mock time utilities (apiFetch uses delay for backoff; resolve instantly in tests)
 vi.mock('@/utils/time', () => ({
-    backoff: vi.fn((fn) => fn())
+    backoff: vi.fn((fn) => fn()),
+    delay: vi.fn(() => Promise.resolve())
 }));
 
 describe('apiGithub', () => {
@@ -40,14 +41,15 @@ describe('apiGithub', () => {
 
             await expect(disconnectGitHub(mockCredentials)).resolves.toBeUndefined();
 
+            // apiFetch injects an AbortSignal for the per-attempt timeout, so match loosely.
             expect(global.fetch).toHaveBeenCalledWith(
                 'https://api.test.com/v1/connect/github',
-                {
+                expect.objectContaining({
                     method: 'DELETE',
                     headers: {
                         'Authorization': 'Bearer test-token'
                     }
-                }
+                })
             );
         });
 
