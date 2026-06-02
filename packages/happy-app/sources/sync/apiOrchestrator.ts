@@ -1,5 +1,5 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
-import { backoff } from '@/utils/time';
+import { apiFetch } from './apiFetch';
 import { getServerUrl } from './serverConfig';
 
 export type OrchestratorRunStatus = 'queued' | 'running' | 'canceling' | 'completed' | 'failed' | 'cancelled';
@@ -125,22 +125,20 @@ export async function listOrchestratorRuns(
     if (query.controllerSessionId) params.set('controllerSessionId', query.controllerSessionId);
     const queryString = params.toString();
 
-    return backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/orchestrator/runs${queryString ? `?${queryString}` : ''}`, {
-            headers: buildAuthHeaders(credentials),
-        });
-        if (!response.ok) {
-            throw new Error(await readErrorMessage(response));
-        }
-        const body = await response.json() as {
-            ok: true;
-            data: {
-                items: Array<Pick<OrchestratorRunDetail, 'runId' | 'title' | 'status' | 'createdAt' | 'updatedAt' | 'summary'> & { machines?: string[]; }>;
-                nextCursor?: string;
-            };
-        };
-        return body.data;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/orchestrator/runs${queryString ? `?${queryString}` : ''}`, {
+        headers: buildAuthHeaders(credentials),
     });
+    if (!response.ok) {
+        throw new Error(await readErrorMessage(response));
+    }
+    const body = await response.json() as {
+        ok: true;
+        data: {
+            items: Array<Pick<OrchestratorRunDetail, 'runId' | 'title' | 'status' | 'createdAt' | 'updatedAt' | 'summary'> & { machines?: string[]; }>;
+            nextCursor?: string;
+        };
+    };
+    return body.data;
 }
 
 export type OrchestratorRunCounts = Record<string, number>;
@@ -154,16 +152,14 @@ export async function getOrchestratorRunCounts(
     if (controllerSessionId) params.set('controllerSessionId', controllerSessionId);
     const queryString = params.toString();
 
-    return backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/orchestrator/runs/counts${queryString ? `?${queryString}` : ''}`, {
-            headers: buildAuthHeaders(credentials),
-        });
-        if (!response.ok) {
-            throw new Error(await readErrorMessage(response));
-        }
-        const body = await response.json() as { ok: true; data: OrchestratorRunCounts };
-        return body.data;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/orchestrator/runs/counts${queryString ? `?${queryString}` : ''}`, {
+        headers: buildAuthHeaders(credentials),
     });
+    if (!response.ok) {
+        throw new Error(await readErrorMessage(response));
+    }
+    const body = await response.json() as { ok: true; data: OrchestratorRunCounts };
+    return body.data;
 }
 
 export type GetOrchestratorRunQuery = {
@@ -183,16 +179,14 @@ export async function getOrchestratorRun(
         params.set('includeExecutions', 'true');
     }
 
-    return backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/orchestrator/runs/${encodeURIComponent(runId)}?${params.toString()}`, {
-            headers: buildAuthHeaders(credentials),
-        });
-        if (!response.ok) {
-            throw new Error(await readErrorMessage(response));
-        }
-        const body = await response.json() as { ok: true; data: OrchestratorRunDetail };
-        return body.data;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/orchestrator/runs/${encodeURIComponent(runId)}?${params.toString()}`, {
+        headers: buildAuthHeaders(credentials),
     });
+    if (!response.ok) {
+        throw new Error(await readErrorMessage(response));
+    }
+    const body = await response.json() as { ok: true; data: OrchestratorRunDetail };
+    return body.data;
 }
 
 export async function pendOrchestratorRun(
@@ -268,19 +262,17 @@ export async function getOrchestratorTask(
     }
     const queryString = params.toString();
 
-    return backoff(async () => {
-        const response = await fetch(
-            `${API_ENDPOINT}/v1/orchestrator/runs/${encodeURIComponent(runId)}/tasks/${encodeURIComponent(taskId)}${queryString ? `?${queryString}` : ''}`,
-            {
-                headers: buildAuthHeaders(credentials),
-            },
-        );
-        if (!response.ok) {
-            throw new Error(await readErrorMessage(response));
-        }
-        const body = await response.json() as { ok: true; data: OrchestratorTaskDetail };
-        return body.data;
-    });
+    const response = await apiFetch(
+        `${API_ENDPOINT}/v1/orchestrator/runs/${encodeURIComponent(runId)}/tasks/${encodeURIComponent(taskId)}${queryString ? `?${queryString}` : ''}`,
+        {
+            headers: buildAuthHeaders(credentials),
+        },
+    );
+    if (!response.ok) {
+        throw new Error(await readErrorMessage(response));
+    }
+    const body = await response.json() as { ok: true; data: OrchestratorTaskDetail };
+    return body.data;
 }
 
 export async function cancelOrchestratorRun(
@@ -289,25 +281,23 @@ export async function cancelOrchestratorRun(
     reason?: string,
 ): Promise<{ runId: string; status: OrchestratorRunStatus; accepted: boolean; }> {
     const API_ENDPOINT = getServerUrl();
-    return backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/orchestrator/runs/${encodeURIComponent(runId)}/cancel`, {
-            method: 'POST',
-            headers: buildAuthHeaders(credentials),
-            body: JSON.stringify(reason ? { reason } : {}),
-        });
-        if (!response.ok) {
-            throw new Error(await readErrorMessage(response));
-        }
-        const body = await response.json() as {
-            ok: true;
-            data: {
-                runId: string;
-                status: OrchestratorRunStatus;
-                accepted: boolean;
-            };
-        };
-        return body.data;
+    const response = await apiFetch(`${API_ENDPOINT}/v1/orchestrator/runs/${encodeURIComponent(runId)}/cancel`, {
+        method: 'POST',
+        headers: buildAuthHeaders(credentials),
+        body: JSON.stringify(reason ? { reason } : {}),
     });
+    if (!response.ok) {
+        throw new Error(await readErrorMessage(response));
+    }
+    const body = await response.json() as {
+        ok: true;
+        data: {
+            runId: string;
+            status: OrchestratorRunStatus;
+            accepted: boolean;
+        };
+    };
+    return body.data;
 }
 
 export async function getOrchestratorActivity(
@@ -317,7 +307,7 @@ export async function getOrchestratorActivity(
     const API_ENDPOINT = getServerUrl();
     const params = new URLSearchParams({ controllerSessionId });
 
-    const response = await fetch(`${API_ENDPOINT}/v1/orchestrator/activity?${params.toString()}`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/orchestrator/activity?${params.toString()}`, {
         headers: buildAuthHeaders(credentials),
     });
     if (!response.ok) {
@@ -331,7 +321,7 @@ export async function getOrchestratorActivityBatch(
     credentials: AuthCredentials,
 ): Promise<{ activity: Record<string, OrchestratorSessionActivity>; totalRunCounts?: Record<string, number> }> {
     const API_ENDPOINT = getServerUrl();
-    const response = await fetch(`${API_ENDPOINT}/v1/orchestrator/activity/batch`, {
+    const response = await apiFetch(`${API_ENDPOINT}/v1/orchestrator/activity/batch`, {
         headers: buildAuthHeaders(credentials),
     });
     if (!response.ok) {
