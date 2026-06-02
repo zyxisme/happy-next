@@ -1,5 +1,5 @@
 ---
-name: release
+name: happy-next-release
 description: Use when the user wants to cut a new release of happy-next — CLI to npm, mobile App + Docker via git tag, or the full combo.
 ---
 
