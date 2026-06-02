@@ -201,7 +201,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 ### Bug Fixes & Stability
 - 250+ bug fixes: message sending reliability, session lifecycle, Markdown rendering, navigation, voice, DooTask, sharing
 - Security: shell command injection fix, plan mode permission handling
-- Performance: payload trimming for mobile, lazy-load diffs, rendering optimization
+- Performance: payload trimming for mobile, lazy-load diffs, rendering optimization, incremental session catch-up on open
 
 ### UI & Polish
 - Native platform-feel mobile UX: iOS / Android use the platform-native bottom tab bar and native header on home, chat, and inbox screens

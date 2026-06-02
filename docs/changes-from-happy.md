@@ -21,7 +21,7 @@ This document summarizes what changed in Happy Next compared to the original Hap
 | Chat UX | Image attachment, pagination, blue dot, compact view, session search, pull-to-refresh |
 | Session mgmt | Active/Inactive tabs, device and agent filters, hot-upgrade, metadata caching |
 | Bug fixes | 250+ fixes across message sending, sessions, rendering, navigation, security |
-| Performance | Payload trimming, lazy-load diffs, rendering optimization |
+| Performance | Payload trimming, lazy-load diffs, rendering optimization, incremental session catch-up on open |
 | CLI | Daemon auto-start, Codex fast mode, receipt tracking, self-upgrade |
 | MCP tools | `preview_html`, colon-separated tool naming, dual-mode long-press copy |
 | OpenClaw | External AI machine gateway with tunnel/direct connections and chat UI |
@@ -325,6 +325,7 @@ Over 250 bug fixes landed. The following are grouped by area.
 - Fix AskUserQuestion options submitting duplicate messages
 - Harden message send on flaky networks
 - Suppress draft restore while a send is in flight
+- Stop the sessions list cache from resurrecting drafts you've already sent
 
 ### Unread Blue Dot Indicator
 - Fix blue dot not showing for offline sessions
@@ -343,6 +344,7 @@ Over 250 bug fixes landed. The following are grouped by area.
 - Fix Codex session ID collision after fork/restart (extract from filename)
 - Fix newly created session briefly showing "deleted" status
 - Fix copy/resume navigation causing detail page to freeze
+- Open sessions via incremental catch-up instead of a full re-bootstrap (faster open on large sessions)
 
 ### Codex & Gemini Agents
 - Correct Codex token usage field mapping for accurate statistics

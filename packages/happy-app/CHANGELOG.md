@@ -1,8 +1,8 @@
 # Changelog
 
-## Version 12 - 2026-05-31
+## Version 12 - 2026-06-02
 
-Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming speech and native iOS voice calls, selectable voice timbre and speech rate, end-to-end-encrypted voice settings sync, and richer slash-command autocomplete with live capability sync.
+Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming speech and native iOS voice calls, selectable voice timbre and speech rate, end-to-end-encrypted voice settings sync, and richer slash-command autocomplete with live capability sync. This update also speeds up session open with incremental catch-up and fixes draft restore and the Claude Opus 4.8 context window.
 
 - Voice: migrated Happy Voice to a new Volcano (火山引擎 / Doubao) real-time gateway, replacing the previous LiveKit / ElevenLabs stack — lower latency and a curated multilingual voice set
 - Voice calls: streaming message text-to-speech and native in-call voice on iOS, with connection state gated on room-state changes and the microphone guarded during a call
@@ -17,7 +17,9 @@ Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming spe
 - Sessions: tidied "vibing" activity messages and lowercased the "awaiting" status label
 - Reliability: message send is hardened for flaky networks, and draft restore is suppressed while a send is in flight
 - Reliability: the chat reducer no longer synthesizes out-of-order completed-permission messages
-- Models: added Claude Opus 4.8 to the model catalog
+- Performance: opening a session now does an incremental catch-up instead of a full re-bootstrap — large sessions open noticeably faster
+- Messages: drafts you've already sent no longer reappear when the sessions list cache refreshes
+- Models: added Claude Opus 4.8 to the model catalog, which now correctly defaults to its 1M-token context window
 - iOS: transparent native session header with proper top padding, and the chat placeholder is centered in the visible area above the keyboard
 - Deploy: docker-compose Happy Voice service points at the Volcano gateway, with the gateway port standardized to 3040
 - CLI: Happy CLI updated to v0.5.2
