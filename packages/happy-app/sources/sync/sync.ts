@@ -682,7 +682,7 @@ class Sync {
         storage.getState().applyPendingMessages(sessionId, decrypted.filter((item): item is PendingMessage => item !== null));
     }
 
-    async pinPendingMessage(sessionId: string, pendingId: string): Promise<boolean> {
+    async pinPendingMessage(sessionId: string, pendingId: string, pinned: boolean): Promise<boolean> {
         if (!this.credentials) {
             return false;
         }
@@ -696,7 +696,9 @@ class Sync {
                     headers: {
                         'Authorization': `Bearer ${this.credentials.token}`,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    // Explicit, idempotent target state (server falls back to toggle if omitted).
+                    body: JSON.stringify({ pinned })
                 }
             );
 

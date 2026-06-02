@@ -9,7 +9,6 @@
 type NonRetryableRule = { method: string; pattern: RegExp; reason: string };
 
 const NON_RETRYABLE: NonRetryableRule[] = [
-    { method: 'POST', pattern: /^\/v3\/sessions\/[^/]+\/pending-messages\/[^/]+\/pin$/, reason: 'pin toggle 翻转 (v3SessionRoutes.ts:520)' },
     { method: 'POST', pattern: /^\/v1\/sessions\/spawn$/, reason: 'RPC 启动新会话进程 (sessionRoutes.ts:417)' },
     { method: 'POST', pattern: /^\/v1\/orchestrator\/tasks\/[^/]+\/send-message$/, reason: '新建 resume execution,重复投递 (orchestratorRoutes.ts:1296)' },
     { method: 'POST', pattern: /^\/v1\/badge\/increment$/, reason: 'badgeCount 累加 (pushRoutes.ts:127)' },

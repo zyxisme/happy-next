@@ -36,8 +36,8 @@ describe('isRetryableRequest', () => {
         expect(isRetryableRequest('GET', `${BASE}/v1/public-share/tok_abc/messages`)).toBe(true);
     });
 
-    it('pin 禁止重试(toggle)', () => {
-        expect(isRetryableRequest('POST', `${BASE}/v3/sessions/s1/pending-messages/p1/pin`)).toBe(false);
+    it('pin 可重试(已改显式 set 幂等)', () => {
+        expect(isRetryableRequest('POST', `${BASE}/v3/sessions/s1/pending-messages/p1/pin`)).toBe(true);
     });
 
     it('忽略 query string,仍按 path 判定', () => {

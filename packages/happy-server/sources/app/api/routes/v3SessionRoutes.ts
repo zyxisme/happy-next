@@ -521,10 +521,17 @@ export function v3SessionRoutes(app: Fastify) {
         preHandler: app.authenticate,
         schema: {
             params: pendingMessageParamsSchema,
+            // Optional explicit target state. When provided the operation is idempotent
+            // (set, not toggle); omitting it preserves the legacy toggle for old clients.
+            // `.nullish()` so an empty body (old clients send none → null) still validates.
+            body: z.object({
+                pinned: z.boolean().optional(),
+            }).nullish(),
         },
     }, async (request, reply) => {
         const userId = request.userId;
         const { sessionId, pendingId } = request.params;
+        const pinned = request.body?.pinned;
 
         if (!await canSendMessages(userId, sessionId)) {
             return reply.code(404).send({ error: "Session not found" });
@@ -535,7 +542,7 @@ export function v3SessionRoutes(app: Fastify) {
             return reply.code(404).send({ error: "Session not found" });
         }
 
-        const pending = await pinPendingMessage(sessionId, pendingId);
+        const pending = await pinPendingMessage(sessionId, pendingId, pinned);
         if (!pending) {
             return reply.code(404).send({ error: "Pending message not found" });
         }

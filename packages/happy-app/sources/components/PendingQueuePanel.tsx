@@ -13,7 +13,7 @@ type PendingQueuePanelProps = {
     messages: PendingMessage[];
     canManage: boolean;
     onSendNow: (pendingId: string) => Promise<void> | void;
-    onPin: (pendingId: string) => Promise<void> | void;
+    onPin: (pendingId: string, pinned: boolean) => Promise<void> | void;
     onDelete: (pendingId: string) => Promise<void> | void;
 };
 
@@ -110,7 +110,7 @@ export const PendingQueuePanel: React.FC<PendingQueuePanelProps> = React.memo(({
 
                                         <Pressable
                                             style={[styles.iconButton, isDisabled && styles.iconButtonDisabled]}
-                                            onPress={() => void runAction(message.id, 'pin', onPin)}
+                                            onPress={() => void runAction(message.id, 'pin', (id) => onPin(id, message.pinnedAt === null))}
                                             accessibilityLabel={t('pendingQueue.pin')}
                                             hitSlop={8}
                                             disabled={isDisabled}

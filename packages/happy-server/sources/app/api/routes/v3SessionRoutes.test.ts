@@ -1210,4 +1210,47 @@ describe("v3SessionRoutes", () => {
         expect(deleteResponse.statusCode).toBe(200);
         expect(state.pendingMessages).toHaveLength(0);
     });
+
+    it("pin with explicit { pinned } is idempotent (set, not toggle)", async () => {
+        seedSession({ id: "session-1", accountId: "user-1", seq: 0 });
+        const pending = seedPendingMessage({
+            sessionId: "session-1",
+            localId: "pending-idem",
+            content: { t: "encrypted", c: "pending-content-idem" },
+        });
+
+        app = await createApp();
+
+        const pinOnce = await app.inject({
+            method: "POST",
+            url: `/v3/sessions/session-1/pending-messages/${pending.id}/pin`,
+            headers: { "x-user-id": "user-1" },
+            payload: { pinned: true },
+        });
+        expect(pinOnce.statusCode).toBe(200);
+        const firstPinnedAt = state.pendingMessages[0].pinnedAt;
+        expect(firstPinnedAt).not.toBeNull();
+
+        // Repeating pinned:true must NOT un-pin and must keep the same timestamp.
+        const pinAgain = await app.inject({
+            method: "POST",
+            url: `/v3/sessions/session-1/pending-messages/${pending.id}/pin`,
+            headers: { "x-user-id": "user-1" },
+            payload: { pinned: true },
+        });
+        expect(pinAgain.statusCode).toBe(200);
+        expect(state.pendingMessages[0].pinnedAt).not.toBeNull();
+        expect(new Date(state.pendingMessages[0].pinnedAt as any).getTime())
+            .toBe(new Date(firstPinnedAt as any).getTime());
+
+        // Explicit unpin.
+        const unpin = await app.inject({
+            method: "POST",
+            url: `/v3/sessions/session-1/pending-messages/${pending.id}/pin`,
+            headers: { "x-user-id": "user-1" },
+            payload: { pinned: false },
+        });
+        expect(unpin.statusCode).toBe(200);
+        expect(state.pendingMessages[0].pinnedAt).toBeNull();
+    });
 });

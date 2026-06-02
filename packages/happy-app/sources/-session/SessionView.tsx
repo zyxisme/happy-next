@@ -905,15 +905,16 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
         try {
             // Pin the message so it becomes the next to dispatch (pinnedAt desc ordering),
             // then abort the current turn — the server auto-dispatches the first pending message.
-            await sync.pinPendingMessage(sessionId, pendingId);
+            // Explicit pinned=true (not toggle) so an already-pinned message stays pinned.
+            await sync.pinPendingMessage(sessionId, pendingId, true);
             await sessionAbort(sessionId);
         } catch {
             Modal.alert(t('common.error'), t('status.operationFailed'));
         }
     }, [sessionId]);
 
-    const handlePinPending = React.useCallback(async (pendingId: string) => {
-        const success = await sync.pinPendingMessage(sessionId, pendingId);
+    const handlePinPending = React.useCallback(async (pendingId: string, pinned: boolean) => {
+        const success = await sync.pinPendingMessage(sessionId, pendingId, pinned);
         if (!success) {
             Modal.alert(t('common.error'), t('status.operationFailed'));
         }

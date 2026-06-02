@@ -137,18 +137,26 @@ export async function enqueuePendingMessage(params: {
     }
 }
 
-export async function pinPendingMessage(sessionId: string, pendingId: string): Promise<PendingMessageRecord | null> {
+export async function pinPendingMessage(
+    sessionId: string,
+    pendingId: string,
+    pinned?: boolean,
+): Promise<PendingMessageRecord | null> {
     const message = await findPendingMessageById(sessionId, pendingId);
     if (!message) {
         return null;
     }
+
+    // Explicit set (idempotent) when `pinned` is provided; fall back to the legacy
+    // toggle when it's omitted so older clients that send no body keep working.
+    const nextPinned = pinned === undefined ? !message.pinnedAt : pinned;
 
     const updated = await db.sessionPendingMessage.update({
         where: {
             id: pendingId,
         },
         data: {
-            pinnedAt: message.pinnedAt ? null : new Date(),
+            pinnedAt: nextPinned ? (message.pinnedAt ?? new Date()) : null,
         },
         select: pendingMessageSelect,
     });
