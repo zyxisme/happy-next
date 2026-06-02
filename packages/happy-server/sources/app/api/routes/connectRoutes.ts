@@ -387,7 +387,8 @@ export function connectRoutes(app: Fastify) {
         }
     }, async (request, reply) => {
         const userId = request.userId;
-        await db.serviceAccountToken.delete({ where: { accountId_vendor: { accountId: userId, vendor: request.params.vendor } } });
+        // Idempotent: deleteMany never throws when the token is already gone (e.g. a retry).
+        await db.serviceAccountToken.deleteMany({ where: { accountId: userId, vendor: request.params.vendor } });
         reply.send({ success: true });
     });
 

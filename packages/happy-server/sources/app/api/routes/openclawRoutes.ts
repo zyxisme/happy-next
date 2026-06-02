@@ -201,35 +201,50 @@ export function openclawRoutes(app: Fastify) {
                 }
             }
 
-            // Build update data
+            // Validate directConfig target before deciding whether anything changed.
+            if (directConfig !== undefined && currentMachine.type !== 'direct') {
+                return reply.code(400).send({ error: 'directConfig can only be updated for direct type machines' });
+            }
+
+            // Build update data, only including fields whose value actually changes.
+            // This keeps the endpoint idempotent: replaying the same body (e.g. a network
+            // retry) does NOT bump `seq` or emit a duplicate event when nothing differs.
             const updateData: {
                 metadata?: string;
                 metadataVersion?: number;
                 pairingData?: string;
                 directConfig?: string;
-                seq: number;
-                updatedAt: Date;
-            } = {
-                seq: currentMachine.seq + 1,
-                updatedAt: new Date()
-            };
+                seq?: number;
+                updatedAt?: Date;
+            } = {};
 
-            if (metadata !== undefined && expectedMetadataVersion !== undefined) {
+            if (metadata !== undefined && expectedMetadataVersion !== undefined && metadata !== currentMachine.metadata) {
                 updateData.metadata = metadata;
                 updateData.metadataVersion = expectedMetadataVersion + 1;
             }
 
-            if (pairingData !== undefined) {
+            if (pairingData !== undefined && pairingData !== currentMachine.pairingData) {
                 updateData.pairingData = pairingData;
             }
 
-            if (directConfig !== undefined) {
-                // Only allow directConfig update for 'direct' type machines
-                if (currentMachine.type !== 'direct') {
-                    return reply.code(400).send({ error: 'directConfig can only be updated for direct type machines' });
-                }
+            if (directConfig !== undefined && directConfig !== currentMachine.directConfig) {
                 updateData.directConfig = directConfig;
             }
+
+            const hasChanges = updateData.metadata !== undefined
+                || updateData.pairingData !== undefined
+                || updateData.directConfig !== undefined;
+
+            // No-op update: return current state without bumping seq or emitting.
+            if (!hasChanges) {
+                return reply.send({
+                    success: true,
+                    machine: formatOpenClawMachine(currentMachine)
+                });
+            }
+
+            updateData.seq = currentMachine.seq + 1;
+            updateData.updatedAt = new Date();
 
             // Update machine
             const updatedMachine = await db.openClawMachine.update({
@@ -247,11 +262,11 @@ export function openclawRoutes(app: Fastify) {
             if (updateData.metadata !== undefined && updateData.metadataVersion !== undefined) {
                 eventUpdates.metadata = { value: updateData.metadata, version: updateData.metadataVersion };
             }
-            if (pairingData !== undefined) {
-                eventUpdates.pairingData = pairingData;
+            if (updateData.pairingData !== undefined) {
+                eventUpdates.pairingData = updateData.pairingData;
             }
-            if (directConfig !== undefined) {
-                eventUpdates.directConfig = directConfig;
+            if (updateData.directConfig !== undefined) {
+                eventUpdates.directConfig = updateData.directConfig;
             }
             const updatePayload = buildUpdateOpenClawMachineUpdate(id, updSeq, randomKeyNaked(12), eventUpdates);
             eventRouter.emitUpdate({

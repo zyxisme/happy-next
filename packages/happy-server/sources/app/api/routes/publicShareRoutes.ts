@@ -606,10 +606,21 @@ export function publicShareRoutes(app: Fastify) {
             return reply.code(404).send({ error: 'Public share not found' });
         }
 
-        const blockedUser = await db.publicShareBlockedUser.create({
-            data: {
+        // Idempotent: retrying a block must not throw on the existing
+        // @@unique([publicShareId, userId]); upsert refreshes the reason instead.
+        const blockedUser = await db.publicShareBlockedUser.upsert({
+            where: {
+                publicShareId_userId: {
+                    publicShareId: publicShare.id,
+                    userId
+                }
+            },
+            create: {
                 publicShareId: publicShare.id,
                 userId,
+                reason: reason ?? null
+            },
+            update: {
                 reason: reason ?? null
             },
             include: {
@@ -649,8 +660,13 @@ export function publicShareRoutes(app: Fastify) {
             return reply.code(403).send({ error: 'Forbidden' });
         }
 
-        await db.publicShareBlockedUser.delete({
-            where: { id: blockedUserId }
+        // Idempotent (deleteMany never throws on missing) AND scoped to this
+        // session's public share so a blockedUserId from another share can't be removed.
+        await db.publicShareBlockedUser.deleteMany({
+            where: {
+                id: blockedUserId,
+                publicShare: { sessionId }
+            }
         });
 
         return reply.send({ success: true });
