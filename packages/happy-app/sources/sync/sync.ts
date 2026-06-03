@@ -467,13 +467,32 @@ class Sync {
     }
 
 
-    private invalidateVisibleSessionData = (sessionId: string) => {
+    // Kick the per-session message sync. The underlying InvalidateSync wraps fetchMessagesV3 in
+    // an infinite backoff, so a single fetch failure is followed by an automatic retry. When the
+    // pending run is a full bootstrap (no seq cursor yet) we surface the "refreshing" indicator
+    // for the ENTIRE retry loop and clear it only once the whole cycle settles (a fetch finally
+    // succeeded). Previously the flag was set/cleared per attempt, so the first failure flipped
+    // the UI back to "online" while a background retry was still churning. Incremental catch-up
+    // stays silent (no indicator), as before.
+    private kickMessagesSync = (sessionId: string) => {
         let ex = this.messagesSync.get(sessionId);
         if (!ex) {
             ex = new InvalidateSync(() => this.fetchMessagesV3(sessionId));
             this.messagesSync.set(sessionId, ex);
         }
+        const isBootstrap = !this.sessionLastSeq.has(sessionId);
+        const alreadyFetching = !!storage.getState().sessionMessagesFetching[sessionId];
         ex.invalidate();
+        if (isBootstrap && !alreadyFetching) {
+            storage.getState().setSessionMessagesFetching(sessionId, true);
+            ex.awaitQueue().finally(() => {
+                storage.getState().setSessionMessagesFetching(sessionId, false);
+            });
+        }
+    }
+
+    private invalidateVisibleSessionData = (sessionId: string) => {
+        this.kickMessagesSync(sessionId);
         this.invalidatePendingMessagesSync(sessionId);
     }
 
@@ -585,12 +604,7 @@ class Sync {
     }
 
     private invalidateMessagesSync = (sessionId: string) => {
-        let ex = this.messagesSync.get(sessionId);
-        if (!ex) {
-            ex = new InvalidateSync(() => this.fetchMessagesV3(sessionId));
-            this.messagesSync.set(sessionId, ex);
-        }
-        ex.invalidate();
+        this.kickMessagesSync(sessionId);
     }
 
     private invalidatePendingMessagesSync = (sessionId: string) => {
@@ -2853,14 +2867,12 @@ class Sync {
         await lock.inLock(async () => {
             const currentCursor = this.sessionLastSeq.get(sessionId);
             if (currentCursor === undefined) {
-                // Mark the message list as actively (re)loading so the UI can show a real
-                // "refreshing" indicator. Cleared in finally on both success and error — an
-                // errored attempt counts as "done loading" so a stuck network surfaces as a
-                // failure (with retry) rather than an indefinite spinner.
-                storage.getState().setSessionMessagesFetching(sessionId, true);
-                try {
                 // Bootstrap with latest page only to avoid loading very large histories at once.
                 // v3 with no after_seq/before_seq returns latest messages in desc order.
+                // The "refreshing" indicator (sessionMessagesFetching) is owned by
+                // kickMessagesSync, which keeps it on across the whole InvalidateSync backoff
+                // retry loop and clears it only when the cycle settles — so a failed attempt no
+                // longer flips the UI back to "online" while a background retry is still running.
                 const API_ENDPOINT = getServerUrl();
                 const response = await fetch(
                     `${API_ENDPOINT}/v3/sessions/${sessionId}/messages?limit=${Sync.INITIAL_MESSAGES_LIMIT}`,
@@ -2903,9 +2915,6 @@ class Sync {
 
                 log.log(`💬 fetchMessagesV3 bootstrap completed for session ${sessionId}, lastSeq=${this.sessionLastSeq.get(sessionId) ?? 0}`);
                 return;
-                } finally {
-                    storage.getState().setSessionMessagesFetching(sessionId, false);
-                }
             }
 
             let afterSeq = currentCursor;
