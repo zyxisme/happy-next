@@ -468,22 +468,23 @@ class Sync {
 
 
     // Kick the per-session message sync. The underlying InvalidateSync wraps fetchMessagesV3 in
-    // an infinite backoff, so a single fetch failure is followed by an automatic retry. When the
-    // pending run is a full bootstrap (no seq cursor yet) we surface the "refreshing" indicator
-    // for the ENTIRE retry loop and clear it only once the whole cycle settles (a fetch finally
-    // succeeded). Previously the flag was set/cleared per attempt, so the first failure flipped
-    // the UI back to "online" while a background retry was still churning. Incremental catch-up
-    // stays silent (no indicator), as before.
-    private kickMessagesSync = (sessionId: string) => {
+    // an infinite backoff, so a single fetch failure is followed by an automatic retry. When
+    // surfaceIndicator is set (a user actually opened/focused the session), show the "refreshing"
+    // indicator for the ENTIRE retry loop and clear it only once the whole cycle settles (a fetch
+    // finally succeeded) — so a failed/slow load keeps reading as "refreshing" instead of flipping
+    // back to "online" (or falling through to the 12s "refresh failed" state) while a background
+    // retry is still running. The UI gates this behind a 3s delay, so fast catch-ups never flash.
+    // Routine background kicks (per-batch ping, gap fill, message-syncing) pass surfaceIndicator
+    // false so an active streaming session doesn't sit on a permanent spinner.
+    private kickMessagesSync = (sessionId: string, surfaceIndicator: boolean = false) => {
         let ex = this.messagesSync.get(sessionId);
         if (!ex) {
             ex = new InvalidateSync(() => this.fetchMessagesV3(sessionId));
             this.messagesSync.set(sessionId, ex);
         }
-        const isBootstrap = !this.sessionLastSeq.has(sessionId);
         const alreadyFetching = !!storage.getState().sessionMessagesFetching[sessionId];
         ex.invalidate();
-        if (isBootstrap && !alreadyFetching) {
+        if (surfaceIndicator && !alreadyFetching) {
             storage.getState().setSessionMessagesFetching(sessionId, true);
             ex.awaitQueue().finally(() => {
                 storage.getState().setSessionMessagesFetching(sessionId, false);
@@ -491,8 +492,8 @@ class Sync {
         }
     }
 
-    private invalidateVisibleSessionData = (sessionId: string) => {
-        this.kickMessagesSync(sessionId);
+    private invalidateVisibleSessionData = (sessionId: string, surfaceIndicator: boolean = false) => {
+        this.kickMessagesSync(sessionId, surfaceIndicator);
         this.invalidatePendingMessagesSync(sessionId);
     }
 
@@ -528,7 +529,7 @@ class Sync {
         }
 
         if (this.encryption?.getSessionEncryption(sessionId)) {
-            this.invalidateVisibleSessionData(sessionId);
+            this.invalidateVisibleSessionData(sessionId, userInitiated);
             if (userInitiated) {
                 gitStatusSync.invalidate(sessionId);
             }
@@ -536,7 +537,7 @@ class Sync {
             void this.ensureSessionEncryptionReady(sessionId)
                 .then((ready) => {
                     if (ready) {
-                        this.invalidateVisibleSessionData(sessionId);
+                        this.invalidateVisibleSessionData(sessionId, userInitiated);
                         if (userInitiated) {
                             gitStatusSync.invalidate(sessionId);
                         }
