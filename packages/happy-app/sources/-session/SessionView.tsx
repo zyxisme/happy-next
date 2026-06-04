@@ -46,6 +46,12 @@ import { useUnistyles } from 'react-native-unistyles';
 const SILENT_REFRESH_INDICATOR_DELAY_MS = 3000;
 const SILENT_REFRESH_FAILED_TIMEOUT_MS = 12000;
 
+// Gap between the leading header-right action (orchestrator / new-session) and the avatar.
+// Web (custom header) gets a roomier gap; native apps stay at the 4px baseline that
+// `getNativeHeaderTitleWidth` assumes. Any value above 4 is compensated out of the iOS title
+// width below, otherwise the system shifts the centered title to avoid the wider buttons.
+const HEADER_LEADING_ACTION_MARGIN = Platform.OS === 'web' ? 8 : 4;
+
 function shouldHideSessionHeaderForCompactLayout(shouldUseCompactLandscapeSessionLayout: boolean) {
     return shouldUseCompactLandscapeSessionLayout && Platform.OS !== 'web';
 }
@@ -74,6 +80,17 @@ export const SessionView = React.memo((props: { id: string }) => {
         router.push(`/orchestrator?controllerSessionId=${encodeURIComponent(sessionId)}`);
     }, [router, sessionId]);
 
+    // Start a new session, carrying over the current session's machine and path
+    const handleNewSession = React.useCallback(() => {
+        const params = new URLSearchParams();
+        const machineId = session?.metadata?.machineId;
+        const path = session?.metadata?.path;
+        if (machineId) params.set('machineId', machineId);
+        if (path) params.set('path', path);
+        const query = params.toString();
+        router.push(query ? `/new?${query}` : '/new');
+    }, [router, session?.metadata?.machineId, session?.metadata?.path]);
+
     const handleBackPress = React.useCallback(() => {
         if (navigation.canGoBack()) {
             router.back();
@@ -82,11 +99,18 @@ export const SessionView = React.memo((props: { id: string }) => {
         }
     }, [navigation, router]);
 
-    const headerTitleWidth = getNativeHeaderTitleWidth({
+    const baseHeaderTitleWidth = getNativeHeaderTitleWidth({
         screenWidth: Math.min(screenWidth, layout.headerMaxWidth),
         leftActionCount: Platform.OS === 'web' ? 1 : undefined,
-        rightActionCount: hasRuns ? 2 : 1,
+        rightActionCount: 2,
     });
+    // iOS uses the system header: UIKit shifts the fixed-width title to avoid overlapping the
+    // header-right buttons, which breaks centering when the leading action gap grows past the
+    // 4px baseline assumed by getNativeHeaderTitleWidth. Trim the extra gap symmetrically (×2)
+    // so the title stays geometrically centered.
+    const headerTitleWidth = Platform.OS === 'ios' && baseHeaderTitleWidth !== undefined
+        ? baseHeaderTitleWidth - (HEADER_LEADING_ACTION_MARGIN - 4) * 2
+        : baseHeaderTitleWidth;
 
     // Track if we've confirmed the session doesn't exist after data loads
     const [sessionNotFound, setSessionNotFound] = React.useState(false);
@@ -214,6 +238,7 @@ export const SessionView = React.memo((props: { id: string }) => {
                             hasRuns={hasRuns}
                             runningTaskCount={runningTaskCount}
                             onOpenRuns={handleOpenSessionRuns}
+                            onNewSession={handleNewSession}
                         />
                     ) : undefined,
                 }}
@@ -1210,11 +1235,12 @@ const ChatHeaderRight = React.memo((props: {
     hasRuns: boolean;
     runningTaskCount: number;
     onOpenRuns: () => void;
+    onNewSession: () => void;
 }) => {
     const { theme } = useUnistyles();
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {props.hasRuns && (
+            {props.hasRuns ? (
                 <Pressable
                     onPress={props.onOpenRuns}
                     hitSlop={15}
@@ -1225,7 +1251,7 @@ const ChatHeaderRight = React.memo((props: {
                         height: 38,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginRight: 4,
+                        marginRight: HEADER_LEADING_ACTION_MARGIN,
                     }}
                 >
                     <Ionicons
@@ -1255,6 +1281,26 @@ const ChatHeaderRight = React.memo((props: {
                             </Text>
                         </View>
                     )}
+                </Pressable>
+            ) : (
+                <Pressable
+                    onPress={props.onNewSession}
+                    hitSlop={15}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('newSession.startNewSessionInFolder')}
+                    style={{
+                        width: 38,
+                        height: 38,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: HEADER_LEADING_ACTION_MARGIN,
+                    }}
+                >
+                    <Ionicons
+                        name="add"
+                        size={26}
+                        color={theme.colors.header.tint}
+                    />
                 </Pressable>
             )}
             {props.avatarId && props.onAvatarPress && (
