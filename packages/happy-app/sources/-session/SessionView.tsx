@@ -1175,7 +1175,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                         <Ionicons
                             name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
                             size={Platform.select({ ios: 28, default: 24 })}
-                            color="#000"
+                            color={theme.dark ? '#fff' : '#000'}
                         />
                     </Pressable>
                 )
