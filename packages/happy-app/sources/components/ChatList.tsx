@@ -126,8 +126,14 @@ const ChatListInternal = React.memo((props: {
     // is only marked complete when the agent is idle (`!thinking`); while the
     // agent is still generating, the bar is suppressed for the whole turn so it
     // doesn't attach to a segment that isn't truly final yet.
+    // Latch of segment ids already shown as their turn's final segment. Keeps the
+    // bar shown if `thinking` briefly flips true again (it can turn true a frame
+    // before a freshly-sent user message lands in the list), avoiding a flicker.
+    const completedTurnIdsRef = useRef<Set<string>>(new Set());
     const lastAgentSegmentIds = React.useMemo(() => {
         const set = new Set<string>();
+        const previouslyCompleted = completedTurnIdsRef.current;
+        const stillCompleted = new Set<string>();
         for (let i = 0; i < visibleMessages.length; i++) {
             const msg = visibleMessages[i];
             if (msg.kind !== 'agent-text' || msg.isThinking) continue;
@@ -140,9 +146,14 @@ const ChatListInternal = React.memo((props: {
             }
             if (!isLast) continue;
             // Older (already-bounded) turns are always complete; the newest turn
-            // only counts as complete once the agent stops thinking.
-            if (reachedUserBoundary || !props.thinking) set.add(msg.id);
+            // only counts as complete once the agent stops thinking — unless it
+            // was already shown as complete (latched).
+            if (reachedUserBoundary || !props.thinking || previouslyCompleted.has(msg.id)) {
+                set.add(msg.id);
+                stillCompleted.add(msg.id);
+            }
         }
+        completedTurnIdsRef.current = stillCompleted;
         return set;
     }, [visibleMessages, props.thinking]);
 
