@@ -152,7 +152,7 @@ class Sync {
     // settles) would stall the session's InvalidateSync forever — and invalidate() on a running
     // sync is a no-op, so reopen/retry could never recover it. With it, a stall throws → backoff
     // retries → self-heals.
-    private static readonly MESSAGE_FETCH_TIMEOUT_MS = 20000;
+    private static readonly MESSAGE_FETCH_TIMEOUT_MS = 60000;
 
     encryption!: Encryption;
     serverID!: string;
