@@ -112,6 +112,12 @@ export const SessionView = React.memo((props: { id: string }) => {
         ? baseHeaderTitleWidth - (HEADER_LEADING_ACTION_MARGIN - 4) * 2
         : baseHeaderTitleWidth;
 
+    // Narrow phones left-align the header title; tablets, web and Mac stay centered.
+    const isNarrowPhone = Platform.OS !== 'web' && !isRunningOnMac() && !isTablet;
+    // iOS centers the titleView regardless of alignment options, so give it the full available
+    // width and left-align the text inside it.
+    const leftAlignTitleWidth = Math.max(140, Math.min(screenWidth, layout.headerMaxWidth) - 176);
+
     // Track if we've confirmed the session doesn't exist after data loads
     const [sessionNotFound, setSessionNotFound] = React.useState(false);
 
@@ -220,11 +226,13 @@ export const SessionView = React.memo((props: { id: string }) => {
                 options={{
                     headerShown: !shouldHideHeader,
                     headerTransparent: shouldUseTransparentNativeHeader,
+                    headerTitleAlign: isNarrowPhone ? 'left' : 'center',
                     headerTitle: () => (
                         <ChatHeaderTitle
                             title={headerProps.title}
                             subtitle={headerProps.subtitle}
-                            width={headerTitleWidth}
+                            align={isNarrowPhone ? 'left' : 'center'}
+                            width={isNarrowPhone ? (Platform.OS === 'ios' ? leftAlignTitleWidth : undefined) : headerTitleWidth}
                         />
                     ),
                     headerLeft: Platform.OS === 'web' ? () => (

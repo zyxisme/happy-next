@@ -21,6 +21,7 @@ interface HeaderProps {
     headerShadowVisible?: boolean;
     headerTransparent?: boolean;
     safeAreaEnabled?: boolean;
+    headerTitleAlign?: 'left' | 'center';
 }
 
 export const Header = React.memo((props: HeaderProps) => {
@@ -39,7 +40,10 @@ export const Header = React.memo((props: HeaderProps) => {
         headerShadowVisible = true,
         headerTransparent = false,
         safeAreaEnabled = true,
+        headerTitleAlign = 'center',
     } = props;
+
+    const leftAligned = headerTitleAlign === 'left';
 
     const insets = useSafeAreaInsets();
     const paddingTop = safeAreaEnabled ? insets.top : 0;
@@ -65,16 +69,16 @@ export const Header = React.memo((props: HeaderProps) => {
         <View style={[containerStyle]}>
             <View style={styles.contentWrapper}>
                 <View style={[styles.content, { height: headerHeight }]}>
-                    <View style={styles.leftContainer}>
+                    <View style={[styles.leftContainer, leftAligned && styles.sideContainerHug]}>
                         {headerLeft && headerLeft()}
                     </View>
 
-                    <View style={styles.centerContainer}>
+                    <View style={[styles.centerContainer, leftAligned && styles.centerContainerLeft]}>
                         {title}
                         {subtitle && <Text style={subtitleStyle} numberOfLines={1}>{subtitle}</Text>}
                     </View>
 
-                    <View style={styles.rightContainer}>
+                    <View style={[styles.rightContainer, leftAligned && styles.sideContainerHug]}>
                         {headerRight && headerRight()}
                     </View>
                 </View>
@@ -180,6 +184,7 @@ const NavigationHeaderComponent: React.FC<NativeStackHeaderProps> = React.memo((
             headerSubtitleStyle={extendedOptions.headerSubtitleStyle}
             headerShadowVisible={options.headerShadowVisible}
             headerTransparent={options.headerTransparent}
+            headerTitleAlign={options.headerTitleAlign}
         />
     );
 });
@@ -220,6 +225,16 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-start',
+    },
+    sideContainerHug: {
+        flexGrow: 0,
+        flexBasis: 'auto',
+    },
+    centerContainerLeft: {
+        flexGrow: 1,
+        flexShrink: 1,
+        minWidth: 0,
+        alignItems: 'flex-start',
     },
     centerContainer: {
         flexGrow: 0,
