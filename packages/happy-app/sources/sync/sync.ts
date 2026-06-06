@@ -148,6 +148,11 @@ class Sync {
     private static readonly MESSAGE_LIST_DISPATCH_INTERVAL_MS = 400;
     // First load for a session should stay bounded; older history is loaded on demand.
     private static readonly INITIAL_MESSAGES_LIMIT = 100;
+    // Per-request timeout for message fetches. Without it a hung request (socket that never
+    // settles) would stall the session's InvalidateSync forever — and invalidate() on a running
+    // sync is a no-op, so reopen/retry could never recover it. With it, a stall throws → backoff
+    // retries → self-heals.
+    private static readonly MESSAGE_FETCH_TIMEOUT_MS = 20000;
 
     encryption!: Encryption;
     serverID!: string;
@@ -156,6 +161,17 @@ class Sync {
     public encryptionCache = new EncryptionCache();
     private sessionsSync: InvalidateSync;
     private messagesSync = new Map<string, InvalidateSync>();
+    // In-flight message fetch aborter per session — lets resetMessagesSync cancel a hung request
+    // and lets each request enforce MESSAGE_FETCH_TIMEOUT_MS.
+    private messagesFetchAbort = new Map<string, AbortController>();
+    // Monotonic token guarding the "refreshing" flag clear: a stale InvalidateSync that unwinds
+    // after a reset must not clear a flag that a fresh cycle already re-armed.
+    private messagesFetchingToken = new Map<string, number>();
+    // Monotonic per-session fetch generation. Bumped by resetMessagesSync; a fetchMessagesV3 run
+    // re-checks it after every awaited boundary and bails before mutating sessionLastSeq / the
+    // dedupe set / applying, so a stale run that's already past its fetch can't write over a fresh
+    // one (stop()/abort only cancel work still inside the network call).
+    private messagesFetchGeneration = new Map<string, number>();
     private pendingMessagesSync = new Map<string, InvalidateSync>();
     private sessionReceivedMessages = new Map<string, Set<string>>();
     private messageSyncTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
@@ -467,6 +483,36 @@ class Sync {
     }
 
 
+    // Hard-reset a session's message sync. invalidate() on a *running* InvalidateSync is a no-op
+    // (it only sets the double-flag), so if the current cycle is stuck awaiting a hung request it
+    // can never recover — reopen/retry would do nothing. This aborts the in-flight request, stops
+    // and drops the InvalidateSync so a fresh one is created on the next kick, and clears the
+    // refreshing flag (bumping the token so the stale cycle's awaitQueue finally can't re-clear a
+    // freshly re-armed flag).
+    private resetMessagesSync = (sessionId: string) => {
+        // Bump first: any in-flight fetchMessagesV3 that's already past its network call will see a
+        // stale generation and bail before applying, even though stop()/abort can't unwind it.
+        this.messagesFetchGeneration.set(sessionId, (this.messagesFetchGeneration.get(sessionId) ?? 0) + 1);
+        // Drop the dedupe set: an aborted/stale run may have added message ids to it during decrypt
+        // without ever applying them (its dispatch bails on the generation check). Clearing here
+        // guarantees the fresh run re-decrypts and applies those messages instead of filtering them
+        // out as "already seen". A reset is the only thing that makes a run bail, so this clear
+        // always pairs with that bail — closing the stale-write/message-loss window.
+        this.sessionReceivedMessages.delete(sessionId);
+        const controller = this.messagesFetchAbort.get(sessionId);
+        if (controller) {
+            controller.abort();
+            this.messagesFetchAbort.delete(sessionId);
+        }
+        const ex = this.messagesSync.get(sessionId);
+        if (ex) {
+            ex.stop();
+            this.messagesSync.delete(sessionId);
+        }
+        this.messagesFetchingToken.set(sessionId, (this.messagesFetchingToken.get(sessionId) ?? 0) + 1);
+        storage.getState().setSessionMessagesFetching(sessionId, false);
+    }
+
     // Kick the per-session message sync. The underlying InvalidateSync wraps fetchMessagesV3 in
     // an infinite backoff, so a single fetch failure is followed by an automatic retry. When
     // surfaceIndicator is set (a user actually opened/focused the session), show the "refreshing"
@@ -477,6 +523,11 @@ class Sync {
     // Routine background kicks (per-batch ping, gap fill, message-syncing) pass surfaceIndicator
     // false so an active streaming session doesn't sit on a permanent spinner.
     private kickMessagesSync = (sessionId: string, surfaceIndicator: boolean = false) => {
+        // A user open/retry forces a clean restart: tear down any stuck/in-flight cycle so we
+        // don't just no-op invalidate() against a hung request that can never recover.
+        if (surfaceIndicator) {
+            this.resetMessagesSync(sessionId);
+        }
         let ex = this.messagesSync.get(sessionId);
         if (!ex) {
             ex = new InvalidateSync(() => this.fetchMessagesV3(sessionId));
@@ -485,9 +536,13 @@ class Sync {
         const alreadyFetching = !!storage.getState().sessionMessagesFetching[sessionId];
         ex.invalidate();
         if (surfaceIndicator && !alreadyFetching) {
+            const token = (this.messagesFetchingToken.get(sessionId) ?? 0) + 1;
+            this.messagesFetchingToken.set(sessionId, token);
             storage.getState().setSessionMessagesFetching(sessionId, true);
             ex.awaitQueue().finally(() => {
-                storage.getState().setSessionMessagesFetching(sessionId, false);
+                if (this.messagesFetchingToken.get(sessionId) === token) {
+                    storage.getState().setSessionMessagesFetching(sessionId, false);
+                }
             });
         }
     }
@@ -2855,6 +2910,26 @@ class Sync {
         return lock;
     }
 
+    // Fetch a page of session messages with a hard timeout and an externally-abortable controller.
+    // On timeout (MESSAGE_FETCH_TIMEOUT_MS) or external abort (resetMessagesSync) the request
+    // rejects, which propagates as a normal failure so the InvalidateSync backoff retries instead
+    // of hanging forever. The timer covers response.json() too, since that body read can also stall.
+    private fetchSessionMessages = async (url: string, controller: AbortController, errorLabel: string): Promise<any> => {
+        const timer = setTimeout(() => controller.abort(), Sync.MESSAGE_FETCH_TIMEOUT_MS);
+        try {
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${this.credentials.token}` },
+                signal: controller.signal,
+            });
+            if (!response.ok) {
+                throw new Error(`${errorLabel}: ${response.status}`);
+            }
+            return await response.json();
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
     private fetchMessagesV3 = async (sessionId: string) => {
         if (!this.credentials) return;
 
@@ -2864,8 +2939,15 @@ class Sync {
             throw new Error(`Session encryption not ready for ${sessionId}`);
         }
 
+        const controller = new AbortController();
+        this.messagesFetchAbort.set(sessionId, controller);
         const lock = this.getSessionMessageLock(sessionId);
         await lock.inLock(async () => {
+            // Generation is captured after acquiring the lock; resetMessagesSync bumps it. Re-check
+            // via isCurrent() after every awaited boundary and bail before any mutation/apply so a
+            // stale run (reset while we were mid-decrypt/await) can't write over a fresh one.
+            const generation = this.messagesFetchGeneration.get(sessionId) ?? 0;
+            const isCurrent = () => (this.messagesFetchGeneration.get(sessionId) ?? 0) === generation;
             const currentCursor = this.sessionLastSeq.get(sessionId);
             if (currentCursor === undefined) {
                 // Bootstrap with latest page only to avoid loading very large histories at once.
@@ -2875,40 +2957,41 @@ class Sync {
                 // retry loop and clears it only when the cycle settles — so a failed attempt no
                 // longer flips the UI back to "online" while a background retry is still running.
                 const API_ENDPOINT = getServerUrl();
-                const response = await fetch(
+                const data = await this.fetchSessionMessages(
                     `${API_ENDPOINT}/v3/sessions/${sessionId}/messages?limit=${Sync.INITIAL_MESSAGES_LIMIT}`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${this.credentials.token}`
-                        }
-                    }
+                    controller,
+                    'Failed to fetch initial messages',
                 );
-
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch initial messages: ${response.status}`);
-                }
-
-                const data = await response.json();
+                if (!isCurrent()) return;
                 const apiMessages = data.messages as ApiMessage[];
                 const hasMoreOlder: boolean = data.hasMore ?? false;
                 const normalizedMessages = apiMessages.length > 0
                     ? await this.decryptAndNormalizeMessages(sessionId, apiMessages, encryption)
                     : [];
+                if (!isCurrent()) return;
 
-                if (apiMessages.length > 0) {
-                    const maxSeq = Math.max(...apiMessages.map((m) => m.seq));
-                    this.sessionLastSeq.set(sessionId, Math.max(this.sessionLastSeq.get(sessionId) ?? 0, maxSeq));
-                } else if (!this.sessionLastSeq.has(sessionId)) {
-                    this.sessionLastSeq.set(sessionId, 0);
-                }
-
+                // Compute cursor bounds now, but commit sessionLastSeq INSIDE the guarded dispatch
+                // (atomically with applyMessages). Advancing the cursor here would move it forward
+                // even if a reset cancels the apply, so the fresh run would start past — and forever
+                // skip — messages that were fetched but never applied.
+                const bootstrapMaxSeq = apiMessages.length > 0
+                    ? Math.max(...apiMessages.map((m) => m.seq))
+                    : null;
                 const minSeq = apiMessages.length > 0
                     ? Math.min(...apiMessages.map((m) => m.seq))
                     : null;
 
                 await this.enqueueSessionMessageDispatch(sessionId, 'fetchMessagesV3:bootstrap', async () => {
+                    // The dispatch runs later (queue + pacing); a reset may have superseded us in the
+                    // meantime, so re-check before applying stale results.
+                    if (!isCurrent()) return;
                     if (normalizedMessages.length > 0) {
                         this.applyMessages(sessionId, normalizedMessages);
+                    }
+                    if (bootstrapMaxSeq !== null) {
+                        this.sessionLastSeq.set(sessionId, Math.max(this.sessionLastSeq.get(sessionId) ?? 0, bootstrapMaxSeq));
+                    } else if (!this.sessionLastSeq.has(sessionId)) {
+                        this.sessionLastSeq.set(sessionId, 0);
                     }
                     storage.getState().applyMessagesLoaded(sessionId);
                     storage.getState().setSessionPagination(sessionId, minSeq, hasMoreOlder);
@@ -2920,40 +3003,41 @@ class Sync {
 
             let afterSeq = currentCursor;
             let hasMore = true;
+            // Highest seq fetched this run. Committed to sessionLastSeq only inside the guarded
+            // dispatch (atomically with applyMessages); afterSeq stays local for loop pagination so
+            // the persistent cursor never advances past messages that a reset prevented us applying.
+            let nextLastSeq = currentCursor;
             const pendingNormalizedMessages: NormalizedMessage[] = [];
 
             while (hasMore) {
                 const API_ENDPOINT = getServerUrl();
-                const response = await fetch(
+                const data = await this.fetchSessionMessages(
                     `${API_ENDPOINT}/v3/sessions/${sessionId}/messages?after_seq=${afterSeq}&limit=100`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${this.credentials.token}`
-                        }
-                    }
+                    controller,
+                    'Failed to fetch v3 messages',
                 );
-
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch v3 messages: ${response.status}`);
-                }
-
-                const data = await response.json();
+                if (!isCurrent()) return;
                 const messages = data.messages as ApiMessage[];
                 hasMore = data.hasMore ?? false;
 
                 if (messages.length > 0) {
                     const normalizedMessages = await this.decryptAndNormalizeMessages(sessionId, messages, encryption);
+                    if (!isCurrent()) return;
                     pendingNormalizedMessages.push(...normalizedMessages);
 
                     const maxSeq = Math.max(...messages.map((m: any) => m.seq));
-                    this.sessionLastSeq.set(sessionId, Math.max(this.sessionLastSeq.get(sessionId) ?? 0, maxSeq));
+                    nextLastSeq = Math.max(nextLastSeq, maxSeq);
                     afterSeq = maxSeq;
                 } else {
                     hasMore = false;
                 }
             }
 
+            if (!isCurrent()) return;
             await this.enqueueSessionMessageDispatch(sessionId, 'fetchMessagesV3:incremental', async () => {
+                // The dispatch runs later (queue + pacing); a reset may have superseded us in the
+                // meantime, so re-check before applying stale results.
+                if (!isCurrent()) return;
                 for (const msg of pendingNormalizedMessages) {
                     if (msg.localId) {
                         const pending = this.pendingSendCallbacks.get(msg.localId);
@@ -2967,6 +3051,8 @@ class Sync {
                 if (pendingNormalizedMessages.length > 0) {
                     this.applyMessages(sessionId, pendingNormalizedMessages);
                 }
+                // Commit the cursor atomically with the apply, under the same generation guard.
+                this.sessionLastSeq.set(sessionId, Math.max(this.sessionLastSeq.get(sessionId) ?? 0, nextLastSeq));
 
                 storage.getState().applyMessagesLoaded(sessionId);
 
@@ -2979,6 +3065,12 @@ class Sync {
             });
 
             log.log(`💬 fetchMessagesV3 completed for session ${sessionId}, lastSeq=${this.sessionLastSeq.get(sessionId) ?? 0}`);
+        }).finally(() => {
+            // Drop the in-flight aborter only if it's still ours (a concurrent reset may have
+            // swapped in a new one).
+            if (this.messagesFetchAbort.get(sessionId) === controller) {
+                this.messagesFetchAbort.delete(sessionId);
+            }
         });
     }
 
@@ -4081,6 +4173,12 @@ class Sync {
                 clearTimeout(existing);
             }
             storage.getState().setSessionMessageSyncing(sessionId, true);
+            // Invalidate any in-flight message fetch (bump generation + abort + stop the sync, drop
+            // the dedupe set). message-syncing on its own does NOT bump the fetch generation, so a
+            // run started before this signal would still pass isCurrent() and could re-apply
+            // pre-sync messages and re-commit sessionLastSeq — defeating the clear+full-reload intent
+            // below and turning the delayed re-fetch into a stale-cursor incremental.
+            this.resetMessagesSync(sessionId);
             this.resetSessionMessageDispatch(sessionId);
             this.sessionMessageUpdateQueues.delete(sessionId);
             storage.getState().clearSessionMessages(sessionId);
@@ -4250,6 +4348,14 @@ class Sync {
             this.encryptedSessionDataKeys.delete(sessionId);
             projectManager.removeSession(sessionId);
             gitStatusSync.clearForSession(sessionId);
+            // Bump (don't delete) the generation so any in-flight run for this now-deleted session
+            // sees a stale generation and bails instead of resurrecting it.
+            this.messagesFetchGeneration.set(sessionId, (this.messagesFetchGeneration.get(sessionId) ?? 0) + 1);
+            this.messagesFetchAbort.get(sessionId)?.abort();
+            this.messagesFetchAbort.delete(sessionId);
+            this.messagesFetchingToken.delete(sessionId);
+            this.sessionReceivedMessages.delete(sessionId);
+            this.messagesSync.get(sessionId)?.stop();
             this.messagesSync.delete(sessionId);
             this.pendingMessagesSync.delete(sessionId);
             this.sessionLastSeq.delete(sessionId);
