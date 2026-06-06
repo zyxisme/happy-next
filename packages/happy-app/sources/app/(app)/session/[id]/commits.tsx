@@ -96,6 +96,14 @@ export default function CommitsScreen() {
     // Worktree branch→path mapping
     const [worktreeMap, setWorktreeMap] = React.useState<Record<string, string>>({});
 
+    // Upstream (remote tracking) info for the active branch.
+    // upstreamRef = name of the tracked remote branch (e.g. "origin/pro").
+    // upstreamHead = commit hash at the tip of that remote branch — the commit
+    // marked with the tag is the latest one already pushed online; everything
+    // listed above it is local and not yet pushed.
+    const [upstreamRef, setUpstreamRef] = React.useState<string | null>(null);
+    const [upstreamHead, setUpstreamHead] = React.useState<string | null>(null);
+
     // Load branches and worktree list on mount (re-runs when selected repo changes)
     React.useEffect(() => {
         (async () => {
@@ -192,6 +200,38 @@ export default function CommitsScreen() {
         return () => { cancelled = true; };
     }, [sessionId, activeCwd]);
 
+    // Resolve the upstream tracking branch + its tip commit, so we can mark
+    // which commits have already been pushed to the remote ("online").
+    React.useEffect(() => {
+        setUpstreamRef(null);
+        setUpstreamHead(null);
+        if (!activeCwd) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const branchRef = selectedBranch || 'HEAD';
+                const [nameResult, hashResult] = await Promise.all([
+                    sessionBash(sessionId, {
+                        command: `git rev-parse --abbrev-ref --symbolic-full-name "${branchRef}@{upstream}"`,
+                        cwd: activeCwd,
+                        timeout: 5000,
+                    }),
+                    sessionBash(sessionId, {
+                        command: `git rev-parse "${branchRef}@{upstream}"`,
+                        cwd: activeCwd,
+                        timeout: 5000,
+                    }),
+                ]);
+                if (cancelled) return;
+                if (nameResult.success && nameResult.stdout?.trim() && hashResult.success && hashResult.stdout?.trim()) {
+                    setUpstreamRef(nameResult.stdout.trim());
+                    setUpstreamHead(hashResult.stdout.trim());
+                }
+            } catch { /* ignore */ }
+        })();
+        return () => { cancelled = true; };
+    }, [sessionId, activeCwd, selectedBranch]);
+
     const handleRepoSelect = React.useCallback((index: number) => {
         if (index === selectedRepoIndex) return;
         setSelectedRepoIndex(index);
@@ -262,7 +302,22 @@ export default function CommitsScreen() {
         router.push(`/session/${sessionId}/commit?hash=${commit.hash}${cwdParam}`);
     }, [router, sessionId, activeCwd, sessionPath]);
 
-    const renderCommit = React.useCallback(({ item, index }: { item: CommitInfo; index: number }) => (
+    // Tag label for the upstream tip. Default to just the remote name
+    // (the part before "/"); only show the full "remote/branch" when the
+    // remote-side branch name differs from the local branch we're viewing.
+    const upstreamLabel = React.useMemo(() => {
+        if (!upstreamRef) return null;
+        const slash = upstreamRef.indexOf('/');
+        if (slash < 0) return upstreamRef;
+        const remote = upstreamRef.substring(0, slash);
+        const remoteBranch = upstreamRef.substring(slash + 1);
+        const activeBranch = selectedBranch || currentBranch;
+        return remoteBranch === activeBranch ? remote : upstreamRef;
+    }, [upstreamRef, selectedBranch, currentBranch]);
+
+    const renderCommit = React.useCallback(({ item, index }: { item: CommitInfo; index: number }) => {
+        const isUpstreamHead = !!upstreamHead && item.hash === upstreamHead;
+        return (
         <Pressable
             key={item.hash}
             onPress={() => handleCommitPress(item)}
@@ -289,6 +344,19 @@ export default function CommitsScreen() {
                     {item.title}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {isUpstreamHead && upstreamLabel ? (
+                        <View style={{
+                            backgroundColor: '#34C75922',
+                            borderRadius: 4,
+                            paddingHorizontal: 6,
+                            paddingVertical: 2,
+                            marginRight: 8,
+                        }}>
+                            <Text style={{ fontSize: 11, color: '#34C759', fontWeight: '700', ...Typography.mono() }}>
+                                {upstreamLabel}
+                            </Text>
+                        </View>
+                    ) : null}
                     <Text style={{
                         fontSize: 13,
                         color: theme.colors.textSecondary,
@@ -319,7 +387,8 @@ export default function CommitsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={16} color={theme.colors.groupped?.chevron || theme.colors.textSecondary} />
         </Pressable>
-    ), [commits.length, theme, handleCommitPress]);
+        );
+    }, [commits.length, theme, handleCommitPress, upstreamHead, upstreamLabel]);
 
     if (isLoading && commits.length === 0) {
         return (
