@@ -83,6 +83,15 @@ export const ca: TranslationStructure = {
         toolCompleted: 'Fet',
         toolFailed: 'Error',
         imageUnavailable: 'Imatge no disponible',
+        sessionTypeGroup: 'Sessió de grup',
+        infoType: 'Tipus',
+        infoModel: 'Model',
+        infoTokens: 'Tokens',
+        infoContext: 'Context',
+        infoUpdated: 'Actualitzat',
+        infoMachine: 'Màquina',
+        infoSessionKey: 'Clau de sessió',
+        infoCopied: 'Copiat',
     },
 
     common: {

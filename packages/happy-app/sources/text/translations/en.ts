@@ -99,6 +99,15 @@ export const en: TranslationStructure = {
         toolCompleted: 'Done',
         toolFailed: 'Failed',
         imageUnavailable: 'Image unavailable',
+        sessionTypeGroup: 'Group Session',
+        infoType: 'Type',
+        infoModel: 'Model',
+        infoTokens: 'Tokens',
+        infoContext: 'Context',
+        infoUpdated: 'Updated',
+        infoMachine: 'Machine',
+        infoSessionKey: 'Session Key',
+        infoCopied: 'Copied',
     },
 
     common: {

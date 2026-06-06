@@ -86,6 +86,15 @@ export const ja: TranslationStructure = {
         toolCompleted: '完了',
         toolFailed: '失敗',
         imageUnavailable: '画像を読み込めません',
+        sessionTypeGroup: 'グループセッション',
+        infoType: 'タイプ',
+        infoModel: 'モデル',
+        infoTokens: 'トークン',
+        infoContext: 'コンテキスト',
+        infoUpdated: '更新日時',
+        infoMachine: 'マシン',
+        infoSessionKey: 'セッションキー',
+        infoCopied: 'コピーしました',
     },
 
     common: {

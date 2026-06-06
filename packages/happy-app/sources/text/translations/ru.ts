@@ -94,6 +94,15 @@ export const ru: TranslationStructure = {
         toolCompleted: 'Готово',
         toolFailed: 'Ошибка',
         imageUnavailable: 'Изображение недоступно',
+        sessionTypeGroup: 'Групповая сессия',
+        infoType: 'Тип',
+        infoModel: 'Модель',
+        infoTokens: 'Токены',
+        infoContext: 'Контекст',
+        infoUpdated: 'Обновлено',
+        infoMachine: 'Машина',
+        infoSessionKey: 'Ключ сессии',
+        infoCopied: 'Скопировано',
     },
 
     common: {

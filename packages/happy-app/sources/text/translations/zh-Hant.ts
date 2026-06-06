@@ -85,6 +85,15 @@ export const zhHant: TranslationStructure = {
         toolCompleted: '完成',
         toolFailed: '失敗',
         imageUnavailable: '圖片無法載入',
+        sessionTypeGroup: '群組工作階段',
+        infoType: '類型',
+        infoModel: '模型',
+        infoTokens: 'Token 用量',
+        infoContext: '上下文',
+        infoUpdated: '更新時間',
+        infoMachine: '機器',
+        infoSessionKey: '工作階段識別碼',
+        infoCopied: '已複製',
     },
 
     common: {

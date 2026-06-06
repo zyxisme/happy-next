@@ -83,6 +83,15 @@ export const es: TranslationStructure = {
         toolCompleted: 'Listo',
         toolFailed: 'Error',
         imageUnavailable: 'Imagen no disponible',
+        sessionTypeGroup: 'Sesión grupal',
+        infoType: 'Tipo',
+        infoModel: 'Modelo',
+        infoTokens: 'Tokens',
+        infoContext: 'Contexto',
+        infoUpdated: 'Actualizado',
+        infoMachine: 'Máquina',
+        infoSessionKey: 'Clave de sesión',
+        infoCopied: 'Copiado',
     },
 
     common: {

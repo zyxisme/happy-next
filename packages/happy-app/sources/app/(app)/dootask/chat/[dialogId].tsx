@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions, Platform } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
@@ -20,6 +20,8 @@ import { ImageViewer } from '@/components/ImageViewer';
 import { MessageContextMenu, ContextMenuAction, MessagePreview } from '@/components/dootask/MessageContextMenu';
 import { layout } from '@/components/layout';
 import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
+import { isRunningOnMac } from '@/utils/platform';
+import { useIsTablet } from '@/utils/responsive';
 import type { DooTaskDialogMsg, PendingMessage, DisplayMessage, DooTaskDialog, DooTaskDialogUser } from '@/sync/dootask/types';
 import { generateMockMessages, MOCK_USER_NAMES, MOCK_USER_AVATARS } from '@/components/dootask/__dev__/mockChatMessages';
 
@@ -52,6 +54,7 @@ export default React.memo(function DooTaskChat() {
     }>();
     const { theme } = useUnistyles();
     const { width: screenWidth } = useWindowDimensions();
+    const isTablet = useIsTablet();
     const router = useRouter();
     const profile = useDootaskProfile();
     const userCache = useDootaskUserCache();
@@ -611,9 +614,21 @@ export default React.memo(function DooTaskChat() {
         rightActionCount: 1,
     });
 
+    // Narrow phones left-align the header title; tablets, web and Mac stay centered (matches SessionView).
+    const isNarrowPhone = Platform.OS !== 'web' && !isRunningOnMac() && !isTablet;
+    // iOS centers the titleView regardless of alignment options, so give it the full available
+    // width and left-align the text inside it. This page has a single right-hand button, so it
+    // reserves ~44pt less than SessionView's two-button header (192 → 148).
+    const leftAlignTitleWidth = Math.max(140, Math.min(screenWidth, layout.headerMaxWidth) - 148);
+
     const headerTitle = React.useCallback(() => (
-        <ChatHeaderTitle title={headerTitleText} subtitle={headerSubtitleText} width={headerTitleWidth} />
-    ), [headerTitleText, headerSubtitleText, headerTitleWidth]);
+        <ChatHeaderTitle
+            title={headerTitleText}
+            subtitle={headerSubtitleText}
+            align={isNarrowPhone ? 'left' : 'center'}
+            width={isNarrowPhone ? (Platform.OS === 'ios' ? leftAlignTitleWidth : undefined) : headerTitleWidth}
+        />
+    ), [headerTitleText, headerSubtitleText, headerTitleWidth, isNarrowPhone, leftAlignTitleWidth]);
 
     const headerRight = React.useCallback(() => (
         <Pressable style={styles.headerIconButton} onPress={handleOpenDetail} hitSlop={15}>
@@ -693,7 +708,7 @@ export default React.memo(function DooTaskChat() {
 
     return (
         <>
-            <Stack.Screen options={{ headerTitle, headerRight }} />
+            <Stack.Screen options={{ headerTitle, headerRight, headerTitleAlign: isNarrowPhone ? 'left' : 'center' }} />
             <View style={[styles.body, { backgroundColor: theme.colors.surface, maxWidth: layout.maxWidth, alignSelf: 'center', width: '100%' }]}>
                 <AgentContentView
                     content={content}

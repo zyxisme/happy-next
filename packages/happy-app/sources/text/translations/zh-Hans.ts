@@ -85,6 +85,15 @@ export const zhHans: TranslationStructure = {
         toolCompleted: '完成',
         toolFailed: '失败',
         imageUnavailable: '图片无法加载',
+        sessionTypeGroup: '群组会话',
+        infoType: '类型',
+        infoModel: '模型',
+        infoTokens: 'Token 用量',
+        infoContext: '上下文',
+        infoUpdated: '更新时间',
+        infoMachine: '机器',
+        infoSessionKey: '会话标识',
+        infoCopied: '已复制',
     },
 
     common: {

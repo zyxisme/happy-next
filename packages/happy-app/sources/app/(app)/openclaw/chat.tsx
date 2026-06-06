@@ -33,11 +33,16 @@ import { t } from '@/text';
 import { Typography } from '@/constants/Typography';
 import { layout } from '@/components/layout';
 import { getNativeHeaderTitleWidth } from '@/utils/nativeHeaderTitleWidth';
+import { ChatHeaderTitle } from '@/components/ChatHeaderTitle';
+import { isRunningOnMac } from '@/utils/platform';
+import { useIsTablet } from '@/utils/responsive';
 import { MarkdownView } from '@/components/markdown/MarkdownView';
 import { MultiTextInput, KeyPressEvent } from '@/components/MultiTextInput';
 import { useOpenClawConnection } from '@/openclaw/connection';
 import { useOpenClawMachine } from '@/sync/storage';
-import type { OpenClawChatMessage, OpenClawChatEvent, OpenClawContentBlock, OpenClawToolStreamEvent } from '@/openclaw/types';
+import type { OpenClawChatMessage, OpenClawChatEvent, OpenClawContentBlock, OpenClawToolStreamEvent, OpenClawSession } from '@/openclaw/types';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { SessionDetailModal } from '@/components/openclaw/SessionDetailModal';
 
 // Special ID for streaming message
 const STREAMING_MESSAGE_ID = '__streaming__';
@@ -683,14 +688,22 @@ export default function OpenClawChatPage() {
     const { theme } = useUnistyles();
     const safeArea = useSafeAreaInsets();
     const { width: screenWidth } = useWindowDimensions();
+    const isTablet = useIsTablet();
     const { machineId, sessionKey, sessionName: sessionNameParam } = useLocalSearchParams<{
         machineId: string;
         sessionKey: string;
         sessionName?: string;
     }>();
 
-    // Left: back button (1), Right: loading indicator (1)
+    // Left: back button (1), Right: machine button (1)
     const headerTitleMaxWidth = getNativeHeaderTitleWidth({ screenWidth, rightActionCount: 1 });
+
+    // Narrow phones left-align the header title; tablets, web and Mac stay centered (matches SessionView).
+    const isNarrowPhone = Platform.OS !== 'web' && !isRunningOnMac() && !isTablet;
+    // iOS centers the titleView regardless of alignment options, so give it the full available
+    // width and left-align the text inside it. This page has a single right-hand button, so it
+    // reserves ~44pt less than SessionView's two-button header (192 → 148).
+    const leftAlignTitleWidth = Math.max(140, Math.min(screenWidth, layout.headerMaxWidth) - 148);
 
     // Get machine data
     const machine = useOpenClawMachine(machineId ?? '');
@@ -778,6 +791,28 @@ export default function OpenClawChatPage() {
         autoConnect: true,
         onEvent: onEventCallback,
     });
+
+    // Session info bottom sheet — fetched on demand from sessions.list
+    const detailModalRef = React.useRef<BottomSheetModal>(null);
+    const [sessionDetail, setSessionDetail] = React.useState<OpenClawSession | null>(null);
+    const [loadingDetail, setLoadingDetail] = React.useState(false);
+
+    const handleOpenInfo = React.useCallback(async () => {
+        detailModalRef.current?.present();
+        if (!isConnected) return;
+        setLoadingDetail(true);
+        try {
+            const result = await send('sessions.list', { includeGlobal: true });
+            if (result.ok && result.payload) {
+                const list = (result.payload as { sessions?: OpenClawSession[] }).sessions ?? [];
+                setSessionDetail(list.find((s) => s.key === sessionKey) ?? null);
+            }
+        } catch {
+            // Ignore — the sheet still shows whatever data we have
+        } finally {
+            setLoadingDetail(false);
+        }
+    }, [isConnected, send, sessionKey]);
 
     // Single source of truth: messages list
     // Contains: history messages + pending user message + streaming AI message
@@ -1154,28 +1189,31 @@ export default function OpenClawChatPage() {
         <View style={styles.container}>
             <Stack.Screen
                 options={{
+                    headerTitleAlign: isNarrowPhone ? 'left' : 'center',
                     headerTitle: () => (
-                        <View style={{ alignItems: 'center', justifyContent: 'center', maxWidth: headerTitleMaxWidth }}>
-                            <Text
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                                style={[Typography.default('semiBold'), { fontSize: 17, lineHeight: 24, color: theme.colors.header.tint, flexShrink: 1 }]}
-                            >
-                                {sessionName}
-                            </Text>
-                            {machineName && (
-                                <Text
-                                    numberOfLines={1}
-                                    ellipsizeMode="tail"
-                                    style={[Typography.default(), { fontSize: 12, color: theme.colors.header.tint, opacity: 0.7, marginTop: -2 }]}
-                                >
-                                    {machineName}
-                                </Text>
-                            )}
-                        </View>
+                        <ChatHeaderTitle
+                            title={sessionName}
+                            subtitle={machineName}
+                            align={isNarrowPhone ? 'left' : 'center'}
+                            width={isNarrowPhone ? (Platform.OS === 'ios' ? leftAlignTitleWidth : undefined) : headerTitleMaxWidth}
+                        />
                     ),
-                    headerRight: () => null,
+                    headerRight: () => (
+                        <Pressable
+                            onPress={handleOpenInfo}
+                            style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
+                            hitSlop={8}
+                        >
+                            <Ionicons name="information-circle-outline" size={24} color={theme.colors.header.tint} />
+                        </Pressable>
+                    ),
                 }}
+            />
+            <SessionDetailModal
+                ref={detailModalRef}
+                session={sessionDetail}
+                machineName={machineName}
+                loading={loadingDetail}
             />
             <AgentContentView
                 content={content}
