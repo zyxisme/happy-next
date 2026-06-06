@@ -31,7 +31,7 @@ Send a natural language prompt in any Happy session describing what you want to 
 | Control order | "first... then...", "after completion" |
 | Use different agents | "dispatch to Claude/Codex/Gemini" |
 | Run in background | "async mode", "in the background" |
-| Specify model | "using opus", "with gpt-5.4" |
+| Specify model | "using opus", "with gpt-5.5" |
 
 ## Examples
 
@@ -99,12 +99,12 @@ Investigate in parallel, then summarize findings.
 A typical orchestrator run with dependencies:
 
 ```
-Task 1: "Design API schema" (Claude, opus-4-6)
+Task 1: "Design API schema" (Claude, opus-4-8)
     ↓
 Task 2: "Implement backend" (Claude, sonnet-4-6)    depends on Task 1
-Task 3: "Implement frontend" (Codex, gpt-5.4)       depends on Task 1
+Task 3: "Implement frontend" (Codex, gpt-5.5)       depends on Task 1
     ↓
-Task 4: "Run tests" (Gemini, gemini-2.5-pro)        depends on Task 2 + 3
+Task 4: "Run tests" (Gemini, gemini-3.5-pro-preview)  depends on Task 2 + 3
 ```
 
 Tasks 2 and 3 run in parallel after Task 1 completes. Task 4 waits for both.

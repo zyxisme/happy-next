@@ -31,7 +31,7 @@ description: "通过依赖图调度多代理工作流。"
 | 控制执行顺序 | "先……然后……"、"完成后" |
 | 使用不同代理 | "分发给 Claude/Codex/Gemini" |
 | 后台运行 | "异步模式"、"在后台" |
-| 指定模型 | "使用 opus"、"用 gpt-5.4" |
+| 指定模型 | "使用 opus"、"用 gpt-5.5" |
 
 ## 示例
 
@@ -98,12 +98,12 @@ description: "通过依赖图调度多代理工作流。"
 一个带依赖关系的典型编排器运行：
 
 ```
-Task 1: "设计 API schema" (Claude, opus-4-6)
+Task 1: "设计 API schema" (Claude, opus-4-8)
     ↓
 Task 2: "实现后端" (Claude, sonnet-4-6)    依赖 Task 1
-Task 3: "实现前端" (Codex, gpt-5.4)       依赖 Task 1
+Task 3: "实现前端" (Codex, gpt-5.5)       依赖 Task 1
     ↓
-Task 4: "运行测试" (Gemini, gemini-2.5-pro)        依赖 Task 2 + 3
+Task 4: "运行测试" (Gemini, gemini-3.5-pro-preview)  依赖 Task 2 + 3
 ```
 
 Task 2 和 Task 3 在 Task 1 完成后并行运行。Task 4 等待两者都完成。
