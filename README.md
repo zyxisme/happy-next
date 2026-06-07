@@ -131,6 +131,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Git changes page: stage, unstage, commit, discard
 - Per-file diff stats (+N/-N) for Claude, Codex, and Gemini
 - Image preview with sharing support
+- Commits list tags the commit at the upstream branch tip
 
 ### Session Sharing
 - Share sessions with friends via direct invite or public link
@@ -161,6 +162,7 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Separate origins architecture (no path reverse proxy)
 - `.env.example` with full configuration reference
 - Runtime env var injection for Docker builds
+- Zero-cost nginx `/healthz` endpoint for load-balancer / uptime probes
 
 ### Sync & Reliability
 - v3 messages API with seq-based sync, batch writes, and cursor pagination
@@ -169,6 +171,8 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - Fixes for cursor skip, outbox race, message duplication/loss
 - Chat reducer no longer synthesizes out-of-order completed-permission messages
 - Message send hardened for flaky networks; draft restore is suppressed while a send is in flight
+- Session loading reliability: 60s message-fetch timeout, recovery from permanent load failure, refresh indicator across the entire retry loop, and chunked base64 encoding to avoid stack overflow on very large payloads
+- Session draft rewritten as a single source of truth — fewer cases of drafts vanishing or reappearing
 
 ### Chat & Session UX
 - Image attachment and clipboard paste (web), image support in drafts, high-quality pass-through up to 1568px preserving text sharpness in code/UI screenshots
@@ -191,12 +195,15 @@ Happy Next is a major evolution of the original Happy. Here are the highlights:
 - `preview_html` tool for full-page HTML preview, colon-separated MCP tool naming
 - CLI hot-upgrade support mid-session
 - Path picker with directory autocomplete via remote machine listing (web + mobile)
+- Session header unified across iOS / Android / web with left-aligned title, new-session button on the header right, and a header title in the session info screen
+- Long user messages (>20k characters) collapse to a preview with a Show More toggle; text selection inside messages on web is fixed
 
 ### CLI
 - `happy update` self-upgrade, `happy --version` with all agent versions
 - Daemon auto-start on boot (`happy daemon enable/disable`), restart command
 - Unified system prompt injection for Codex and Gemini
 - Message receipt tracking with legacy compatibility
+- Permission-mode switches from the app forward synchronously to the running Claude subprocess (no longer wait until the next message)
 
 ### Bug Fixes & Stability
 - 250+ bug fixes: message sending reliability, session lifecycle, Markdown rendering, navigation, voice, DooTask, sharing

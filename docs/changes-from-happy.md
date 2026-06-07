@@ -131,6 +131,7 @@ The app now includes a full code browsing and git management experience.
 - **Staged file diff display** with accurate line count
 - **Base64 decoding** fixed for UTF-8 (CJK characters)
 - **Image preview** with sharing support in the file viewer
+- **Upstream-tip marker** in the commits list to highlight the commit that matches the upstream branch tip
 
 ## Session Sharing
 
@@ -204,6 +205,7 @@ Happy Next adds a first-class self-hosting path.
 - **`APP_URL`** configuration for connect flows
 - **`VOICE_TOOL_BRIDGE_BASE_URL`** for voice-to-server communication in Docker networks
 - **Self-host documentation**: `docs/self-host.md`
+- **`/healthz` endpoint** served directly by nginx for load-balancer and uptime probes (no app round-trip)
 
 ## Sync & Messaging Reliability
 
@@ -216,6 +218,7 @@ Major reliability improvements to the real-time sync layer.
 - **Message loss prevention** when CLI is offline
 - **Message receipt tracking**: CLI confirms message receipt with legacy compatibility
 - **happy-wire** shared protocol types package to deduplicate schemas across CLI/app/server
+- **Session loading reliability**: message-fetch timeout raised from 20s to 60s, sessions stuck in permanent load failure now recover, refresh indicator stays visible across the entire retry loop and on user-opened incremental loads, and base64 encoding is chunked so very large message payloads no longer trigger a stack overflow when restoring sessions
 
 ## Chat & Session UX
 
@@ -261,6 +264,12 @@ Extensive improvements to the chat and session management experience.
 - **Dual-mode long-press copy**: long-press to copy in tool detail views (text or JSON)
 - **Colon-separated tool naming**: support MCP tool names with colons (`server:tool`)
 - **Tool input as display name**: use tool input title for MCP tool display name
+- **Unified session header**: left-aligned title across iOS / Android / web, new-session button on the header right, header title in the session info screen, and a dedicated OpenClaw session info sheet
+- **Narrow-phone header**: title left-aligns instead of center-overflowing on narrow phones; back icon fixed in dark-theme landscape
+- **Long user messages**: messages over ~20k characters collapse to a preview with a Show More toggle
+- **Web text selection**: text selection inside chat messages on web fixed
+- **Action bar stability**: per-message action bar no longer flickers when the message flips between thinking and streaming states
+- **Session draft as single source of truth**: rewritten to eliminate drafts vanishing or reappearing
 
 ## CLI Improvements
 
@@ -288,6 +297,7 @@ The CLI (`happy-next-cli`) received substantial upgrades.
 - **Attribution setting**: new setting to control commit attribution, default off
 - **Unified system prompt injection**: shared prompt injection for Codex and Gemini
 - **Orchestrator guidance**: first-turn prompts include orchestrator usage guidance
+- **`set_permission_mode` forwarding**: permission-mode switches from the app are forwarded synchronously to the active Claude subprocess via the stream-json `set_permission_mode` control request, instead of taking effect only on the next user message
 
 ## Server
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 13 - 2026-06-07
+
+Session header is reworked with a left-aligned title, a new-session button, and OpenClaw session info sheets; session loading gets a reliability sweep (longer fetch timeout, retry-loop refresh indicator, stuck-load recovery, base64 stack-overflow fix); long user messages collapse and select cleanly on web; the commits list tags the upstream tip; nginx adds a /healthz endpoint; Happy CLI updates to v0.5.3 with mid-turn permission-mode forwarding to the Claude subprocess.
+
+- Session header: unified left-aligned title across iOS / Android / web — new-session button on the header right, header title in the session info screen, and a dedicated OpenClaw session info sheet
+- Session header: left-align the title on narrow phones (was center-overflowing), and fix the invisible back icon in dark-theme landscape
+- Messages: long user messages (>20k chars) now collapse to a preview with a Show More toggle; web text selection inside messages is fixed
+- Messages: per-message action bar no longer flickers when the message flips between thinking and streaming states
+- Session loading reliability: message fetch timeout raised 20s → 60s; sessions stuck in permanent load failure now recover; refresh indicator stays visible across the entire retry loop and also on user-opened incremental loads
+- Session loading reliability: chunk base64 encoding so very large message payloads no longer trigger a stack overflow when restoring sessions
+- Session draft: rewritten as a single source of truth — fewer cases of drafts vanishing or reappearing
+- Commits view: the commit at the upstream tip is now tagged
+- Deploy: nginx serves a zero-cost `/healthz` endpoint so load balancers and uptime checks have a cheap target
+- CLI: Happy CLI updated to v0.5.3 — permission-mode switches from the app now forward synchronously to the Claude subprocess instead of waiting until the next message
+
 ## Version 12 - 2026-06-02
 
 Happy Voice moves to a new Volcano (Doubao) real-time gateway with streaming speech and native iOS voice calls, selectable voice timbre and speech rate, end-to-end-encrypted voice settings sync, and richer slash-command autocomplete with live capability sync. This update also speeds up session open with incremental catch-up and fixes draft restore and the Claude Opus 4.8 context window.
