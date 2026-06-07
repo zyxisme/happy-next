@@ -663,6 +663,7 @@ export const ru: TranslationStructure = {
     },
 
     sessionInfo: {
+        title: 'Сведения о сессии',
         // Used by Session Info screen (app/(app)/session/[id]/info.tsx)
         killSession: 'Завершить сессию',
         killSessionConfirm: 'Вы уверены, что хотите завершить эту сессию?',

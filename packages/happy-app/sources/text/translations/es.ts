@@ -776,6 +776,7 @@ export const es: TranslationStructure = {
     },
 
     sessionInfo: {
+        title: 'Detalles de la sesión',
         // Used by Session Info screen (app/(app)/session/[id]/info.tsx)
         killSession: 'Terminar sesión',
         killSessionConfirm: '¿Seguro que quieres terminar esta sesión?',

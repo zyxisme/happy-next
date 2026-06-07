@@ -778,6 +778,7 @@ export const zhHant: TranslationStructure = {
     },
 
     sessionInfo: {
+        title: '會話詳情',
         // Used by Session Info screen (app/(app)/session/[id]/info.tsx)
         killSession: '終止工作階段',
         killSessionConfirm: '您確定要終止此工作階段嗎？',

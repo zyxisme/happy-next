@@ -808,6 +808,7 @@ export const ja: TranslationStructure = {
     },
 
     sessionInfo: {
+        title: 'セッションの詳細',
         // Used by Session Info screen (app/(app)/session/[id]/info.tsx)
         killSession: 'セッションを終了',
         killSessionConfirm: 'このセッションを終了してもよろしいですか？',

@@ -90,7 +90,7 @@ export default function RootLayout() {
                 name="session/[id]/info"
                 options={{
                     headerShown: true,
-                    headerTitle: '',
+                    headerTitle: t('sessionInfo.title'),
                 }}
             />
             <Stack.Screen
