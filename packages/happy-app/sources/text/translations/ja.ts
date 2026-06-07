@@ -1460,6 +1460,7 @@ export const ja: TranslationStructure = {
         forkFromHere: 'ここから分岐',
         playVoice: '読み上げ',
         stopVoice: '停止',
+        tooLongPlaceholder: ({ chars }: { chars: number }) => `長いメッセージ（${chars} 文字）。タップして表示。`,
     },
 
     codex: {

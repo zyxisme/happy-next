@@ -197,21 +197,40 @@ export default function TextSelectionScreen() {
                     ),
                 }}
             />
-            <WebView
-                originWhitelist={['*']}
-                source={{ html }}
-                javaScriptEnabled
-                domStorageEnabled
-                setSupportMultipleWindows={false}
-                mixedContentMode="always"
-                {...(Platform.OS === 'ios' ? {
-                    contentInsetAdjustmentBehavior: 'never' as const,
-                    automaticallyAdjustContentInsets: false,
-                    decelerationRate: 'normal' as const,
-                    directionalLockEnabled: true,
-                } : {})}
-                style={{ flex: 1, backgroundColor: 'transparent' }}
-            />
+            {Platform.OS === 'web' ? (
+                // react-native-webview is unsupported on web. Use a plain iframe with the same
+                // srcDoc html — a browser-in-a-browser, same content & styling as the native side.
+                // @ts-ignore web-only iframe
+                <iframe
+                    title="text-selection"
+                    srcDoc={html}
+                    sandbox="allow-same-origin"
+                    style={{
+                        display: 'block',
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        background: 'transparent',
+                        flex: 1,
+                    }}
+                />
+            ) : (
+                <WebView
+                    originWhitelist={['*']}
+                    source={{ html }}
+                    javaScriptEnabled
+                    domStorageEnabled
+                    setSupportMultipleWindows={false}
+                    mixedContentMode="always"
+                    {...(Platform.OS === 'ios' ? {
+                        contentInsetAdjustmentBehavior: 'never' as const,
+                        automaticallyAdjustContentInsets: false,
+                        decelerationRate: 'normal' as const,
+                        directionalLockEnabled: true,
+                    } : {})}
+                    style={{ flex: 1, backgroundColor: 'transparent' }}
+                />
+            )}
         </View>
     );
 }

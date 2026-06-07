@@ -3,10 +3,12 @@ import { View, Text, Pressable, Platform, ActivityIndicator } from "react-native
 import { Image } from "expo-image";
 import { Ionicons, SimpleLineIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { useRouter } from 'expo-router';
 import { ImageViewer } from "./ImageViewer";
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { MarkdownView, OptionsLoadingState } from "./markdown/MarkdownView";
 import { t } from '@/text';
+import { storeTempText } from '@/sync/persistence';
 import { Message, UserTextMessage, AgentTextMessage, ToolCallMessage } from "@/sync/typesMessage";
 import { Metadata } from "@/sync/storageTypes";
 import { layout } from "./layout";
@@ -258,6 +260,11 @@ function RenderBlock(props: {
   }
 }
 
+// Beyond this many characters, parseMarkdown + the resulting React tree freezes the UI on
+// mid-range devices. Such messages are almost always pasted dumps (skill bodies, logs, files),
+// so we collapse them to a single tap-to-view placeholder instead of rendering them inline.
+const LONG_USER_MESSAGE_THRESHOLD = 20000;
+
 function UserTextBlock(props: {
   message: UserTextMessage;
   sessionId: string;
@@ -273,6 +280,7 @@ function UserTextBlock(props: {
   showActionBar?: boolean;
   forkLoading?: boolean;
 }) {
+  const router = useRouter();
   const [imageViewerVisible, setImageViewerVisible] = React.useState(false);
   const [imageViewerIndex, setImageViewerIndex] = React.useState(0);
   const [optionsLoadingState, setOptionsLoadingState] = React.useState<OptionsLoadingState>({ loadingIndex: null });
@@ -331,6 +339,17 @@ function UserTextBlock(props: {
     copyMessageText(messageText);
   }, [messageText]);
 
+  const renderedText = props.message.displayText || props.message.text;
+  const isTooLong = renderedText.length > LONG_USER_MESSAGE_THRESHOLD;
+  const handleOpenFullText = React.useCallback(() => {
+    try {
+      const textId = storeTempText(renderedText);
+      router.push(`/text-selection?textId=${textId}`);
+    } catch (error) {
+      console.error('Error opening long message:', error);
+    }
+  }, [renderedText, router]);
+
   return (
     <View style={styles.userMessageContainer} {...hoverHandlers}>
       {senderLabel && (
@@ -359,16 +378,28 @@ function UserTextBlock(props: {
             />
           </>
         )}
-        <MarkdownView
-          markdown={props.message.displayText || props.message.text}
-          sessionId={props.sessionId}
-          sessionWorkingDirectory={props.sessionWorkingDirectory}
-          sessionHomeDirectory={props.sessionHomeDirectory}
-          onOptionPress={props.readOnly ? undefined : handleOptionPress}
-          onOptionLongPress={props.readOnly ? undefined : handleOptionLongPress}
-          optionsLoadingState={props.readOnly ? undefined : optionsLoadingState}
-          hideOptions={props.readOnly}
-        />
+        {isTooLong ? (
+          <Pressable
+            onPress={handleOpenFullText}
+            onLongPress={handleOpenFullText}
+            style={styles.longMessagePlaceholder}
+          >
+            <Text style={styles.longMessagePlaceholderText}>
+              {t('message.tooLongPlaceholder', { chars: renderedText.length })}
+            </Text>
+          </Pressable>
+        ) : (
+          <MarkdownView
+            markdown={renderedText}
+            sessionId={props.sessionId}
+            sessionWorkingDirectory={props.sessionWorkingDirectory}
+            sessionHomeDirectory={props.sessionHomeDirectory}
+            onOptionPress={props.readOnly ? undefined : handleOptionPress}
+            onOptionLongPress={props.readOnly ? undefined : handleOptionLongPress}
+            optionsLoadingState={props.readOnly ? undefined : optionsLoadingState}
+            hideOptions={props.readOnly}
+          />
+        )}
         {props.message.deliveryError ? (
           <Text style={styles.deliveryErrorText}>{props.message.deliveryError}</Text>
         ) : null}
@@ -586,6 +617,16 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 12,
     marginTop: 4,
     marginBottom: 4,
+  },
+  longMessagePlaceholder: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  longMessagePlaceholderText: {
+    color: theme.colors.userMessageText,
+    fontSize: 14,
+    fontStyle: 'italic',
+    opacity: 0.85,
   },
   agentMessageContainer: {
     paddingHorizontal: 16,

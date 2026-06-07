@@ -1445,6 +1445,7 @@ export const en = {
         forkFromHere: 'Fork from here',
         playVoice: 'Play voice',
         stopVoice: 'Stop voice',
+        tooLongPlaceholder: ({ chars }: { chars: number }) => `Long message (${chars} characters). Tap to view.`,
     },
 
     codex: {

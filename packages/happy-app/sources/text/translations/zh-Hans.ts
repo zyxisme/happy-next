@@ -1430,6 +1430,7 @@ export const zhHans: TranslationStructure = {
         forkFromHere: '从这里分叉',
         playVoice: '朗读',
         stopVoice: '停止朗读',
+        tooLongPlaceholder: ({ chars }: { chars: number }) => `消息过长（${chars} 字符），点击查看`,
     },
 
     codex: {

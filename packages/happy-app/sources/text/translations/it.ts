@@ -1458,6 +1458,7 @@ export const it: TranslationStructure = {
         forkFromHere: 'Dirama da qui',
         playVoice: 'Riproduci voce',
         stopVoice: 'Ferma voce',
+        tooLongPlaceholder: ({ chars }: { chars: number }) => `Messaggio lungo (${chars} caratteri). Tocca per aprire.`,
     },
 
     codex: {

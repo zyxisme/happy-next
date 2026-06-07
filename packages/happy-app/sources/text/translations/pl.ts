@@ -1439,6 +1439,7 @@ export const pl: TranslationStructure = {
         forkFromHere: 'Rozgałęź stąd',
         playVoice: 'Odtwórz głos',
         stopVoice: 'Zatrzymaj',
+        tooLongPlaceholder: ({ chars }: { chars: number }) => `Długa wiadomość (${chars} znaków). Stuknij, aby otworzyć.`,
     },
 
     codex: {

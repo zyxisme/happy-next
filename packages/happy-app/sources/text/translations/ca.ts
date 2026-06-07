@@ -1428,6 +1428,7 @@ export const ca: TranslationStructure = {
         forkFromHere: 'Bifurca des d\'aquí',
         playVoice: 'Reprodueix la veu',
         stopVoice: 'Atura la veu',
+        tooLongPlaceholder: ({ chars }: { chars: number }) => `Missatge llarg (${chars} caràcters). Toca per veure'l.`,
     },
 
     codex: {

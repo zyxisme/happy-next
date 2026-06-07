@@ -1427,6 +1427,7 @@ export const ru: TranslationStructure = {
         forkFromHere: 'Форкнуть отсюда',
         playVoice: 'Озвучить',
         stopVoice: 'Остановить',
+        tooLongPlaceholder: ({ chars }: { chars: number }) => `Длинное сообщение (${chars} симв.). Нажмите, чтобы открыть.`,
     },
 
     codex: {
