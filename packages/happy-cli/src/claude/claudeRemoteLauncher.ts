@@ -138,13 +138,15 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
 
     // Create permission handler
     const permissionHandler = new PermissionHandler(session);
-    const validPermissionModes: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions'];
+    const claudeModes = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions'] as const;
+    const isClaudeMode = (m: PermissionMode | undefined): m is typeof claudeModes[number] =>
+        !!m && (claudeModes as readonly string[]).includes(m);
 
     session.client.rpcHandlerManager.registerHandler<{ mode?: PermissionMode }, boolean>(
         'permission-mode-changed',
         async (payload) => {
             const mode = payload?.mode;
-            if (!mode || !validPermissionModes.includes(mode)) {
+            if (!isClaudeMode(mode)) {
                 logger.debug('[remote]: invalid permission mode via rpc', { mode });
                 return false;
             }
@@ -551,6 +553,9 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
                     },
                     onQueryCreated: (q) => {
                         currentQuery = q;
+                        permissionHandler.setModeForwarder(async (mode) => {
+                            if (isClaudeMode(mode)) await q.setPermissionMode(mode);
+                        });
                     },
                     onReady: () => {
                         if (!pending && session.queue.size() === 0) {
@@ -593,6 +598,7 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
 
                 logger.debug('[remote]: launch finally');
                 currentQuery = null;
+                permissionHandler.setModeForwarder(undefined);
 
                 // Terminate all ongoing tool calls
                 for (let [toolCallId, { parentToolCallId }] of ongoingToolCalls) {

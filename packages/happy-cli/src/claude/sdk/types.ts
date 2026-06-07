@@ -107,6 +107,11 @@ export interface InterruptRequest extends ControlRequest {
     subtype: 'interrupt'
 }
 
+export interface SetPermissionModeRequest extends ControlRequest {
+    subtype: 'set_permission_mode'
+    mode: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan'
+}
+
 export interface CanUseToolRequest extends ControlRequest {
     subtype: 'can_use_tool'
     tool_name: string
