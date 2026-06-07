@@ -664,7 +664,7 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 // Skipped for AI-message forks (the new session continues after the reply, nothing to pre-fill).
                 const selectedMessage = uuid ? userMessages.find(m => m.uuid === uuid) : undefined;
                 if (!skipDraft && selectedMessage?.content) {
-                    storage.getState().updateSessionDraft(spawnResult.sessionId, {
+                    storage.getState().setDraft(spawnResult.sessionId, {
                         text: selectedMessage.content,
                         images: [],
                     });

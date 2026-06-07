@@ -3,7 +3,7 @@ import { View, Pressable, FlatList, Platform, RefreshControl } from 'react-nativ
 import { Swipeable } from 'react-native-gesture-handler';
 import { Text } from '@/components/StyledText';
 import { usePathname } from 'expo-router';
-import { SessionListViewItem, useSetting, useOrchestratorRunningTaskCount } from '@/sync/storage';
+import { SessionListViewItem, useSetting, useOrchestratorRunningTaskCount, useSessionHasDraft } from '@/sync/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { getSessionName, useSessionStatus, getSessionSubtitle, getSessionAvatarId } from '@/utils/sessionUtils';
 import { Avatar } from './Avatar';
@@ -499,6 +499,7 @@ const SessionItem = React.memo(({ session, selected, isFirst, isLast, isSingle }
 }) => {
     const styles = stylesheet;
     const sessionStatus = useSessionStatus(session);
+    const hasDraft = useSessionHasDraft(session.id);
     const sessionName = getSessionName(session);
     const sessionSubtitle = getSessionSubtitle(session);
     const compactSessionView = useSetting('compactSessionView');
@@ -550,7 +551,7 @@ const SessionItem = React.memo(({ session, selected, isFirst, isLast, isSingle }
             {!compactSessionView && (
                 <View style={styles.avatarContainer}>
                     <Avatar id={avatarId} size={48} monochrome={!sessionStatus.isConnected} flavor={session.metadata?.flavor} sessionIcon={session.metadata?.sessionIcon} />
-                    {session.draft && (
+                    {hasDraft && (
                         <View style={styles.draftIconContainer}>
                             <Ionicons
                                 name="create-outline"

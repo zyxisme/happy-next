@@ -9,7 +9,7 @@ import { getSessionName, useSessionStatus, getSessionAvatarId, formatPathRelativ
 import { Avatar } from './Avatar';
 import { Typography } from '@/constants/Typography';
 import { StatusDot } from './StatusDot';
-import { useAllMachines, useOrchestratorRunningTaskCount, useSetting } from '@/sync/storage';
+import { useAllMachines, useOrchestratorRunningTaskCount, useSetting, useSessionHasDraft } from '@/sync/storage';
 import { StyleSheet } from 'react-native-unistyles';
 import { isMachineOnline } from '@/utils/machineUtils';
 import { machineSpawnNewSession, sessionKill } from '@/sync/ops';
@@ -363,6 +363,7 @@ export function ActiveSessionsGroup({ sessions, selectedSessionId }: ActiveSessi
 const CompactSessionRow = React.memo(({ session, selected, showBorder }: { session: Session; selected?: boolean; showBorder?: boolean }) => {
     const styles = stylesheet;
     const sessionStatus = useSessionStatus(session);
+    const hasDraft = useSessionHasDraft(session.id);
     const sessionName = getSessionName(session);
     const runningTaskCount = useOrchestratorRunningTaskCount(session.id);
     const navigateToSession = useNavigateToSession();
@@ -486,7 +487,7 @@ const CompactSessionRow = React.memo(({ session, selected, showBorder }: { sessi
                     {/* Status indicators on the right side */}
                     <View style={styles.statusIndicatorsRight}>
                         {/* Draft status indicator */}
-                        {session.draft && (
+                        {hasDraft && (
                             <View style={styles.taskStatusContainer}>
                                 <Ionicons
                                     name="create-outline"

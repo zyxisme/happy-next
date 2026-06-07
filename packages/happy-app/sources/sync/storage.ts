@@ -9,7 +9,7 @@ import { applySettings, Settings } from "./settings";
 import { LocalSettings, applyLocalSettings } from "./localSettings";
 import { Profile } from "./profile";
 import { UserProfile } from "./friendTypes";
-import { loadSettings, loadLocalSettings, saveLocalSettings, saveSettings, loadProfile, saveProfile, loadSessionDrafts, saveSessionDrafts, loadDooTaskProfile, saveDooTaskProfile, loadDooTaskUserCache, saveDooTaskUserCache, clearDooTaskUserCache, loadDooTaskProjects, saveDooTaskProjects, clearDooTaskProjects, loadDooTaskPriorities, saveDooTaskPriorities, clearDooTaskPriorities, loadDooTaskColumns, saveDooTaskColumns, clearDooTaskColumns, loadRegisteredReposLocal, saveRegisteredReposLocal } from "./persistence";
+import { loadSettings, loadLocalSettings, saveLocalSettings, saveSettings, loadProfile, saveProfile, loadSessionDrafts, saveSessionDrafts, normalizeDraft, loadDooTaskProfile, saveDooTaskProfile, loadDooTaskUserCache, saveDooTaskUserCache, clearDooTaskUserCache, loadDooTaskProjects, saveDooTaskProjects, clearDooTaskProjects, loadDooTaskPriorities, saveDooTaskPriorities, clearDooTaskPriorities, loadDooTaskColumns, saveDooTaskColumns, clearDooTaskColumns, loadRegisteredReposLocal, saveRegisteredReposLocal } from "./persistence";
 import { DooTaskProfile, DooTaskProject, DooTaskItem, DooTaskFilters, DooTaskPager, DooTaskPriority, DooTaskColumn } from './dootask/types';
 import { dootaskFetchProjects, dootaskFetchTasks, dootaskFetchUsersBasic, dootaskFetchPriorities, dootaskFetchProjectColumns } from './dootask/api';
 import type { PermissionMode } from '@/components/PermissionModeSelector';
@@ -106,10 +106,10 @@ interface StorageState {
     sessionListViewData: SessionListViewItem[] | null;
     sessionMessages: Record<string, SessionMessages>;
     sessionPendingMessages: Record<string, PendingMessage[]>;
-    // Per-session "a send is currently in flight" flag (transient, not persisted).
-    // Used to suppress draft restoration while a message is being sent so that
-    // leaving and re-entering the chat mid-send can't resurrect the just-sent text.
-    sessionSendInFlight: Record<string, boolean>;
+    // Per-session input drafts. Single source of truth, mirrored to the `session-drafts`
+    // MMKV key on every write. Deliberately NOT a field on Session — drafts must never
+    // take part in session sync/merge/cache. See useDraft.
+    drafts: Record<string, SessionDraft>;
     // Per-session "message-list bootstrap (re)fetch is in flight" flag (transient, not persisted).
     // Set true while a focus/retry-triggered full reload (fetchMessagesV3 bootstrap) is loading,
     // cleared on success OR error. Drives the "refreshing" indicator in SessionView.
@@ -197,10 +197,9 @@ interface StorageState {
     setOrchestratorActivityBatch: (activity: Record<string, Record<string, string[]>>, totalRunCounts?: Record<string, number>) => void;
     getActiveSessions: () => Session[];
     applyCachedSessions: (sessions: Record<string, Session>, sharedSessions: Record<string, Session>) => void;
-    updateSessionDraft: (sessionId: string, draft: SessionDraft | null) => void;
+    setDraft: (sessionId: string, draft: SessionDraft | null) => void;
     updateSessionActivity: (sessionId: string, active: boolean) => void;
     setAwaitingResponse: (sessionId: string, value: number | null) => void;
-    setSendInFlight: (sessionId: string, inFlight: boolean) => void;
     setSessionMessagesFetching: (sessionId: string, fetching: boolean) => void;
     setSessionUpgrading: (sessionId: string, upgrading: boolean) => void;
     setSessionFastMode: (sessionId: string, fastMode: boolean) => void;
@@ -384,7 +383,6 @@ function areSessionsShallowEqual(a: Session, b: Session): boolean {
         a.messageSyncing === b.messageSyncing &&
         a.presence === b.presence &&
         a.todos === b.todos &&
-        a.draft === b.draft &&
         a.permissionMode === b.permissionMode &&
         a.modelMode === b.modelMode &&
         a.fastMode === b.fastMode &&
@@ -445,7 +443,7 @@ export const storage = create<StorageState>()((set, get) => {
         sessionListViewData: null,
         sessionMessages: {},
         sessionPendingMessages: {},
-        sessionSendInFlight: {},
+        drafts: loadSessionDrafts(),
         sessionMessagesFetching: {},
         sessionGitStatus: {},
         realtimeStatus: 'disconnected',
@@ -498,10 +496,8 @@ export const storage = create<StorageState>()((set, get) => {
             return Object.values(state.sessions).filter(s => s.active);
         },
         applyCachedSessions: (sessions, sharedSessions) => set((state) => {
-            // Drafts are not stored in the sessions cache (see stripVolatileSessionFields).
-            // Restore them from the authoritative `session-drafts` MMKV so a cleared
-            // draft stays cleared and an unsent one survives the cold-start hydration.
-            const persistedDrafts = loadSessionDrafts();
+            // Drafts live in their own `drafts` map (loaded at store init), never on the
+            // Session object — so cache hydration does not touch them.
             const normalizedSessions = Object.fromEntries(
                 Object.entries(sessions).map(([id, session]) => [
                     id,
@@ -511,7 +507,6 @@ export const storage = create<StorageState>()((set, get) => {
                         thinking: false,
                         thinkingAt: 0,
                         messageSyncing: false,
-                        draft: persistedDrafts[id] ?? null,
                     }
                 ])
             );
@@ -524,7 +519,6 @@ export const storage = create<StorageState>()((set, get) => {
                         thinking: false,
                         thinkingAt: 0,
                         messageSyncing: false,
-                        draft: persistedDrafts[id] ?? null,
                     }
                 ])
             );
@@ -566,11 +560,6 @@ export const storage = create<StorageState>()((set, get) => {
             };
         }),
         applySessions: (sessions: (Omit<Session, 'presence'> & { presence?: "online" | number })[]) => set((state) => {
-            // Load drafts if sessions are empty (initial load). Read fresh from MMKV
-            // rather than a startup snapshot so a draft cleared mid-session can't be
-            // resurrected from stale in-memory state.
-            const savedDrafts = Object.keys(state.sessions).length === 0 ? loadSessionDrafts() : {};
-
             // Merge new sessions with existing ones
             const mergedSessions: Record<string, Session> = { ...state.sessions };
 
@@ -589,9 +578,6 @@ export const storage = create<StorageState>()((set, get) => {
                 const useExistingAgentState = existing &&
                     existing.agentStateVersion >= session.agentStateVersion;
 
-                // Preserve existing draft if it exists, or load from saved data
-                const existingDraft = existing?.draft;
-                const savedDraft = savedDrafts[session.id];
                 const existingMessageSyncing = existing?.messageSyncing;
                 const cloudSessionMode = getSessionModeForSession(state.sessionModeConfig, session.id);
 
@@ -636,7 +622,6 @@ export const storage = create<StorageState>()((set, get) => {
                     thinkingAt: useExistingThinking ? existing.thinkingAt : (session.thinkingAt ?? 0),
                     awaitingResponseSince: mergedAwaitingResponseSince,
                     presence: resolvedPresence,
-                    draft: existingDraft || savedDraft || session.draft || null,
                     permissionMode: cloudSessionMode?.permissionMode ?? existing?.permissionMode ?? session.permissionMode ?? 'default',
                     modelMode: cloudSessionMode?.modelMode ?? existing?.modelMode ?? session.modelMode ?? 'default',
                     fastMode: cloudSessionMode?.fastMode ?? existing?.fastMode ?? session.fastMode,
@@ -1365,42 +1350,22 @@ export const storage = create<StorageState>()((set, get) => {
                 orchestratorTotalRunCount: { ...state.orchestratorTotalRunCount, ...totalRunCounts },
             }),
         })),
-        updateSessionDraft: (sessionId: string, draft: SessionDraft | null) => set((state) => {
-            const isShared = sessionId in state.sharedSessions;
-            const session = state.sessions[sessionId] ?? state.sharedSessions[sessionId];
-            if (!session) return state;
-
-            // Normalize: store null if both text and images are empty
-            const normalizedDraft = (draft && (draft.text.trim() || draft.images.length > 0))
-                ? draft : null;
-
-            // Collect all drafts for persistence (from both own and shared sessions)
-            const allDrafts: Record<string, SessionDraft> = {};
-            const allSessions = { ...state.sessions, ...state.sharedSessions };
-            Object.entries(allSessions).forEach(([id, sess]) => {
-                if (id === sessionId) {
-                    if (normalizedDraft) {
-                        allDrafts[id] = normalizedDraft;
-                    }
-                } else if (sess.draft) {
-                    allDrafts[id] = sess.draft;
-                }
-            });
-
-            // Persist drafts
-            saveSessionDrafts(allDrafts);
-
-            const updatedSession = { ...session, draft: normalizedDraft };
-
-            if (isShared) {
-                const updatedSharedSessions = { ...state.sharedSessions, [sessionId]: updatedSession };
-                const sessionListViewData = buildSessionListViewData(state.sessions, updatedSharedSessions);
-                return { ...state, sharedSessions: updatedSharedSessions, sessionListViewData };
+        setDraft: (sessionId: string, draft: SessionDraft | null) => set((state) => {
+            // Single source of truth for drafts. Independent of the Session object, so
+            // it works for sessions that aren't mounted yet (e.g. fork pre-fill). The
+            // list "has draft" indicator subscribes via useSessionHasDraft.
+            const normalized = normalizeDraft(draft);
+            const existing = state.drafts[sessionId] ?? null;
+            if (normalized === null && existing === null) return state; // no-op
+            if (normalized === existing) return state;
+            const nextDrafts = { ...state.drafts };
+            if (normalized === null) {
+                delete nextDrafts[sessionId];
+            } else {
+                nextDrafts[sessionId] = normalized;
             }
-
-            const updatedSessions = { ...state.sessions, [sessionId]: updatedSession };
-            const sessionListViewData = buildSessionListViewData(updatedSessions, state.sharedSessions);
-            return { ...state, sessions: updatedSessions, sessionListViewData };
+            saveSessionDrafts(nextDrafts);
+            return { ...state, drafts: nextDrafts };
         }),
         setAwaitingResponse: (sessionId: string, value: number | null) => set((state) => {
             const session = state.sessions[sessionId];
@@ -1415,17 +1380,6 @@ export const storage = create<StorageState>()((set, get) => {
                 sessions: updatedSessions,
                 sessionListViewData: buildSessionListViewData(updatedSessions, state.sharedSessions)
             };
-        }),
-        setSendInFlight: (sessionId: string, inFlight: boolean) => set((state) => {
-            const current = !!state.sessionSendInFlight[sessionId];
-            if (current === inFlight) return state;
-            const next = { ...state.sessionSendInFlight };
-            if (inFlight) {
-                next[sessionId] = true;
-            } else {
-                delete next[sessionId];
-            }
-            return { ...state, sessionSendInFlight: next };
         }),
         setSessionMessagesFetching: (sessionId: string, fetching: boolean) => set((state) => {
             const current = !!state.sessionMessagesFetching[sessionId];
@@ -1799,14 +1753,15 @@ export const storage = create<StorageState>()((set, get) => {
                 Object.entries(state.sessionGitStatus).filter(([id]) => !deleteSet.has(id))
             );
             
-            // Clear drafts and permission modes from persistent storage
-            const drafts = loadSessionDrafts();
+            // Drop drafts for deleted sessions from the in-memory map and persist.
+            const remainingDrafts = Object.fromEntries(
+                Object.entries(state.drafts).filter(([id]) => !deleteSet.has(id))
+            );
+            saveSessionDrafts(remainingDrafts);
             for (const sessionId of deleteSet) {
-                delete drafts[sessionId];
                 projectManager.removeSession(sessionId);
             }
-            saveSessionDrafts(drafts);
-            
+
             // Rebuild sessionListViewData without the deleted session
             const sessionListViewData = buildSessionListViewData(
                 remainingSessions as Record<string, Session>,
@@ -1820,6 +1775,7 @@ export const storage = create<StorageState>()((set, get) => {
                 sessionMessages: remainingSessionMessages as Record<string, SessionMessages>,
                 sessionPendingMessages: remainingPendingMessages as Record<string, PendingMessage[]>,
                 sessionGitStatus: remainingGitStatus as Record<string, GitStatus | null>,
+                drafts: remainingDrafts,
                 sessionListViewData
             };
         }),
@@ -2332,6 +2288,14 @@ export function useSessions() {
 
 export function useSession(id: string): Session | null {
     return storage(useShallow((state) => state.sessions[id] ?? state.sharedSessions[id] ?? null));
+}
+
+/**
+ * Subscribe to whether a session currently has a non-empty draft. Drafts live in
+ * their own map (not on the Session object), so list rows read draft presence here.
+ */
+export function useSessionHasDraft(sessionId: string): boolean {
+    return storage((state) => !!state.drafts[sessionId]);
 }
 
 /**

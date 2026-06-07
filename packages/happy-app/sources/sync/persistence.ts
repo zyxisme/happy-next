@@ -120,6 +120,16 @@ export function saveSessionDrafts(drafts: Record<string, SessionDraft>) {
     mmkv.set('session-drafts', JSON.stringify(drafts));
 }
 
+// A draft with no text (after trim) and no images is meaningless — treat it as
+// "no draft" so an empty input never persists an entry. Single source of truth
+// for the normalize-to-null rule, shared between the store action and tests.
+export function normalizeDraft(draft: SessionDraft | null | undefined): SessionDraft | null {
+    if (draft && (draft.text.trim() || draft.images.length > 0)) {
+        return draft;
+    }
+    return null;
+}
+
 export function loadNewSessionDraft(): NewSessionDraft | null {
     const raw = mmkv.getString(NEW_SESSION_DRAFT_KEY);
     if (!raw) {
@@ -447,11 +457,6 @@ function stripVolatileSessionFields(session: Session): Session {
         thinkingAt: 0,
         messageSyncing: false,
         presence: session.active ? 'online' : session.activeAt,
-        // Drafts are owned by the dedicated `session-drafts` MMKV key, not the
-        // sessions cache. Persisting them here let the two stores diverge: clearing
-        // a draft (after send) updates `session-drafts` but not this cache, so a
-        // later cold-start hydration could resurrect an already-sent draft.
-        draft: null,
         upgrading: false,
     };
 }

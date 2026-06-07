@@ -9,7 +9,7 @@ import { getSessionName, useSessionStatus, getSessionAvatarId, formatPathRelativ
 import { Avatar } from './Avatar';
 import { Typography } from '@/constants/Typography';
 import { StatusDot } from './StatusDot';
-import { useAllMachines, useSetting } from '@/sync/storage';
+import { useAllMachines, useSetting, useSessionHasDraft } from '@/sync/storage';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { isMachineOnline } from '@/utils/machineUtils';
 import { machineSpawnNewSession, sessionKill } from '@/sync/ops';
@@ -328,6 +328,7 @@ const CompactSessionRow = React.memo(({ session, selected, showBorder }: { sessi
     const styles = stylesheet;
     const { theme } = useUnistyles();
     const sessionStatus = useSessionStatus(session);
+    const hasDraft = useSessionHasDraft(session.id);
     const sessionName = getSessionName(session);
     const navigateToSession = useNavigateToSession();
     const swipeableRef = React.useRef<Swipeable | null>(null);
@@ -415,7 +416,7 @@ const CompactSessionRow = React.memo(({ session, selected, showBorder }: { sessi
                     {/* Status dot or draft icon on the left */}
                     {(() => {
                         // Show draft icon when online with draft
-                        if (sessionStatus.state === 'waiting' && session.draft) {
+                        if (sessionStatus.state === 'waiting' && hasDraft) {
                             return (
                                 <Ionicons
                                     name="create-outline"

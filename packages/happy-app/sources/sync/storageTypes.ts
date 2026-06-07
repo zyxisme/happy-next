@@ -166,7 +166,6 @@ export interface Session {
         priority: 'high' | 'medium' | 'low';
         id: string;
     }>;
-    draft?: SessionDraft | null; // Local draft message with optional images, not synced to server
     permissionMode?: 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan' | 'read-only' | 'on-failure' | 'full-auto' | 'auto_edit' | 'yolo' | null; // Session permission mode (cached locally; source of truth is UserKV)
     modelMode?: string | null; // Session model mode (cached locally; source of truth is UserKV)
     fastMode?: boolean; // Codex fast mode (service_tier: fast), local-only

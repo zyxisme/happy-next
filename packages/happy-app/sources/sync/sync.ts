@@ -1032,9 +1032,6 @@ class Sync {
             this.pendingSendCallbacks.set(localId, onBeforeApply);
         }
 
-        // Suppress draft restoration for the whole send window (survives leaving and
-        // re-entering the chat). Cleared in the finally below. See useDraft.
-        storage.getState().setSendInFlight(sessionId, true);
         try {
             const API_ENDPOINT = getServerUrl();
             const response = await this.hedgedSend(
@@ -1105,8 +1102,6 @@ class Sync {
         } catch (error) {
             this.pendingSendCallbacks.delete(localId);
             return { success: false, localId, error: error instanceof Error ? error.message : 'Unknown error' };
-        } finally {
-            storage.getState().setSendInFlight(sessionId, false);
         }
     }
 
