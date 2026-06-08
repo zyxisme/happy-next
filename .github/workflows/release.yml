@@ -16,18 +16,32 @@ jobs:
   # ── Tag push: build APK + AAB + IPA → GitHub Release ──
 
   build-android:
-    name: Build Android ${{ matrix.type }}
+    name: Build Android ${{ matrix.arch }} ${{ matrix.type }}
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - type: APK
+          - arch: arm64
+            type: APK
             buildType: apk
             ext: apk
-          - type: AAB
+            abi: arm64-v8a
+          - arch: arm64
+            type: AAB
             buildType: app-bundle
             ext: aab
+            abi: arm64-v8a
+          - arch: armv7
+            type: APK
+            buildType: apk
+            ext: apk
+            abi: armeabi-v7a
+          - arch: armv7
+            type: AAB
+            buildType: app-bundle
+            ext: aab
+            abi: armeabi-v7a
     defaults:
       run:
         working-directory: packages/happy-app
@@ -77,12 +91,13 @@ jobs:
       - name: Build ${{ matrix.type }}
         env:
           APP_VERSION: ${{ github.ref_name }}
-        run: eas build --local -p android --profile production --non-interactive --output ./happy-${{ github.ref_name }}.${{ matrix.ext }}
+          ABI_FILTERS: ${{ matrix.abi }}
+        run: eas build --local -p android --profile production --non-interactive --output ./happy-${{ github.ref_name }}-${{ matrix.arch }}.${{ matrix.ext }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: android-${{ matrix.ext }}
-          path: packages/happy-app/happy-${{ github.ref_name }}.${{ matrix.ext }}
+          name: android-${{ matrix.arch }}-${{ matrix.ext }}
+          path: packages/happy-app/happy-${{ github.ref_name }}-${{ matrix.arch }}.${{ matrix.ext }}
 
   build-ios:
     name: Build iOS IPA
