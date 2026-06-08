@@ -16,37 +16,9 @@ jobs:
   # ── Tag push: build APK + AAB + IPA → GitHub Release ──
 
   build-android:
-    name: Build Android ${{ matrix.arch }} ${{ matrix.type }}
+    name: Build Android armv7 APK
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1
-      matrix:
-        include:
-          - arch: arm64
-            type: APK
-            gradleTask: assembleRelease
-            ext: apk
-            artifactDir: app/build/outputs/apk/release
-            abi: arm64-v8a
-          - arch: arm64
-            type: AAB
-            gradleTask: bundleRelease
-            ext: aab
-            artifactDir: app/build/outputs/bundle/release
-            abi: arm64-v8a
-          - arch: armv7
-            type: APK
-            gradleTask: assembleRelease
-            ext: apk
-            artifactDir: app/build/outputs/apk/release
-            abi: armeabi-v7a
-          - arch: armv7
-            type: AAB
-            gradleTask: bundleRelease
-            ext: aab
-            artifactDir: app/build/outputs/bundle/release
-            abi: armeabi-v7a
     defaults:
       run:
         working-directory: packages/happy-app
@@ -86,7 +58,7 @@ jobs:
       - name: Generate native Android project
         env:
           APP_VERSION: ${{ github.ref_name }}
-          ABI_FILTERS: ${{ matrix.abi }}
+          ABI_FILTERS: armeabi-v7a
         run: npx expo prebuild -p android --clean --no-install
 
       - name: Set Gradle memory limits
@@ -108,25 +80,25 @@ jobs:
           }
           GRADLE
 
-      - name: Build ${{ matrix.type }}
+      - name: Build APK
         run: |
-          cd android && ./gradlew ${{ matrix.gradleTask }}
+          cd android && ./gradlew assembleRelease
 
       - name: Find and rename artifact
         run: |
-          find . -name "*.${{ matrix.ext }}" -path "*/build/outputs/*" -type f | head -5
-          ARTIFACT=$(find . -name "*.${{ matrix.ext }}" -path "*/build/outputs/*" -type f | head -1)
+          find . -name "*.apk" -path "*/build/outputs/*" -type f | head -5
+          ARTIFACT=$(find . -name "*.apk" -path "*/build/outputs/*" -type f | head -1)
           if [ -z "$ARTIFACT" ]; then
-            echo "ERROR: No ${{ matrix.ext }} found in build outputs"
+            echo "ERROR: No apk found in build outputs"
             exit 1
           fi
           echo "Found artifact: $ARTIFACT"
-          mv "$ARTIFACT" ./happy-${{ github.ref_name }}-${{ matrix.arch }}.${{ matrix.ext }}
+          mv "$ARTIFACT" ./happy-${{ github.ref_name }}-armv7.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: android-${{ matrix.arch }}-${{ matrix.ext }}
-          path: packages/happy-app/happy-${{ github.ref_name }}-${{ matrix.arch }}.${{ matrix.ext }}
+          name: android-armv7-apk
+          path: packages/happy-app/happy-${{ github.ref_name }}-armv7.apk
 
   build-ios:
     name: Build iOS IPA
