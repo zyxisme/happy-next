@@ -112,10 +112,16 @@ jobs:
         run: |
           cd android && ./gradlew ${{ matrix.gradleTask }}
 
-      - name: Rename artifact
+      - name: Find and rename artifact
         run: |
-          mv ${{ matrix.artifactDir }}/app-release.${{ matrix.ext }} \
-             ./happy-${{ github.ref_name }}-${{ matrix.arch }}.${{ matrix.ext }}
+          find . -name "*.${{ matrix.ext }}" -path "*/build/outputs/*" -type f | head -5
+          ARTIFACT=$(find . -name "*.${{ matrix.ext }}" -path "*/build/outputs/*" -type f | head -1)
+          if [ -z "$ARTIFACT" ]; then
+            echo "ERROR: No ${{ matrix.ext }} found in build outputs"
+            exit 1
+          fi
+          echo "Found artifact: $ARTIFACT"
+          mv "$ARTIFACT" ./happy-${{ github.ref_name }}-${{ matrix.arch }}.${{ matrix.ext }}
 
       - uses: actions/upload-artifact@v4
         with:
